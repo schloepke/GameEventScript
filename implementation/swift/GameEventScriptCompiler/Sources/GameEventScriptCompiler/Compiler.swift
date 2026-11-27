@@ -155,6 +155,7 @@ final class GesCompiler {
     let catalog: (any GesExternalTypeCatalog)?
     // The handle catalog by name without `@`, and the handle types the Program names, imported as HandleType bindings.
     let handleTypes: [String: GesHandleType]
+    let handleTypeOrder: [String]
     var namedHandleTypes: Set<String> = []
     var moduleName: String
     let constants: [String: GesExpression]
@@ -168,6 +169,7 @@ final class GesCompiler {
         modules = validated.modules
         catalog = validated.catalog
         handleTypes = validated.handleTypes
+        handleTypeOrder = validated.handleTypeOrder
         moduleName = validated.moduleName
         constants = validated.constants
         definitions = validated.definitions
@@ -199,7 +201,10 @@ final class GesCompiler {
         }.map(\.element)
         builder.routines = routines
         // The validator reported every undeclared type before lowering.
-        for name in namedHandleTypes { builder.handleTypes[name] = (handleTypes[name]!.linkHash, handleTypes[name]!.stateName) }
+        for name in namedHandleTypes {
+            let type = handleTypes[name]!
+            builder.handleTypes[name] = (type.linkHash, type.stateName, type.projections.map(\.name))
+        }
         return try builder.build(moduleName: moduleName)
     }
 

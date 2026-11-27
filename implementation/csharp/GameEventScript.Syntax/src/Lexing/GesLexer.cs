@@ -602,6 +602,8 @@ internal sealed class GesLexer
         Advance();
         ReadWordName();
         ReadUpperNameSegments();
+        var projectionEnd = GesText.HandleProjectionEnd(_input, _index);
+        while (_index < projectionEnd) Advance();
         if (!IsAtEnd && Current == '~') Advance();
         if (IsAtEnd || (!StartsAttachedIllegalOperatorSequence() && IsValidWordBoundary(Current)))
             return CreateToken(GesTokenKind.HandleTypeName, _input[start.._index], line, column);

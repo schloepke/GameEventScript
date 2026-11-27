@@ -209,7 +209,23 @@ here.
   folding. Keep the portable dump and TextMate bundles free of IntelliJ-specific
   markers in the meantime.
 
+## Network
+
+- Phase D2, network protocol for handles: the part of phase D of the catalog/projection assignment (§0 "Mitgeschickter
+  Zustand", §5 "Über das Wire") that phase D left out. Phase D delivered `owns ... as :P sending state` as syntax,
+  checking, network hash and layout only. Open: a receiver fetches the index (id + hash) of an owned handle type,
+  compares it with its cache (itself a catalog of the same type) and loads only new or changed entries; `owns` routes
+  generate the network resolve, batched like `ResolveMany`; `sending state` actually sends the state (full or the
+  route's projection) with a delta per connection, the sender remembering which version each party holds; the first
+  query lists the entries of one module. Decide there whether a field may choose between sent-along state and lazy
+  resolve instead of one choice per handle type. Not needed while catalogs are read only on the server.
+
 ## Performance and optimizer follow-ups
+
+- Measure the resolve path of projected handles in both ports. Bot scripts read handles on the hot path, and Swift
+  deliberately deviates from C# there: it computes projections when the link hash completes instead of storing them on
+  the resolved handle (which holds its schema weakly), and it sets the handle context in `runSlice`. Compare execution
+  time and allocations of reading `@X(:P)` fields, `ResolveMany` and the projection-keyed cache against C#.
 
 - Handle refs and `@Root`: `Receive`, `Emit`, `Publish` and callback results check every argument for a handle with a
   ref by walking Lists, Maps, Records and Messages (`HoldsRef`, O(n) per value), and each `.@Root` read allocates a new

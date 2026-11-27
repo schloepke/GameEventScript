@@ -38,10 +38,13 @@ struct GesLayoutNetwork {
     var owners: [GesLayoutOwner] = []
 }
 
-// One `owns` route: the side, `client` or `server`, and the handle type's name without `@`.
+// One `owns` route: the side, `client` or `server`, the handle type's name without `@`, the projection the other side
+// reads, empty without one, and whether the owner sends state along.
 struct GesLayoutOwner {
     var side: String
     var handle: String
+    var projection: String
+    var sendingState: Bool
 }
 
 // A handle type: its name without `@`, its handle hash, its state schema's type name and the encodings of its identity, an
@@ -400,7 +403,7 @@ enum GesSchemaLayoutBuilder {
                 rateMicroseconds: route.rateMicroseconds
             )
         }
-        var owners = network.owners.map { GesLayoutOwner(side: $0.side == .client ? "client" : "server", handle: $0.handle.name) }
+        var owners = network.owners.map { GesLayoutOwner(side: $0.side == .client ? "client" : "server", handle: $0.handle.name, projection: $0.projection?.name ?? "", sendingState: $0.sendsState) }
         owners.sort { ordinal($0.handle, $1.handle) }
         return GesLayoutNetwork(name: network.name, hash: try network.bind(parameters: parameters).hash, routes: routes, owners: owners)
     }

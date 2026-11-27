@@ -21,7 +21,7 @@ struct AdapterHandles {
         for answer in try Validation.array(catalog.required("answers")) {
             try Validation.fields(answer, ["handle", "answer", "text", "version"])
             _ = try GesHandle(parsing: answer.text("handle"))
-            try Validation.require(["document", "record", "missing", "fail"].contains(try answer.text("answer")))
+            try Validation.require(["document", "record", "missing", "notVisible", "fail"].contains(try answer.text("answer")))
         }
         for answer in try Validation.array(catalog.required("refAnswers")) {
             try Validation.fields(answer, ["ref", "answer", "version"])
@@ -95,6 +95,8 @@ private final class ScriptedResolver: GesHandleResolver {
             try call.setState(record, version: passed)
         case "missing":
             try call.setMissing()
+        case "notVisible":
+            try call.setNotVisible()
         default:
             throw ScriptedResolverError(description: "The case's resolver fails for \(handle).")
         }

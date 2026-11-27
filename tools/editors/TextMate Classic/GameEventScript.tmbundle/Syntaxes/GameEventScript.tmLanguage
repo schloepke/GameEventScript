@@ -958,7 +958,7 @@
 					<key>comment</key>
 					<string>Handle types such as @Unit and versioned @Unit~; | between them stays a collection operator.</string>
 					<key>match</key>
-					<string>@[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*~?(?![A-Za-z0-9_])</string>
+					<string>@[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*(?:\(:[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*\))?~?(?![A-Za-z0-9_])</string>
 					<key>name</key>
 					<string>entity.name.type.custom.gameeventscript</string>
 				</dict>

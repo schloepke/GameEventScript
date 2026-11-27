@@ -204,6 +204,7 @@ public sealed class GesSchemaType
         Schema = type.Reference?.Public;
         HandleType = type.Handle?.Public;
         IsVersioned = type.Versioned;
+        Projection = type.Projection?.Public;
     }
 
     internal static GesSchemaBound? Bound(GesResolvedValue? value) => value is null ? null : new GesSchemaBound(value);
@@ -266,6 +267,10 @@ public sealed class GesSchemaType
 
     /// <summary>Gets whether a handle is written <c>@Name~</c> and carries its version.</summary>
     public bool IsVersioned { get; }
+
+    /// <summary>Gets the projection a handle written <c>@Name(:P)</c> reads through; null for every other type
+    /// (specs/Schemas.md#projections).</summary>
+    public GesSchema? Projection { get; }
 }
 
 /// <summary>A field of a schema or an argument of a message.</summary>
@@ -432,6 +437,10 @@ public sealed class GesSchema
     /// <summary>Gets how many bits of its word a packed schema's fields take, those of its record on the wire; 0 for a schema
     /// that is not packed.</summary>
     public int PackedBits { get; }
+
+    /// <summary>Gets the source of a projection, the schema or projection it selects its fields from; null for any other
+    /// declaration (specs/Schemas.md#projections).</summary>
+    public GesSchema? Source => _declaration.Source?.Public;
 
     /// <summary>Gets the schemas whose fields this schema takes with <c>with</c>, in declared order. Their fields are part of
     /// <see cref="Fields"/>, as if written in place.</summary>

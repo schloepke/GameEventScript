@@ -13,6 +13,7 @@ internal static class DocumentCommand
     private const string HelpText = """
 Usage:
   dotnet ges document check <data.gesd> [more.gesd ...] [--schema <file.gess> ...] [-q]
+  dotnet ges document check --schema <file.gess> ... --catalog @<Type> <root.gesd> ... [data.gesd ...] [-q]
   dotnet ges document format <data.gesd> [-o <output.gesd>] [--color]
 
 Commands:
@@ -21,6 +22,8 @@ Commands:
 
 Options:
   --schema <file.gess> Check each document against the schema its header names; repeatable.
+  --catalog @<Type> <root.gesd>
+                       Read the catalog of a handle type from a root file; repeatable.
   -o, --output <path>  Write the formatted document to a UTF-8 file instead of stdout.
   --color              Color terminal output (unless NO_COLOR is set).
   -q, --quiet          Hide the success report of check.
@@ -37,6 +40,11 @@ document with a header against its schema: :Schema(:Name) names a schema of the
 set, :Schema('file.gess') a file relative to the document that must be one of the
 given files. A schema that the set does not hold is schema.unknownName. Documents
 without a header are only read.
+
+With --catalog, check reads the catalog of each named handle type of the schema
+set from its root files and reports every error of it. Imports are read relative
+to the directory of their root file and cannot leave it. Catalogs are read in the
+order their types first appear; each may pin entries of the catalogs before it.
 """;
 
     internal static int Run(string[] arguments)
@@ -50,6 +58,7 @@ without a header are only read.
         var check = arguments[0] == "check";
         var paths = new List<string>();
         var schemaArguments = new List<string>();
+        var catalogArguments = new List<(string Type, string Path)>();
         string? outputPath = null;
         var quiet = false;
         var color = false;
@@ -76,13 +85,22 @@ without a header are only read.
                     return UsageError("Specify a schema path after --schema; prefix a path starting with '-' with './'.");
                 schemaArguments.Add(arguments[++index]);
             }
+            else if (parseOptions && check && argument == ToolCatalogs.Option)
+            {
+                if (index + 2 >= arguments.Length || !arguments[index + 1].StartsWith('@') || arguments[index + 1].Length == 1
+                    || arguments[index + 2].StartsWith('-') || string.IsNullOrWhiteSpace(arguments[index + 2]))
+                    return UsageError("Specify a handle type and a root file after --catalog, for example '--catalog @Unit units.gesd'.");
+                catalogArguments.Add((arguments[index + 1][1..], arguments[index + 2]));
+                index += 2;
+            }
             else if (parseOptions && !check && argument == "--color") color = Environment.GetEnvironmentVariable("NO_COLOR") is null;
             else if (parseOptions && argument.StartsWith('-')) return UsageError($"Unknown document {arguments[0]} option '{argument}'.");
             else if (string.IsNullOrWhiteSpace(argument)) return UsageError("Document paths must not be empty.");
             else paths.Add(argument);
         }
 
-        if (paths.Count == 0) return UsageError("Specify a document file.");
+        if (paths.Count == 0 && catalogArguments.Count == 0) return UsageError("Specify a document file.");
+        if (catalogArguments.Count > 0 && schemaArguments.Count == 0) return UsageError("--catalog needs the schemas of --schema.");
         if (!check && paths.Count > 1) return UsageError("Format accepts exactly one document file.");
         if (outputPath is not null && string.IsNullOrWhiteSpace(outputPath)) return UsageError("The output path must not be empty.");
         string? activePath = null;
@@ -92,6 +110,11 @@ without a header are only read.
             {
                 var schemas = ToolDocumentSchemas.Load(schemaArguments, ref activePath);
                 var failed = 0;
+                if (catalogArguments.Count > 0)
+                {
+                    failed = ToolCatalogs.Check(catalogArguments, schemas!, quiet);
+                    if (failed < 0) return 2;
+                }
                 // An unreadable file fails like an invalid one; the remaining files are still checked.
                 foreach (var path in paths)
                 {
@@ -111,7 +134,7 @@ without a header are only read.
                         failed++;
                     }
                 }
-                if (!quiet && failed == 0) Console.WriteLine(paths.Count == 1 ? $"Checked {paths[0]}." : $"Checked {paths.Count} documents.");
+                if (!quiet && failed == 0 && paths.Count > 0) Console.WriteLine(paths.Count == 1 ? $"Checked {paths[0]}." : $"Checked {paths.Count} documents.");
                 return failed == 0 ? 0 : 1;
             }
 

@@ -313,6 +313,22 @@ public sealed class GesSchemaSet
     {
         if (composed.Contains(declaration)) return;
         path.Add(declaration);
+        if (declaration.IsProjection)
+        {
+            var syntax = declaration.Syntax;
+            if (!_declarations.TryGetValue(syntax.State, out var source) || source.Kind != GesSchemaKind.Schema)
+                throw declaration.Scope.Error(Code.InvalidProjection, syntax.StateOffset, $"The source of '{declaration.Name}', ':{syntax.State}', is no declared schema or projection.");
+            if (source.Abstract) throw declaration.Scope.Error(Code.InvalidProjection, syntax.StateOffset, $"The source of '{declaration.Name}', ':{syntax.State}', is abstract.");
+            if (source.Packed) throw declaration.Scope.Error(Code.InvalidProjection, syntax.StateOffset, $"The source of '{declaration.Name}', ':{syntax.State}', is packed.");
+            if (path.Contains(source)) throw declaration.Scope.Error(Code.InvalidProjection, syntax.StateOffset, $"'{declaration.Name}' projects ':{syntax.State}', which projects it in turn.");
+            Compose(source, path, composed);
+            path.RemoveAt(path.Count - 1);
+            declaration.Source = source;
+            declaration.Scope.ComposeProjection(declaration);
+            composed.Add(declaration);
+            return;
+        }
+
         foreach (var with in declaration.Syntax.Withs)
         {
             if (!_declarations.TryGetValue(with.Name, out var source) || source.Kind != GesSchemaKind.Schema)
@@ -439,6 +455,9 @@ internal sealed class GesResolvedType
     // A handle written `@Name~`, which carries its version.
     internal bool Versioned { get; init; }
 
+    // The projection of a handle written `@Name(:P)`, which it reads; null without one.
+    internal GesResolvedDeclaration? Projection { get; init; }
+
     internal string ReferenceName { get; init; } = "";
 
     // The named tag set a Tag takes its members from, or empty.
@@ -532,6 +551,21 @@ internal sealed class GesResolvedDeclaration
     // The fields written `computed by`, own and taken, in the order their expressions may read each other.
     internal GesResolvedComputed[] Computed { get; set; } = [];
 
+    // A projection's source and, per taken field, the source fields along its path, from the source's root.
+    internal bool IsProjection => Syntax.Kind == GesSchemaDeclarationKind.Projection;
+
+    internal GesResolvedDeclaration? Source { get; set; }
+
+    internal GesResolvedField[][] Paths { get; set; } = [];
+
+    // Whether this schema is a projection that narrows the other: the other is its source or a schema its source narrows.
+    internal bool Narrows(GesResolvedDeclaration other)
+    {
+        for (var source = Source; source is not null; source = source.Source)
+            if (source == other) return true;
+        return false;
+    }
+
     // The public description, which exists once all declarations are resolved.
     internal GesSchema Public { get; set; } = null!;
 }
@@ -615,7 +649,7 @@ internal sealed partial class GesFileScope
                     {
                         Kind = declaration.Kind switch
                         {
-                            GesSchemaDeclarationKind.Schema => GesSchemaKind.Schema,
+                            GesSchemaDeclarationKind.Schema or GesSchemaDeclarationKind.Projection => GesSchemaKind.Schema,
                             GesSchemaDeclarationKind.Message => GesSchemaKind.Message,
                             _ => GesSchemaKind.Messages
                         },
@@ -647,10 +681,12 @@ internal sealed partial class GesFileScope
         foreach (var handle in _ownHandles)
         {
             var syntax = handle.Syntax;
-            if (!all.TryGetValue(syntax.State, out var state) || state.Kind != GesSchemaKind.Schema)
+            if (syntax.Catalog.Length > 0)
+                handle.Catalog = CatalogOf(handle);
+            else if (!all.TryGetValue(syntax.State, out var state) || state.Kind != GesSchemaKind.Schema)
                 throw Error(Code.InvalidHandle, syntax.StateOffset, $"The state of '@{handle.Name}', ':{syntax.State}', is no declared schema.");
-            if (state.Abstract) throw Error(Code.InvalidHandle, syntax.StateOffset, $"The state of '@{handle.Name}', ':{syntax.State}', is abstract.");
-            handle.State = state;
+            else if (state.Abstract) throw Error(Code.InvalidHandle, syntax.StateOffset, $"The state of '@{handle.Name}', ':{syntax.State}', is abstract.");
+            else handle.State = state;
             if (syntax.Root.Length > 0)
             {
                 var root = Handle(syntax.Root, syntax.RootOffset);
@@ -669,9 +705,26 @@ internal sealed partial class GesFileScope
         }
     }
 
-    // A state field named `id`, `version` or `root` would collide with the handle's members.
+    // A catalog file type `:Catalog(@Unit)` is composite with a Text part, and its catalog's type is a declared handle type
+    // with a Text id that is neither composite nor a catalog file type itself.
+    private GesResolvedHandle CatalogOf(GesResolvedHandle handle)
+    {
+        var syntax = handle.Syntax;
+        if (syntax.Root.Length == 0)
+            throw Error(Code.InvalidHandle, syntax.CatalogOffset, $"The catalog file type '@{handle.Name}' is no composite; it names the files of a root.");
+        if (syntax.Id!.Kind != GesSchemaTypeKind.Text)
+            throw Error(Code.InvalidHandle, syntax.Id.Offset, $"The part of the catalog file type '@{handle.Name}' is a path, a :Text with max.");
+        var target = Handle(syntax.Catalog, syntax.CatalogOffset);
+        if (target.Syntax.Catalog.Length > 0 || target.Syntax.Root.Length > 0 || target.Syntax.Id!.Kind != GesSchemaTypeKind.Text)
+            throw Error(Code.InvalidHandle, syntax.CatalogOffset, $"A catalog holds a handle type with a Text id that is not composite, unlike '@{syntax.Catalog}'.");
+        target.Files.Add(handle);
+        return target;
+    }
+
+    // A state field named `id`, `version` or `root` would collide with the handle's members; a catalog file type has no state.
     internal void CheckHandleState(GesResolvedHandle handle)
     {
+        if (handle.Catalog is not null) return;
         foreach (var name in new[] { "id", "version", "root" })
             if (Array.Exists(handle.State.Fields, field => field.Name == name) || Array.Exists(handle.State.Computed, field => field.Name == name))
                 throw Error(Code.InvalidHandle, handle.Syntax.StateOffset, $"The state ':{handle.State.Name}' of '@{handle.Name}' has a field '{name}', which collides with the handle's members.");
@@ -679,6 +732,13 @@ internal sealed partial class GesFileScope
 
     private GesResolvedHandle Handle(string name, int offset)
         => _handles.TryGetValue(name, out var handle) ? handle : throw Error(Code.UnknownName, offset, $"Handle type '@{name}' is not declared.");
+
+    private GesResolvedHandle KeyHandle(string name, int offset)
+    {
+        var handle = Handle(name, offset);
+        return handle.Syntax.Catalog.Length == 0 ? handle
+            : throw Error(Code.InvalidHandle, offset, $"'@{name}' is a catalog file type, which only reading a catalog uses.");
+    }
 
     internal void Resolve(Dictionary<string, GesResolvedDeclaration> all, Dictionary<string, GesResolvedDeclaration> messages)
     {
@@ -812,6 +872,74 @@ internal sealed partial class GesFileScope
         _lets.Clear();
         foreach (var let in declaration.Lets) _lets[let.Name] = let;
         ResolveDefaults(declaration);
+    }
+
+    // Copies the fields a projection takes from its composed source along their paths (specs/Schemas.md#projections). A
+    // field keeps its type, file and marker; a path through an optional Record makes it optional without default, a key
+    // stays one only when taken bare, and a sibling default only when the sibling is taken bare too.
+    internal void ComposeProjection(GesResolvedDeclaration declaration)
+    {
+        var source = declaration.Source!;
+        var taken = declaration.Syntax.Taken;
+        var fields = new GesResolvedField[taken.Length];
+        var paths = new GesResolvedField[taken.Length][];
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        for (var index = 0; index < taken.Length; index++)
+        {
+            var entry = taken[index];
+            if (!names.Add(entry.Name)) throw Error(Code.InvalidProjection, entry.Offset, $"'{entry.Name}' is taken twice by '{declaration.Name}'.");
+            var holder = source;
+            var path = new GesResolvedField[entry.Path.Length];
+            var throughOptional = false;
+            for (var segment = 0; segment < path.Length; segment++)
+            {
+                var name = entry.Path[segment];
+                var offset = entry.PathOffsets[segment];
+                var field = Array.Find(holder.Fields, candidate => candidate.Name == name);
+                if (field is null)
+                    throw Error(Code.InvalidProjection, offset, Array.Exists(holder.Computed, computed => computed.Name == name)
+                        ? $"'{name}' of '{holder.Name}' is computed; a projection takes stored fields."
+                        : $"'{name}' is no field of '{holder.Name}'.");
+                path[segment] = field;
+                if (segment == path.Length - 1) break;
+                if (field.Alternatives is not [{ Kind: GesSchemaTypeKind.Reference, Reference: { } record }])
+                    throw Error(Code.InvalidProjection, entry.PathOffsets[segment + 1], $"'{name}' of '{holder.Name}' is no Record, so a path cannot continue through it.");
+                throughOptional |= field.Marker == GesSchemaFieldMarker.Optional;
+                holder = record;
+            }
+
+            var last = path[path.Length - 1];
+            if (Array.Exists(last.Alternatives, alternative => alternative.Depth > 0))
+                throw Error(Code.InvalidProjection, entry.PathOffsets[path.Length - 1], $"'{last.Name}' is a recursive List, which a projection does not take.");
+            var bare = path.Length == 1 && entry.Path[0] == entry.Name;
+            var marker = last.Marker;
+            if (marker == GesSchemaFieldMarker.Key)
+            {
+                if (!bare) marker = GesSchemaFieldMarker.None;
+                else if (index != 0) throw Error(Code.InvalidKey, entry.Offset, "A key is the first field of a schema, an integer or a Tag with a set, without delta within or a union.");
+            }
+
+            if (throughOptional)
+                marker = last.Alternatives.Length > 1 && Array.Exists(last.Alternatives, alternative => alternative.Kind == GesSchemaTypeKind.Nothing) ? GesSchemaFieldMarker.None : GesSchemaFieldMarker.Optional;
+            fields[index] = new GesResolvedField
+            {
+                Name = entry.Name,
+                Unlabeled = last.Unlabeled,
+                Alternatives = last.Alternatives,
+                Marker = marker,
+                Default = throughOptional ? null : last.Default,
+                Offset = last.Offset,
+                Scope = last.Scope
+            };
+            paths[index] = path;
+        }
+
+        for (var index = 0; index < fields.Length; index++)
+            if (fields[index].Default is { Kind: GesSchemaDefaultKind.Field } fallback
+                && (paths[index].Length != 1 || !Array.Exists(taken, entry => entry.Name == fallback.Name && entry.Path is [var only] && only == fallback.Name)))
+                throw Error(Code.InvalidDefault, taken[index].Offset, $"'{fields[index].Name}' defaults to '{fallback.Name}', which '{declaration.Name}' does not take under its name.");
+        declaration.Fields = fields;
+        declaration.Paths = paths;
     }
 
     // The computed fields in written order: own ones, and those of a schema taken by `with` where the `with` stands, without
@@ -1076,7 +1204,10 @@ internal sealed partial class GesFileScope
                 GesSchemaTypeKind.Handle => "@" + alternative.Name,
                 _ => result[index].Kind.ToString()
             };
-            if (!seen.Add(name)) throw Error(Code.InvalidUnion, alternative.Offset, "A union repeats a type name; a unit does not distinguish alternatives.");
+            if (!seen.Add(name))
+                throw result[index].Kind == GesSchemaTypeKind.Handle && Array.Exists(result, other => other is not null && other != result[index] && other.Kind == GesSchemaTypeKind.Handle && other.Handle == result[index].Handle && other.Projection != result[index].Projection)
+                    ? Error(Code.InvalidProjection, alternative.Offset, $"A union holds '@{alternative.Name}' with two projections or with and without one.")
+                    : Error(Code.InvalidUnion, alternative.Offset, "A union repeats a type name; a unit does not distinguish alternatives.");
             if (alternative.Constraints.Delta is not null) throw Error(Code.InvalidUnion, alternative.Offset, "A union alternative has no delta within.");
             // Generated code names an alternative after its label or its type, so both must stay apart.
             var label = alternative.Label.Length > 0 ? char.ToUpperInvariant(alternative.Label[0]) + alternative.Label.Substring(1)
@@ -1087,14 +1218,36 @@ internal sealed partial class GesFileScope
         return result;
     }
 
+    // `@Name(:P)` names a projection that narrows the state of a handle type that is neither composite nor a catalog file
+    // type. Narrowing follows the declared sources by name, since projections are composed only later.
+    private GesResolvedDeclaration HandleProjection(GesResolvedHandle handle, GesSchemaTypeSyntax type, Dictionary<string, GesResolvedDeclaration> all)
+    {
+        if (handle.Root is not null)
+            throw Error(Code.InvalidProjection, type.ProjectionOffset, $"'@{type.Name}' is composite; a projection reads a handle type that is not.");
+        if (!all.TryGetValue(type.Projection, out var projection) || !projection.IsProjection)
+            throw Error(Code.InvalidProjection, type.ProjectionOffset, $"':{type.Projection}' is no declared projection.");
+        var source = projection;
+        for (var steps = 0; source.IsProjection && steps <= all.Count; steps++)
+        {
+            if (!all.TryGetValue(source.Syntax.State, out var next)) break;
+            source = next;
+            if (source == handle.State) return projection;
+        }
+
+        throw Error(Code.InvalidProjection, type.ProjectionOffset, $"':{type.Projection}' is no projection of '@{type.Name}', whose state is ':{handle.State.Name}'.");
+    }
+
     private GesResolvedType ResolveType(GesSchemaTypeSyntax type, Dictionary<string, GesResolvedDeclaration> all)
     {
         if (type.Kind == GesSchemaTypeKind.Handle)
         {
             var handle = Handle(type.Name, type.Offset);
+            if (handle.Syntax.Catalog.Length > 0)
+                throw Error(Code.InvalidHandle, type.Offset, $"'@{type.Name}' is a catalog file type, which only reading a catalog uses.");
             if (type.Versioned && !handle.Versioned)
                 throw Error(Code.InvalidHandle, type.Offset, $"'@{type.Name}' has no version, so '@{type.Name}~' does not exist.");
-            return new GesResolvedType { Kind = GesSchemaTypeKind.Handle, Handle = handle, Versioned = type.Versioned, ReferenceName = type.Name, Offset = type.Offset };
+            var projection = type.Projection.Length > 0 ? HandleProjection(handle, type, all) : null;
+            return new GesResolvedType { Kind = GesSchemaTypeKind.Handle, Handle = handle, Versioned = type.Versioned, Projection = projection, ReferenceName = type.Name, Offset = type.Offset };
         }
 
         // A named tag set stands for a Tag with its members; only its name differs, which belongs to no hash.
@@ -1145,7 +1298,7 @@ internal sealed partial class GesFileScope
             Axes = axes,
             Reference = reference,
             ReferenceName = type.Name,
-            Handle = type.Key.Length > 0 ? Handle(type.Key, type.KeyOffset) : null,
+            Handle = type.Key.Length > 0 ? KeyHandle(type.Key, type.KeyOffset) : null,
             Offset = type.Offset
         };
     }
@@ -1571,6 +1724,7 @@ internal static class GesSchemaCanonical
                 break;
             case GesSchemaTypeKind.Handle:
                 builder.Append('@').Append(type.Handle!.Name);
+                if (type.Projection is { } projected) builder.Append('(').Append(projected.Name).Append(')');
                 if (type.Versioned) builder.Append('~');
                 break;
             case GesSchemaTypeKind.Map when type.Handle is { } key:

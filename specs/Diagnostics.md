@@ -54,6 +54,15 @@ Validation uses the following semantic codes:
   compilation declares) and `validate.invalidHandleUse` (`as @Name` outside a parameter or
   field, `@Name~` or `h.version` of a type without versions, a union mixing handle and other
   types); **Since: Unreleased**.
+- `validate.invalidProjection` (`@Name(:P)` with a `:P` that is no
+  [projection](Schemas.md#projections) of the type's state schema, or `as :P` from a
+  value that is not of a source of `:P`) and `validate.handleWidening` (a handle of a
+  projection converted or passed to the full view or to a projection it does not
+  narrow); **Since: Unreleased**.
+
+Documents use the `document.*` codes of [Documents](Documents.md#errors) and catalogs the
+`catalog.*` codes of [reading a catalog](Documents.md#reading-a-catalog); **Since: Unreleased**
+— catalogs.
 
 Compiler lowering/resource analysis uses `compile.unsupportedConstruct`,
 `compile.invalidArity`, `compile.unresolvedSymbol`,
@@ -179,6 +188,10 @@ Runtime uses these stable codes:
   version differs from the carried one), each with the handle's text form in
   `symbol`; a state read without a registered resolver, which only a read without a
   static handle type reaches, gives `nothing` instead; **Since: Unreleased**.
+- `runtime.handleNotVisible` (a resolver answered that the asking party may not see
+  the object) reaches only the host observer, with the handle's text form in
+  `symbol`; the read yields `nothing` as for a missing state and the handler
+  continues; **Since: Unreleased**.
 
 `runtime.randomStackUnderflow` reports an attempted pop across an active runtime
 boundary, while `runtime.randomScopeImbalance` reports scopes left open by a

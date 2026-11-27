@@ -37,6 +37,7 @@ extension Tool {
         let check = arguments[0] == "check"
         var paths: [String] = []
         var schemaArguments: [String] = []
+        var catalogArguments: [(type: String, path: String)] = []
         var output: String?
         var quiet = false
         var color = false
@@ -61,6 +62,12 @@ extension Tool {
                 }
                 index += 1
                 schemaArguments.append(arguments[index])
+            } else if options && check && argument == ToolCatalogs.option {
+                guard index + 2 < arguments.count, arguments[index + 1].hasPrefix("@"), arguments[index + 1].count > 1, !arguments[index + 2].hasPrefix("-"),
+                    !arguments[index + 2].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                else { throw ToolError.usage("Specify a handle type and a root file after --catalog, for example '--catalog @Unit units.gesd'.") }
+                catalogArguments.append((String(arguments[index + 1].dropFirst()), arguments[index + 2]))
+                index += 2
             } else if options && !check && argument == "--color" {
                 color = !io.noColor
             } else if options && argument.hasPrefix("-") {
@@ -71,7 +78,8 @@ extension Tool {
             }
             index += 1
         }
-        guard !paths.isEmpty else { throw ToolError.usage("Specify a document file.") }
+        guard !paths.isEmpty || !catalogArguments.isEmpty else { throw ToolError.usage("Specify a document file.") }
+        guard catalogArguments.isEmpty || !schemaArguments.isEmpty else { throw ToolError.usage("--catalog needs the schemas of --schema.") }
         guard check || paths.count == 1 else { throw ToolError.usage("Format accepts exactly one document file.") }
         if let path = output {
             guard !path.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw ToolError.usage("The output path must not be empty.") }
@@ -81,6 +89,7 @@ extension Tool {
         if check {
             let schemas = try ToolDocumentSchemas.load(schemaArguments)
             var failed = 0
+            if let schemas, !catalogArguments.isEmpty { failed = try ToolCatalogs.check(catalogArguments, schemas, quiet: quiet, io) }
             // An unreadable file fails like an invalid one; the remaining files are still checked.
             for path in paths {
                 let text: String
@@ -97,7 +106,7 @@ extension Tool {
                 }
                 if let schemas, !schemas.check(path, text, document, io) { failed += 1 }
             }
-            if !quiet && failed == 0 { io.line(paths.count == 1 ? "Checked \(paths[0])." : "Checked \(paths.count) documents.") }
+            if !quiet && failed == 0 && !paths.isEmpty { io.line(paths.count == 1 ? "Checked \(paths[0])." : "Checked \(paths.count) documents.") }
             return failed == 0 ? 0 : 1
         }
         guard let document = try readDocument(paths[0], ToolFiles.source(paths[0])) else { return 1 }
@@ -147,6 +156,9 @@ final class ToolDocumentSchemas {
         guard let sources = try ToolFiles.schemaSources(arguments, activePath: &activePath) else { return nil }
         return try ToolDocumentSchemas(sources)
     }
+
+    // The handle type of the set with this name, or nil.
+    func handleType(_ name: String) -> GesHandleType? { set.handleTypes.first { $0.name.utf8.elementsEqual(name.utf8) } }
 
     // Checks a readable document against the schema of its header and reports the first error; a document without a
     // header has nothing to check against.

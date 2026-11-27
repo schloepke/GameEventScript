@@ -14,6 +14,8 @@ final class GesAstValidator {
     let catalog: (any GesExternalTypeCatalog)?
     // The handle catalog by name without `@`; the validator checks every `@Name` against it.
     let handleTypes: [String: GesHandleType]
+    // The handle type names in declaration order.
+    let handleTypeOrder: [String]
     private(set) var moduleName = ""
     private(set) var constants: [String: GesExpression] = [:]
     // Callables by signature; a predicate wins over a function of the same signature, as in C#.
@@ -24,10 +26,11 @@ final class GesAstValidator {
     // later inference reuses it instead of inferring the callee again; see CallableResults.
     var callResults: [String: String] = [:]
 
-    init(modules: [GesModule], catalog: (any GesExternalTypeCatalog)?, handleTypes: [String: GesHandleType] = [:], diagnostics: [GesDiagnostic] = []) {
+    init(modules: [GesModule], catalog: (any GesExternalTypeCatalog)?, handleTypes: [String: GesHandleType] = [:], handleTypeOrder: [String]? = nil, diagnostics: [GesDiagnostic] = []) {
         self.modules = modules
         self.catalog = catalog
         self.handleTypes = handleTypes
+        self.handleTypeOrder = handleTypeOrder ?? handleTypes.keys.sorted()
         self.diagnostics = diagnostics
     }
 
@@ -281,7 +284,13 @@ final class GesAstValidator {
         switch e.kind {
         case .name, .handler: break
         case .member(let target, let member):
-            if member == "version" || member == "root", case let type = infer(target, types), GesHandleTypeNames.isHandleType(type) { handleMember(e, member, type) }
+            if case let type = infer(target, types), GesHandleTypeNames.isHandleType(type) {
+                if member == "version" || member == "root" {
+                    handleMember(e, member, type)
+                } else if member != "id" && GesHandleTypeNames.hasProjection(type) {
+                    projectedMember(e, member, type)
+                }
+            }
             expression(target, types)
         case .map(let entries): for (_, value) in entries { expression(value, types) }
         case .generated(_, _, let source, _, let predicate, let projection):
@@ -297,8 +306,11 @@ final class GesAstValidator {
         case .call(let name, let args):
             call(name, args, e.location)
             for argument in args { expression(argument.value, types) }
+            if let callee = definitions[callableSignature(name, args.map(\.label))] {
+                for (argument, parameter) in zip(args, callee.parameters) { handleView(argument.value, parameter.type, types) }
+            }
         case .message(_, let args): for argument in args { expression(argument.value, types) }
-        case .constructor(let type, let args): constructor(type, args, e) { expression($0, types) }
+        case .constructor(let type, let args): constructor(type, args, e, types) { expression($0, types) }
         default: preconditionFailure()
         }
     }
@@ -336,6 +348,8 @@ final class GesAstValidator {
             // A handle has no constructor and no cast; only parameter and field types check handles (specs/Language.md#handles).
             if GesHandleTypeNames.isHandleType(type) {
                 report("validate.invalidHandleUse", e.location, symbol: type, kind: .type, message: "'as \(type)' is only a parameter or field type; use 'is \(type)' to test a value.")
+            } else if case let source = infer(value, types), GesHandleTypeNames.isHandleType(source), GesHandleTypeNames.hasProjection(source) {
+                projectedStateCast(e, type, source)
             }
             expression(value, types)
         default: preconditionFailure()
@@ -382,19 +396,83 @@ final class GesAstValidator {
         }
     }
 
-    // Each alternative of a handle type or union is a declared `@Name`, and `@Name~` names a type with versions.
+    // Each alternative of a handle type or union is a declared `@Name`, `@Name~` names a type with versions and
+    // `@Name(:P)` a projection of a type that is not composite, at most once per type in a union.
     private func handleTypeName(_ typeName: String, _ location: GesSourceLocation) {
-        for alternative in GesHandleTypeNames.alternatives(typeName) {
+        let alternatives = GesHandleTypeNames.alternatives(typeName)
+        for (index, alternative) in alternatives.enumerated() {
             guard GesHandleTypeNames.isHandleType(alternative) else {
                 let written = GesHandleTypeNames.sourceName(alternative)
                 report("validate.invalidHandleUse", location, symbol: written, kind: .type, message: "A union is written only of handle types, not '\(written)'.")
                 continue
             }
             let (name, versioned) = GesHandleTypeNames.split(alternative)
-            if let type = handleTypes[name] {
-                if versioned && type.version == .none { report("validate.invalidHandleUse", location, symbol: alternative, kind: .type, message: "'@\(name)~' needs a handle type with versions.") }
-            } else {
+            let projection = GesHandleTypeNames.projection(alternative)
+            guard let type = handleTypes[name] else {
                 report("validate.unknownHandleType", location, symbol: "@" + name, kind: .type, message: "Handle type '@\(name)' is not declared.")
+                continue
+            }
+            if versioned && type.version == .none {
+                report("validate.invalidHandleUse", location, symbol: alternative, kind: .type, message: "'@\(name)~' needs a handle type with versions.")
+            } else if !projection.isEmpty && type.root != nil {
+                report("validate.invalidProjection", location, symbol: alternative, kind: .type, message: "'@\(name)' is composite; a projection reads a handle type that is not.")
+            } else if !projection.isEmpty && type.findProjection(projection) == nil {
+                report("validate.invalidProjection", location, symbol: alternative, kind: .type, message: "':\(projection)' is no projection of '@\(name)', whose state is ':\(type.stateName)'.")
+            } else if alternatives[..<index].contains(where: { other in
+                GesHandleTypeNames.isHandleType(other) && GesHandleTypeNames.split(other).name == name && (!projection.isEmpty || !GesHandleTypeNames.projection(other).isEmpty)
+            }) {
+                report("validate.invalidProjection", location, symbol: alternative, kind: .type, message: "A union holds '@\(name)' with two projections or with and without one.")
+            }
+        }
+    }
+
+    // A member other than the identity of a projected handle must be a field of its projection (specs/Language.md#projections).
+    private func projectedMember(_ e: GesExpression, _ member: String, _ typeName: String) {
+        for alternative in GesHandleTypeNames.alternatives(typeName) {
+            let projectionName = GesHandleTypeNames.projection(alternative)
+            guard !projectionName.isEmpty, let projection = handleTypes[GesHandleTypeNames.split(alternative).name]?.findProjection(projectionName) else { continue }
+            if !projection.fields.contains(where: { $0.name == member }) && !projection.computedFields.contains(where: { $0.name == member }) {
+                report("validate.invalidProjection", e.location, symbol: member, kind: .type, message: "'\(member)' is no field of ':\(projectionName)', the view of '\(alternative)'.")
+                return
+            }
+        }
+    }
+
+    // `h as :S` on a projected handle reads no more than its view: the state schema or a projection that does not narrow
+    // the view is widening; any other target is an ordinary cast.
+    private func projectedStateCast(_ e: GesExpression, _ castType: String, _ typeName: String) {
+        // A union reads the view through every alternative that can, so only a cast none of them reads would widen.
+        var widening: (alternative: String, view: String)?
+        for alternative in GesHandleTypeNames.alternatives(typeName) {
+            guard let type = handleTypes[GesHandleTypeNames.split(alternative).name] else { continue }
+            let target = type.findProjection(castType)
+            if type.stateName != castType && target == nil { continue }
+            let projectionName = GesHandleTypeNames.projection(alternative)
+            guard !projectionName.isEmpty, let view = type.findProjection(projectionName) else { return }
+            if let target, target === view || target.narrows(view) { return }
+            if widening == nil { widening = (alternative, projectionName) }
+        }
+        if let widening {
+            report("validate.handleWidening", e.location, symbol: castType, kind: .type, message: "'\(widening.alternative)' reads only ':\(widening.view)', so 'as :\(castType)' would read more.")
+        }
+    }
+
+    // A value of a statically projected handle type passes only to a view it narrows to (specs/Language.md#projections).
+    private func handleView(_ value: GesExpression, _ declaredType: String?, _ types: [String: String]) {
+        guard let declaredType, GesHandleTypeNames.isHandleType(declaredType) else { return }
+        let sourceType = infer(value, types)
+        guard GesHandleTypeNames.isHandleType(sourceType), GesHandleTypeNames.hasProjection(sourceType) else { return }
+        for alternative in GesHandleTypeNames.alternatives(sourceType) {
+            let viewName = GesHandleTypeNames.projection(alternative)
+            let name = GesHandleTypeNames.split(alternative).name
+            guard !viewName.isEmpty, let type = handleTypes[name], let view = type.findProjection(viewName) else { continue }
+            for target in GesHandleTypeNames.alternatives(declaredType) where GesHandleTypeNames.isHandleType(target) && GesHandleTypeNames.split(target).name == name {
+                let targetName = GesHandleTypeNames.projection(target)
+                let targetView = targetName.isEmpty ? nil : type.findProjection(targetName)
+                if targetView == nil && !targetName.isEmpty { break }
+                if let targetView, targetView === view || targetView.narrows(view) { break }
+                report("validate.handleWidening", value.location, symbol: target, kind: .type, message: "'\(alternative)' reads only ':\(viewName)', so it cannot pass to '\(target)'.")
+                return
             }
         }
     }
@@ -451,7 +529,7 @@ final class GesAstValidator {
         }
     }
 
-    private func constructor(_ type: String, _ args: [GesArgument], _ e: GesExpression, _ visit: (GesExpression) -> Void) {
+    private func constructor(_ type: String, _ args: [GesArgument], _ e: GesExpression, _ types: [String: String], _ visit: (GesExpression) -> Void) {
         for argument in args { visit(argument.value) }
 
         func invalid() { report("validate.invalidTypeConstructor", e.location, symbol: type, kind: .type) }
@@ -501,6 +579,12 @@ final class GesAstValidator {
         }
         if args.filter({ $0.label == "_" }).count > labels.filter({ $0 == "_" }).count { invalid() }
         let named = Set(labels.filter { $0 != "_" })
-        for argument in args where argument.label != "_" && !named.contains(argument.label) { invalid() }
+        for argument in args where argument.label != "_" {
+            if !named.contains(argument.label) {
+                invalid()
+            } else if let field = records[type]?.fields.first(where: { $0.name == argument.label }) {
+                handleView(argument.value, field.type, types)
+            }
+        }
     }
 }

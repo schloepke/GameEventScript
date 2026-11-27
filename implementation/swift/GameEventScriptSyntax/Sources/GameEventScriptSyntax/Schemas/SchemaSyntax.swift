@@ -113,6 +113,7 @@ public enum GesHandleVersionKind: UInt8, Sendable, Equatable {
     case tagSet
     case network
     case handle
+    case projection
 }
 
 @_spi(Syntax) public enum GesSchemaRouteClass: Sendable, Equatable {
@@ -136,6 +137,11 @@ public enum GesHandleVersionKind: UInt8, Sendable, Equatable {
     @_spi(Syntax) public var rate: GesSchemaValueSyntax?
     /// `server owns @Target`: the root names the handle type, and the route has no class or rate.
     @_spi(Syntax) public var owns = false
+    /// The projection of `owns @Unit as :UnitPublic`, which the other side reads, without `:`; empty without one.
+    @_spi(Syntax) public var projection = ""
+    @_spi(Syntax) public var projectionOffset = 0
+    /// `owns @Target sending state`: the owner sends the state its party reads with each handle.
+    @_spi(Syntax) public var sendingState = false
     @_spi(Syntax) public var offset = 0
 }
 
@@ -196,6 +202,9 @@ public enum GesHandleVersionKind: UInt8, Sendable, Equatable {
     @_spi(Syntax) public var name = ""
     /// A handle type written `@Name~`, with its version.
     @_spi(Syntax) public var versioned = false
+    /// The projection of a handle type written `@Name(:P)`, without `:`, and where it starts; empty otherwise.
+    @_spi(Syntax) public var projection = ""
+    @_spi(Syntax) public var projectionOffset = 0
     /// The key handle type of a handle Map `:Map(@Name → T)`, empty for any other type, and where it starts.
     @_spi(Syntax) public var key = ""
     @_spi(Syntax) public var keyOffset = 0
@@ -412,10 +421,15 @@ public enum GesHandleVersionKind: UInt8, Sendable, Equatable {
     @_spi(Syntax) public var memberOffsets: [Int] = []
     /// The routes of a network in declared order.
     @_spi(Syntax) public var routes: [GesSchemaRouteSyntax] = []
+    /// The fields a projection takes from its source, which `state` names, in written order.
+    @_spi(Syntax) public var taken: [GesSchemaTakenSyntax] = []
     /// A handle declaration: its state schema, the composite root without `@`, the id or part type, the version form and the
     /// revision's type, each with where it starts.
     @_spi(Syntax) public var state = ""
     @_spi(Syntax) public var stateOffset = 0
+    /// The handle type of a catalog file type, `:Catalog(@Type)`, without `@`; empty otherwise, when `state` names the state.
+    @_spi(Syntax) public var catalog = ""
+    @_spi(Syntax) public var catalogOffset = 0
     @_spi(Syntax) public var root = ""
     @_spi(Syntax) public var rootOffset = 0
     @_spi(Syntax) public var id: GesSchemaTypeSyntax?
@@ -425,6 +439,15 @@ public enum GesHandleVersionKind: UInt8, Sendable, Equatable {
     /// The group of a wire or model root, or nil when the declaration has no such role.
     @_spi(Syntax) public var wireGroup: String?
     @_spi(Syntax) public var modelGroup: String?
+}
+
+/// A field a projection takes: its name and the path of field names from the source's root, one segment for a bare name.
+@_spi(Syntax) public struct GesSchemaTakenSyntax: Sendable {
+    @_spi(Syntax) public var name = ""
+    @_spi(Syntax) public var path: [String] = []
+    @_spi(Syntax) public var offset = 0
+    /// Where each path segment starts.
+    @_spi(Syntax) public var pathOffsets: [Int] = []
 }
 
 @_spi(Syntax) public struct GesSchemaDiagnostic: Sendable, Equatable {
@@ -454,6 +477,7 @@ public enum GesHandleVersionKind: UInt8, Sendable, Equatable {
     @_spi(Syntax) public static let invalidRoute = "schema.invalidRoute"
     @_spi(Syntax) public static let duplicateRoute = "schema.duplicateRoute"
     @_spi(Syntax) public static let invalidHandle = "schema.invalidHandle"
+    @_spi(Syntax) public static let invalidProjection = "schema.invalidProjection"
 
     @_spi(Syntax) public let code: String
     /// The UTF-8 offset of the error.

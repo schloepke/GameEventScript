@@ -92,7 +92,14 @@ type's state, a `MemberAccess` of another member than `id`, `version` and `root`
 `CastCustom` to its state schema, and `0xFFFF` when the Program reads none. Handle type names
 are unique among these imports. Instructions name handle types by text: `CheckCustomType` and
 `CastCustom` take `@Name` or `@Name~`, whose name must have a `HandleType` import; a
-`CastCustom` to `@Name` checks without converting and writes `nothing` on a mismatch. On a
+`CastCustom` to `@Name` checks without converting and writes `nothing` on a mismatch.
+<a id="projected-handle-operands"></a>`@Name(:P)` and `@Name(:P)~` name the [projection](Language.md#projections) `P` of
+the state, a type name (**Since: Unreleased**): a `CastCustom` to one gives a matching handle that view, narrowing a wider
+one, and `nothing` for a handle whose view `P` does not narrow; `CheckCustomType` tests the same without converting. A
+`HandleStateRead` of a handle reads its view's state. A `CastCustom` to a projection's schema name `:P` converts a
+Record of a schema in `P`'s source chain to `P`, reading `P` from the host's registered handle types; it counts as a
+state read of the first handle type with that projection for its `EntryAddress`. The view is no part of the Program's
+other data and needs no import of its own. On a
 handle, `MemberAccess` reads `id` and `version` from the identity, `root` gives `nothing`, `@Root` (the
 root type's name with `@`, which needs a `HandleType` import) reads the root handle of a composite
 and `nothing` of another handle, and every other member reads the resolved state.

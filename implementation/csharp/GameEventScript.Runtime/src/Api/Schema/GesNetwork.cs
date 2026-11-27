@@ -81,10 +81,12 @@ public sealed class GesNetworkRoute
 /// <summary>An <c>owns</c> route of a network: the side that owns the objects of a handle type. Immutable.</summary>
 public sealed class GesNetworkOwner
 {
-    internal GesNetworkOwner(GesNetworkSide side, GesHandleType handle)
+    internal GesNetworkOwner(GesNetworkSide side, GesHandleType handle, GesSchema? projection, bool sendsState)
     {
         Side = side;
         Handle = handle;
+        Projection = projection;
+        SendsState = sendsState;
     }
 
     /// <summary>Gets the side that owns the objects and can resolve their handles.</summary>
@@ -92,6 +94,14 @@ public sealed class GesNetworkOwner
 
     /// <summary>Gets the owned handle type, which is never composite.</summary>
     public GesHandleType Handle { get; }
+
+    /// <summary>Gets the projection of <c>owns @Unit as :UnitPublic</c>, the only view of the state the other side reads;
+    /// null when it reads the full state.</summary>
+    public GesSchema? Projection { get; }
+
+    /// <summary>Gets whether the route is written <c>sending state</c>: the owner sends the state the other side reads with
+    /// each handle instead of leaving it to a resolve.</summary>
+    public bool SendsState { get; }
 }
 
 /// <summary>A network declaration: the routes of one client–server pair. Immutable; it can be bound any number of times.</summary>
@@ -171,7 +181,10 @@ public sealed class GesBoundNetwork
                 .Append(owner.Side == GesNetworkSide.Client ? "client" : "server").Append(' ')
                 .Append(owner.Handle.Name).Append(' ')
                 .Append(GesSchemaCanonical.Hex(owner.Handle.Hash)).Append(' ')
-                .Append(GesSchemaCanonical.Hex(owner.Handle.Resolved.State.Public.Hash)).Append('\n');
+                .Append(GesSchemaCanonical.Hex(owner.Handle.Resolved.State.Public.Hash));
+            if (owner.Projection is { } projection) text.Append(" as ").Append(projection.Name).Append(' ').Append(GesSchemaCanonical.Hex(projection.Hash));
+            if (owner.SendsState) text.Append(" sending");
+            text.Append('\n');
         }
 
         return text.ToString();
@@ -197,6 +210,7 @@ internal sealed partial class GesFileScope
         {
             var routes = new List<GesNetworkRoute>(syntax.Routes.Length);
             var owners = new List<GesNetworkOwner>();
+            var carried = new List<(GesSchemaRouteSyntax Syntax, GesResolvedDeclaration Root)>();
             var seen = new HashSet<(bool, bool, GesResolvedDeclaration)>();
             foreach (var route in syntax.Routes)
             {
@@ -207,7 +221,16 @@ internal sealed partial class GesFileScope
                         throw Error(Code.InvalidHandle, route.RootOffset, $"'@{route.Root}' is composite; its root's owner owns it.");
                     if (owners.Exists(owner => owner.Handle.Name == route.Root))
                         throw Error(Code.DuplicateRoute, route.Offset, $"The network names '@{route.Root}' in two owns routes.");
-                    owners.Add(new GesNetworkOwner(route.Server ? GesNetworkSide.Server : GesNetworkSide.Client, handle.Public));
+                    GesResolvedDeclaration? projection = null;
+                    if (route.Projection.Length > 0)
+                    {
+                        if (!all.TryGetValue(route.Projection, out projection))
+                            throw Error(Code.UnknownName, route.ProjectionOffset, $"':{route.Projection}' is no declared schema.");
+                        if (handle.State is null || !projection.Narrows(handle.State))
+                            throw Error(Code.InvalidProjection, route.ProjectionOffset, $"':{route.Projection}' is no projection of the state of '@{route.Root}'.");
+                    }
+
+                    owners.Add(new GesNetworkOwner(route.Server ? GesNetworkSide.Server : GesNetworkSide.Client, handle.Public, projection?.Public, route.SendingState));
                     continue;
                 }
 
@@ -242,11 +265,50 @@ internal sealed partial class GesFileScope
                     throw Error(Code.DuplicateRoute, route.Offset, $"The {(route.Server ? "server" : "client")} {(route.Publishes ? "publishes" : "sends")} '{route.Root}' twice.");
                 routes.Add(new GesNetworkRoute(index, route.Server ? GesNetworkSide.Server : GesNetworkSide.Client,
                     route.Publishes ? GesNetworkVerb.Publishes : GesNetworkVerb.Sends, root.Public, deliveryClass, rate));
+                carried.Add((route, root));
+            }
+
+            // A route from the owner of a projected type carries its handles only in the view of the other side.
+            foreach (var owner in owners)
+            {
+                if (owner.Projection is null) continue;
+                foreach (var (route, root) in carried)
+                    if (route.Server == (owner.Side == GesNetworkSide.Server))
+                        CheckView(root, owner.Handle.Resolved, owner.Projection.Declaration, route, new HashSet<GesResolvedDeclaration>());
             }
 
             owners.Sort((left, right) => string.CompareOrdinal(left.Handle.Name, right.Handle.Name));
             networks.Add(new GesNetwork(syntax.Name, routes.ToArray(), owners.ToArray()));
         }
+    }
+
+    // Every handle of the owned type the declaration reaches, at any depth, reads the party's projection or one that narrows
+    // it; a pinned revision handle is an error, since the version of a projected party's handle is no revision.
+    private void CheckView(GesResolvedDeclaration declaration, GesResolvedHandle handle, GesResolvedDeclaration projection, GesSchemaRouteSyntax route,
+        HashSet<GesResolvedDeclaration> visited)
+    {
+        if (!visited.Add(declaration)) return;
+        foreach (var field in declaration.Fields)
+            foreach (var type in field.Alternatives) CheckView(type, handle, projection, route, visited);
+        foreach (var member in declaration.Members) CheckView(member, handle, projection, route, visited);
+    }
+
+    private void CheckView(GesResolvedType type, GesResolvedHandle handle, GesResolvedDeclaration projection, GesSchemaRouteSyntax route,
+        HashSet<GesResolvedDeclaration> visited)
+    {
+        if (type.Kind == GesSchemaTypeKind.Handle && type.Handle == handle)
+        {
+            if (type.Projection is not { } view || view != projection && !view.Narrows(projection))
+                throw Error(Code.InvalidProjection, route.RootOffset,
+                    $"'{route.Root}' carries '@{handle.Name}{(type.Projection is { } other ? "(:" + other.Name + ")" : "")}' to a side that reads it only as ':{projection.Name}'.");
+            if (type.Versioned && handle.VersionKind == GesHandleVersionKind.Revision)
+                throw Error(Code.InvalidHandle, route.RootOffset,
+                    $"'{route.Root}' pins a revision of '@{handle.Name}' to a side that reads it as ':{projection.Name}', which has no revision; leave out '~'.");
+        }
+
+        if (type.Element is { } element)
+            foreach (var alternative in element) CheckView(alternative, handle, projection, route, visited);
+        if (type.Reference is { } reference) CheckView(reference, handle, projection, route, visited);
     }
 
     // A rate in microseconds, rounded up: a time quantity greater than zero and at most 3600 seconds.

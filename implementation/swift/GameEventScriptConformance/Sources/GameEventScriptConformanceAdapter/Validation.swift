@@ -90,7 +90,7 @@ enum Validation {
                             "complete",
                             "dump", "dumpBaseline",
                             "deltaEncode",
-                            "deltaDecode", "describe", "document", "readDocument", "network", "handle", "contentHash",
+                            "deltaDecode", "describe", "document", "readDocument", "network", "handle", "contentHash", "catalog",
                         ]
                     )
                     if api["contentHash"] != nil && api["contentHash"] != .null { try value(api.required("contentHash")) }

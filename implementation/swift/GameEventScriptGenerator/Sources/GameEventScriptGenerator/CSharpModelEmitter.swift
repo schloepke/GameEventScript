@@ -35,7 +35,8 @@ enum GesCSharpModelEmitter {
         prologue.line("using GameEventScript.Api;")
         // Model messages and sets convert to and from messages through the values class, which they need without --values.
         let messages = layout.types.contains { $0.kind != .schema }
-        let valued = options.values || messages
+        // Projections convert from their sources through it too.
+        let valued = options.values || messages || layout.types.contains { !$0.conversions.isEmpty }
         if options.bindings || valued { prologue.line("using GameEventScript.Runtime.Values;") }
         prologue.blank()
         let header = GesModelPlanner.header(layout)
@@ -100,12 +101,15 @@ enum GesCSharpModelEmitter {
                 }
             )
         }
+        let catalogs = options.catalogs ? try GesModelPlanner.catalogs(layout, topLevel) : []
+        let catalogSet = schemaSet.map { $0.qualified + ".Set" } ?? "__GesModelDocuments" + suffix + ".Set"
+        for catalog in catalogs { document.units.append(GesCodeUnit(owner: catalog.name) { code in self.catalog(&code, catalog, access, qualifier, catalogSet) }) }
         if options.bindings { document.units.append(GesCodeUnit(owner: "") { code in bindings(&code, plain, access, qualifier, support, computed) }) }
         if valued { document.units.append(GesCodeUnit(owner: "") { code in valueConversions(&code, layout, values, qualifier, support, computed) }) }
         if messages { document.units.append(GesCodeUnit(owner: "") { code in schemasHolder(&code, layout, schemas, schemaSet) }) }
         if let documents, !plain.roots.isEmpty {
             document.units.append(GesCodeUnit(owner: "") { code in documentTypeDeclaration(&code, plain, documentType, documents, access, qualifier) })
-            if schemaSet == nil { document.units.append(GesCodeUnit(owner: "") { code in documentsHolder(&code, layout, "__GesModelDocuments" + suffix) }) }
+            if schemaSet == nil { document.units.append(GesCodeUnit(owner: "") { code in documentsHolder(&code, layout, "__GesModelDocuments" + suffix, catalogs: !catalogs.isEmpty) }) }
         }
         if let setName = schemaSet?.declared {
             document.units.append(GesCodeUnit(owner: "") { code in GesSchemaSetReference.writeCSharp(&code, setName, access, layout.sources, [], networks: false) })
@@ -176,15 +180,22 @@ enum GesCSharpModelEmitter {
     }
 
     // The schema sources of this file, parsed when a document is first read.
-    private static func documentsHolder(_ code: inout Code, _ layout: GesModelLayout, _ holder: String) {
+    // With catalogs it also offers the parsed set, which they look their handle types up in.
+    private static func documentsHolder(_ code: inout Code, _ layout: GesModelLayout, _ holder: String, catalogs: Bool) {
         code.line("/// <summary>The schema sources of this file, which reading documents checks them against.</summary>")
         code.line("internal static class \(holder)")
         code.open("{")
         code.line("private static GesSchemaSet? __set;")
         code.blank()
-        code.line("internal static GesSchemaDocument Read(string text, params string[] roots)")
-        code.open("{")
-        code.line("var set = __set ??= GesSchemaSet.Parse(")
+        if catalogs {
+            code.line("internal static GesSchemaDocument Read(string text, params string[] roots) => GesSchemaDocument.Read(Set, text, roots);")
+            code.blank()
+            code.line("internal static GesSchemaSet Set => __set ??= GesSchemaSet.Parse(")
+        } else {
+            code.line("internal static GesSchemaDocument Read(string text, params string[] roots)")
+            code.open("{")
+            code.line("var set = __set ??= GesSchemaSet.Parse(")
+        }
         code.indent()
         for (index, source) in layout.sources.enumerated() {
             code.line("new GesSchemaSource(\(GesSchemaPlanner.literal(source.name, swift: false)), string.Join(\"\\n\", new[]")
@@ -193,8 +204,10 @@ enum GesCSharpModelEmitter {
             code.close(index + 1 < layout.sources.count ? "}))," : "})));")
         }
         code.dedent()
-        code.line("return GesSchemaDocument.Read(set, text, roots);")
-        code.close()
+        if !catalogs {
+            code.line("return GesSchemaDocument.Read(set, text, roots);")
+            code.close()
+        }
         code.close()
     }
 
@@ -242,6 +255,7 @@ enum GesCSharpModelEmitter {
         if bindings { names += ["ToGesValue", "FromGesValue"].map { ($0, "the generated member " + $0) } }
         if values != nil { names += ["ToValue", "FromValue"].map { ($0, "the generated member " + $0) } }
         if documents != nil { names.append(("FromDocument", "the generated member FromDocument")) }
+        if values != nil && !type.conversions.isEmpty { names.append(("From", "the generated member From")) }
         if messageValues != nil { names += messageMembers.map { ($0, "the generated member " + $0) } }
         if bindings && fields.contains(where: { $0.field.name == "fields" }) {
             throw GesGeneratorError(GesGeneratorError.nameCollision, "In '\(type.name)', the field fields and the generated field fields of its bindings share a name.")
@@ -364,6 +378,17 @@ enum GesCSharpModelEmitter {
             code.line("/// <returns>The record.</returns>")
             code.line("/// <exception cref=\"GesWireException\">A field does not convert: <c>wire.typeMismatch</c> at its path.</exception>")
             code.line("public static \(type.name) FromValue(GesValue value) => \(values).Read\(type.name)(value, \"\");")
+            for conversion in type.conversions {
+                let packed = layout.type(conversion.source).packed != nil
+                code.blank()
+                code.line("/// <summary>Narrows a <c>:\(conversion.source)</c> to this projection: every taken field along its path, absent where an optional Record")
+                code.line("/// on the path is absent. It never fails, since the source holds valid values.</summary>")
+                code.line("/// <param name=\"source\">The value to narrow.</param>")
+                code.line("/// <returns>The projected value.</returns>")
+                if !packed { code.line("/// <exception cref=\"ArgumentNullException\">Thrown when <paramref name=\"source\"/> is null.</exception>") }
+                let argument = packed ? "source" : "source ?? throw new ArgumentNullException(nameof(source))"
+                code.line("public static \(type.name) From(\(qualifier)\(conversion.source) source) => \(values).\(type.name)__\(conversion.source)(\(argument));")
+            }
         }
         if let documents {
             code.blank()
@@ -1218,11 +1243,34 @@ enum GesCSharpModelEmitter {
                 code.line("return true;")
                 code.close()
             }
+            for conversion in type.conversions {
+                let paths = conversion.paths.map { path in "new[] { " + path.map { literal($0) }.joined(separator: ", ") + " }" }
+                code.blank()
+                code.line("private static readonly string[][] \(type.name)__\(conversion.source)Paths = { \(paths.joined(separator: ", ")) };")
+                code.blank()
+                code.line("internal static \(record) \(type.name)__\(conversion.source)(\(qualifier)\(conversion.source) source)")
+                code.line("    => Read\(type.name)(Select(Value(source), \(typeLiteral), \(names), \(type.name)__\(conversion.source)Paths), \"\");")
+            }
             var found: [GesModelPlanValue] = []
             for field in fields { conversions(field.value, &found) }
             for conversion in found where conversion.tagSet.isEmpty || emitted.insert(conversion.tagSet).inserted {
                 self.conversion(&code, type.name, qualifier, support, conversion, plain: true)
             }
+        }
+        if layout.types.contains(where: { !$0.conversions.isEmpty }) {
+            code.blank()
+            code.line("// The taken fields of a projection's source along their paths; a path through an absent Record gives nothing.")
+            code.line("private static GesValue Select(in GesValue source, string name, string[] names, string[][] paths)")
+            code.open("{")
+            code.line("var values = new GesValue[paths.Length];")
+            code.line("for (var index = 0; index < paths.Length; index++)")
+            code.open("{")
+            code.line("var current = source;")
+            code.line("foreach (var segment in paths[index]) current = current.AsMap() is { } map && map.Get(segment) is { } next ? next : GesValue.GesNothing();")
+            code.line("values[index] = current;")
+            code.close()
+            code.line("return GesValue.GesRecord(name, names, values);")
+            code.close()
         }
         code.blank()
         code.line("// The fields of a Record of the schema, or of a Map whose keys are all fields of it.")

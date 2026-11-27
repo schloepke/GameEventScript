@@ -18,7 +18,7 @@ internal static class GesSchemaHighlighting
         "default", "true", "false", "abstract", "packed", "with", "all", "without", "computed", "by", "when", "otherwise", "or", "not", "of",
         "min", "clamp", "abs", "has", "sqrt", "cbrt", "sin", "cos", "tan", "asin", "acos", "atan", "atan2", "hypot", "exp", "ln",
         "floor", "ceil", "truncate", "round", "rad", "deg", "network", "client", "server", "sends", "publishes", "reliable",
-        "latest", "bulk", "at", "most", "every", "handle", "composite", "owns"
+        "latest", "bulk", "at", "most", "every", "handle", "composite", "owns", "projection", "sending"
     };
 
     internal static void Highlight(string text, GesSpanBuilder spans, List<GesHighlightDiagnostic> diagnostics)
@@ -43,8 +43,8 @@ internal static class GesSchemaHighlighting
             }
             else if (c == '@' && position + 1 < text.Length && GesText.IsAsciiUpper(text[position + 1]))
             {
-                // A handle type `@Name`, with a directly following `~` for its version.
-                position = GesText.UpperNameEnd(text, WordEnd(text, position + 1));
+                // A handle type `@Name`, with a directly following projection `(:Name)` and `~` for its version.
+                position = GesText.HandleProjectionEnd(text, GesText.UpperNameEnd(text, WordEnd(text, position + 1)));
                 if (position < text.Length && text[position] == '~') position++;
                 kind = GesSyntaxKind.Type;
             }
@@ -76,8 +76,9 @@ internal static class GesSchemaHighlighting
                 if (GesText.IsAsciiUpper(c)) position = GesText.UpperNameEnd(text, position);
                 var word = text.Substring(start, position - start);
 
-                // The words of `round half even`, `round half up` and `round half down` are keywords only there.
-                var mode = previous == "round" && word == "half" || previous == "half" && word is "even" or "up" or "down";
+                // The words of `round half even`, `round half up` and `round half down` are keywords only there, and
+                // `state` is a keyword only in `sending state`.
+                var mode = previous == "round" && word == "half" || previous == "half" && word is "even" or "up" or "down" || previous == "sending" && word == "state";
                 kind = Keywords.Contains(word) || mode ? GesSyntaxKind.Keyword : char.IsUpper(c) ? GesSyntaxKind.Message : GesSyntaxKind.Identifier;
                 previous = word;
                 spans.Add(start, position - start, kind);

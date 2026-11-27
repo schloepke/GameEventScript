@@ -83,7 +83,10 @@
                 output += "network :\(declaration.name) as {\n"
                 for route in declaration.routes {
                     if route.owns {
-                        output += "  \(route.server ? "server" : "client") owns @\(route.root)\n"
+                        output += "  \(route.server ? "server" : "client") owns @\(route.root)"
+                        if !route.projection.isEmpty { output += " as :\(route.projection)" }
+                        if route.sendingState { output += " sending state" }
+                        output += "\n"
                         continue
                     }
                     output += "  \(route.server ? "server" : "client") \(route.publishes ? "publishes" : "sends") \(route.isMessage ? "" : ":")\(route.root) "
@@ -93,6 +96,14 @@
                     case .bulk: output += "bulk"
                     }
                     if let rate = route.rate { output += " at most every \(value(rate))" }
+                    output += "\n"
+                }
+                output += "}\n"
+            case .projection:
+                output += "projection :\(declaration.name) of :\(declaration.state) as {\n"
+                for taken in declaration.taken {
+                    output += "  " + taken.name
+                    if taken.path.count != 1 || taken.path[0] != taken.name { output += ": " + taken.path.joined(separator: ".") }
                     output += "\n"
                 }
                 output += "}\n"
@@ -401,6 +412,7 @@
             return
         case .handle:
             output += "@" + type.name
+            if !type.projection.isEmpty { output += "(:\(type.projection))" }
             if type.versioned { output += "~" }
             return
         case .map where !type.key.isEmpty:

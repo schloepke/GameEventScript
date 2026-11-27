@@ -43,6 +43,14 @@
     /// no well-formed handle; otherwise its end and parts. A `/` that begins a `//` comment never starts or continues a
     /// part.
     @_spi(Syntax) public static func scan(_ bytes: [UInt8], _ start: Int) -> (end: Int, parts: Parts)? {
+        guard let scanned = scan(bytes, start, allowPin: false) else { return nil }
+        return (scanned.end, scanned.parts)
+    }
+
+    /// Reads a handle like `scan(_:_:)`; with `allowPin`, a `~` that no version follows pins the handle of a catalog
+    /// (specs/Documents.md#references) and `pin` is its offset, otherwise nil.
+    static func scan(_ bytes: [UInt8], _ start: Int, allowPin: Bool) -> (end: Int, parts: Parts, pin: Int?)? {
+        var pin: Int?
         var position = start + 1
         guard position < bytes.count, GesNames.upper(bytes[position]) else { return nil }
         while position < bytes.count && (GesNames.alnum(bytes[position]) || bytes[position] == 95) { position += 1 }
@@ -53,7 +61,9 @@
         var version = Version.none
         if position < bytes.count && bytes[position] == 126 {
             position += 1
-            if position < bytes.count && bytes[position] == 35 {
+            if allowPin && (position == bytes.count || isDelimiter(bytes, position)) {
+                pin = position - 1
+            } else if position < bytes.count && bytes[position] == 35 {
                 position += 1
                 let tagStart = position
                 while position < bytes.count && GesNames.alnum(bytes[position]) { position += 1 }
@@ -82,14 +92,15 @@
             guard let read = key(bytes, &position, isPart: true) else { return nil }
             part = read
         }
-        return (position, Parts(typeName: typeName, id: id, version: version, part: part))
+        return (position, Parts(typeName: typeName, id: id, version: version, part: part), pin)
     }
 
     /// Reads a handle in a document at `start`, which holds `@`. Returns nil when the text there is no well-formed
     /// handle that a document delimiter follows; otherwise its end, its identity (type, id and part, which compare keys)
-    /// and whether a version or a ref follows the id.
-    static func read(_ bytes: [UInt8], _ start: Int) -> (end: Int, identity: [Unicode.Scalar], versioned: Bool)? {
-        guard let scanned = scan(bytes, start), scanned.end == bytes.count || isDelimiter(bytes, scanned.end) else { return nil }
+    /// and whether a version or a ref follows the id. With `allowPin`, a catalog handle may end with a pinning `~` at
+    /// offset `pin`, otherwise nil.
+    static func read(_ bytes: [UInt8], _ start: Int, allowPin: Bool = false) -> (end: Int, identity: [Unicode.Scalar], versioned: Bool, pin: Int?)? {
+        guard let scanned = scan(bytes, start, allowPin: allowPin), scanned.end == bytes.count || isDelimiter(bytes, scanned.end) else { return nil }
         let parts = scanned.parts
         var identity = Array(parts.typeName.unicodeScalars)
         identity.append(":")
@@ -98,7 +109,7 @@
             identity.append("/")
             append(part, to: &identity)
         }
-        return (scanned.end, identity, parts.version != .none)
+        return (scanned.end, identity, parts.version != .none, scanned.pin)
     }
 
     /// Whether a Text id or part may be written without quotes: a nonempty bare run that does not read as an integer
@@ -120,7 +131,7 @@
     }
 
     // A document delimiter ends a handle: whitespace, a separator, a closing bracket, a key colon or a comment.
-    private static func isDelimiter(_ bytes: [UInt8], _ position: Int) -> Bool {
+    static func isDelimiter(_ bytes: [UInt8], _ position: Int) -> Bool {
         switch bytes[position] {
         case 32, 9, 13, 10, 44, 93, 41, 58: return true
         default: return isComment(bytes, position)
@@ -181,6 +192,9 @@
         }
         return nil
     }
+
+    // Whether the byte may start a bare or quoted id.
+    static func isIdStart(_ byte: UInt8) -> Bool { byte == 39 || isBareByte(byte, false) }
 
     private static func isBareByte(_ byte: UInt8, _ isPart: Bool) -> Bool {
         GesNames.alnum(byte) || byte == 46 || byte == 95 || byte == 45 || (isPart && byte == 47)

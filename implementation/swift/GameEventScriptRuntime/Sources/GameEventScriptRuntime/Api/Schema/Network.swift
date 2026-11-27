@@ -65,10 +65,18 @@ public final class GesNetworkOwner: @unchecked Sendable {
     public let side: GesNetworkSide
     /// The owned handle type, which is never composite.
     public let handle: GesHandleType
+    /// The projection of `owns @Unit as :UnitPublic`, the only view of the state the other side reads; nil when it reads
+    /// the full state.
+    public let projection: GesSchema?
+    /// Whether the route is written `sending state`: the owner sends the state the other side reads with each handle
+    /// instead of leaving it to a resolve.
+    public let sendsState: Bool
 
-    init(side: GesNetworkSide, handle: GesHandleType) {
+    init(side: GesNetworkSide, handle: GesHandleType, projection: GesSchema?, sendsState: Bool) {
         self.side = side
         self.handle = handle
+        self.projection = projection
+        self.sendsState = sendsState
     }
 }
 
@@ -117,7 +125,10 @@ public final class GesBoundNetwork: @unchecked Sendable {
         }
         for owner in network.owners {
             text += "owns \(owner.side == .client ? "client" : "server") \(owner.handle.name) \(GesSchemaCanonical.hex(owner.handle.hash)) "
-            text += "\(GesSchemaCanonical.hex(owner.handle.resolved.state.schema!.hash))\n"
+            text += GesSchemaCanonical.hex(owner.handle.resolved.state.schema!.hash)
+            if let projection = owner.projection { text += " as \(projection.name) \(GesSchemaCanonical.hex(projection.hash))" }
+            if owner.sendsState { text += " sending" }
+            text += "\n"
         }
         canonicalForm = text
         hash = GesSchemaCanonical.hash(text)
@@ -142,6 +153,7 @@ extension GesFileScope {
         for syntax in networkSyntaxes {
             var routes: [GesNetworkRoute] = []
             var owners: [GesNetworkOwner] = []
+            var carried: [(syntax: GesSchemaRouteSyntax, root: GesResolvedDeclaration)] = []
             var seen: Set<String> = []
             for route in syntax.routes {
                 if route.owns {
@@ -150,7 +162,15 @@ extension GesFileScope {
                     if owners.contains(where: { $0.handle.name == route.root }) {
                         throw error(Code.duplicateRoute, route.offset, "The network names '@\(route.root)' in two owns routes.")
                     }
-                    owners.append(GesNetworkOwner(side: route.server ? .server : .client, handle: handle.publicType!))
+                    var projection: GesResolvedDeclaration?
+                    if !route.projection.isEmpty {
+                        projection = all[route.projection]
+                        guard let projection else { throw error(Code.unknownName, route.projectionOffset, "':\(route.projection)' is no declared schema.") }
+                        guard let state = handle.state, projection.narrows(state) else {
+                            throw error(Code.invalidProjection, route.projectionOffset, "':\(route.projection)' is no projection of the state of '@\(route.root)'.")
+                        }
+                    }
+                    owners.append(GesNetworkOwner(side: route.server ? .server : .client, handle: handle.publicType!, projection: projection?.schema, sendsState: route.sendingState))
                     continue
                 }
                 let index = routes.count
@@ -197,10 +217,61 @@ extension GesFileScope {
                         rateMicroseconds: rate
                     )
                 )
+                carried.append((route, root))
+            }
+            // A route from the owner of a projected type carries its handles only in the view of the other side.
+            for owner in owners {
+                guard let projection = owner.projection else { continue }
+                for (route, root) in carried where route.server == (owner.side == .server) {
+                    var visited: Set<ObjectIdentifier> = []
+                    try checkView(root, owner.handle.resolved, projection.declaration, route, &visited)
+                }
             }
             owners.sort { Array($0.handle.name.utf8).lexicographicallyPrecedes(Array($1.handle.name.utf8)) }
             networks.append(GesNetwork(name: syntax.name, routes: routes, owners: owners))
         }
+    }
+
+    /// Every handle of the owned type the declaration reaches, at any depth, reads the party's projection or one that
+    /// narrows it; a pinned revision handle is an error, since the version of a projected party's handle is no revision.
+    private func checkView(
+        _ declaration: GesResolvedDeclaration,
+        _ handle: GesResolvedHandle,
+        _ projection: GesResolvedDeclaration,
+        _ route: GesSchemaRouteSyntax,
+        _ visited: inout Set<ObjectIdentifier>
+    ) throws {
+        if !visited.insert(ObjectIdentifier(declaration)).inserted { return }
+        for field in declaration.fields {
+            for type in field.alternatives { try checkView(type, handle, projection, route, &visited) }
+        }
+        for member in declaration.members { try checkView(member, handle, projection, route, &visited) }
+    }
+
+    private func checkView(
+        _ type: GesResolvedType,
+        _ handle: GesResolvedHandle,
+        _ projection: GesResolvedDeclaration,
+        _ route: GesSchemaRouteSyntax,
+        _ visited: inout Set<ObjectIdentifier>
+    ) throws {
+        if type.kind == .handle && type.handle === handle {
+            if type.projection.map({ $0 !== projection && !$0.narrows(projection) }) ?? true {
+                let written = type.projection.map { "(:\($0.name))" } ?? ""
+                throw error(Code.invalidProjection, route.rootOffset, "'\(route.root)' carries '@\(handle.name)\(written)' to a side that reads it only as ':\(projection.name)'.")
+            }
+            if type.versioned && handle.versionKind == .revision {
+                throw error(
+                    Code.invalidHandle,
+                    route.rootOffset,
+                    "'\(route.root)' pins a revision of '@\(handle.name)' to a side that reads it as ':\(projection.name)', which has no revision; leave out '~'."
+                )
+            }
+        }
+        if let element = type.element {
+            for alternative in element { try checkView(alternative, handle, projection, route, &visited) }
+        }
+        if let reference = type.reference { try checkView(reference, handle, projection, route, &visited) }
     }
 
     /// A rate in microseconds, rounded up: a time quantity greater than zero and at most 3600 seconds.

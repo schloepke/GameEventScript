@@ -80,6 +80,13 @@ public enum GesDiagnosticCodes {
     /// of a type without versions, or a union mixing handle and other types.
     public static let validateInvalidHandleUse = "validate.invalidHandleUse"
 
+    /// A projected handle type names no projection of the type's state, projects a composite, stands beside the same type
+    /// without projection in a union, or reads a member that is no field of its projection.
+    public static let validateInvalidProjection = "validate.invalidProjection"
+
+    /// A projected handle passes to a wider view, or `as` converts it to a schema its projection does not narrow.
+    public static let validateHandleWidening = "validate.handleWidening"
+
     /// Defines the compile unsupported construct value.
     public static let compileUnsupportedConstruct = "compile.unsupportedConstruct"
 
@@ -200,4 +207,8 @@ public enum GesDiagnosticCodes {
 
     /// A passed or computed handle version differs from the version the handle carries or from the content hash.
     public static let runtimeHandleVersionMismatch = "runtime.handleVersionMismatch"
+
+    /// A handle resolver answered that the asking party may not see an object; reported to the runtime observer only, the
+    /// read gives `nothing` and the handler continues.
+    public static let runtimeHandleNotVisible = "runtime.handleNotVisible"
 }

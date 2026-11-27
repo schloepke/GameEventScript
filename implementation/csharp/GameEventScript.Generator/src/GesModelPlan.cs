@@ -45,7 +45,7 @@ internal sealed class GesModelPlanValue
     internal bool ClosedTag => Kind == GesModelKind.Tag && Model.Tags.Count > 0;
 }
 
-internal static class GesModelPlanner
+internal static partial class GesModelPlanner
 {
     // The named tag sets the types use, in order of first use, with their members.
     internal static List<(string Name, List<string> Tags)> TagSets(GesModelLayout layout)

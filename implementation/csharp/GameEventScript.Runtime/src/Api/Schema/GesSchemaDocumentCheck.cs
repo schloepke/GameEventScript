@@ -71,15 +71,16 @@ internal sealed class GesSchemaDocumentCheck
     internal static GesDocumentException? Failing(string text, GesDocumentNode root, GesResolvedDeclaration schema, GesSchemaParameters? parameters)
         => Failing(text, root, schema, parameters, out _);
 
-    // The first error, or null with the alternative that held for each union of several.
-    internal static GesDocumentException? Failing(string text, GesDocumentNode root, GesResolvedDeclaration schema, GesSchemaParameters? parameters, out IReadOnlyDictionary<(string Position, GesResolvedType[] Alternatives), GesResolvedType> chosen)
+    // The first error, or null with the alternative that held for each union of several. A missing field of the root is
+    // reported at rootStart: the start of the text for a document, the entry's value for a catalog entry.
+    internal static GesDocumentException? Failing(string text, GesDocumentNode root, GesResolvedDeclaration schema, GesSchemaParameters? parameters, out IReadOnlyDictionary<(string Position, GesResolvedType[] Alternatives), GesResolvedType> chosen, int rootStart = 0)
     {
         if (parameters is not null) GesSchemaBinder.CheckParameters(schema, parameters);
         var check = new GesSchemaDocumentCheck(parameters);
         chosen = check._chosen;
         try
         {
-            check.Fields(root, schema, 0);
+            check.Fields(root, schema, rootStart);
             return null;
         }
         catch (Failure failure)

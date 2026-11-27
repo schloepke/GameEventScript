@@ -48,6 +48,9 @@ class HandleCatalogTests(unittest.TestCase):
             (self.script, {'answers': [{'handle': 'Drone:7', 'missing': True}]}),
             (self.script, {'answers': [{'handle': '@Drone:7', 'missing': True, 'fail': True}]}),
             (self.script, {'answers': [{'handle': '@Drone:7', 'missing': False}]}),
+            (self.script, {'answers': [{'handle': '@Drone:7', 'notVisible': False}]}),
+            (self.script, {'answers': [{'handle': '@Drone:7', 'notVisible': True, 'missing': True}]}),
+            (self.script, {'answers': [{'handle': '@Drone:7', 'notVisible': True, 'version': {'type': ':Number.int64', 'value': '1'}}]}),
             (self.script, {'answers': [{'handle': '@Drone:7', 'fail': True, 'version': {'type': ':Number.int64', 'value': '1'}}]}),
             (self.script, {'answers': [{**answer, 'version': {'type': ':Text', 'value': '1'}}]}),
             (self.compile, {'answers': [answer]}),
@@ -64,6 +67,11 @@ class HandleCatalogTests(unittest.TestCase):
         for case, changes in invalid:
             with self.subTest(changes=changes), self.assertRaises(InvalidDocument):
                 handle_catalog.prepare(self.with_catalog(case, **changes))
+
+    def test_not_visible_answer(self):
+        case = self.with_catalog(self.script, answers=[{'handle': '@Drone:7', 'notVisible': True}])
+        answer = handle_catalog.prepare(case)['answers'][0]
+        self.assertEqual({'handle': '@Drone:7', 'answer': 'notVisible', 'text': None, 'version': None}, answer)
 
     def test_ref_answers_and_resolved_refs(self):
         catalog = handle_catalog.prepare(self.refs)

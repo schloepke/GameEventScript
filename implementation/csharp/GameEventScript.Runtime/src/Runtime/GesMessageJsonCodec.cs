@@ -149,7 +149,11 @@ internal sealed class GesMessageJsonCodec
                 var map = value.MaterializedMap() ?? throw Error();
                 var entries = new GesValue[map.Length];
                 for (var i = 0; i < entries.Length; i++)
-                    entries[i] = Object(("key", Text(map.KeyAt(i))), ("value", Encode(map.ValueAt(i), depth + 1)));
+                {
+                    var key = map.HandleKey(i) is { } handleKey ? EncodeHandle(handleKey, depth + 1) : Text(map.KeyAt(i));
+                    entries[i] = Object(("key", key), ("value", Encode(map.ValueAt(i), depth + 1)));
+                }
+
                 if (value.Kind == Map)
                     return Typed("Map", ("entries", Array(entries)));
                 if (value.CustomTypeName is not { } name || !GesText.IsTypeName(name))
@@ -202,10 +206,55 @@ internal sealed class GesMessageJsonCodec
                 return Typed("Handler", ("name", Text(handler.Name)), ("labels", Array(labels)));
             case Message:
                 return Typed("Message", ("value", EncodeMessage(value.Message ?? throw Error(), depth + 1)));
+            case GesBytecodeTypeKind.Handle:
+                return EncodeHandle(value.Handle ?? throw Error(), depth);
             default:
                 throw Error();
         }
     }
+
+    // A handle object; a ref is never written. A composite carries its root's id and version and its part.
+    private GesValue EncodeHandle(GameEventScript.Api.GesHandle handle, int depth)
+    {
+        if (!handle.Ref.IsNothing)
+            throw Error();
+        var fields = new List<(string, GesValue)> { ("name", Text(handle.TypeName)), ("id", Encode(handle.Id, depth + 1)) };
+        if (handle.IsComposite)
+            fields.Add(("part", Encode(handle.Part, depth + 1)));
+        if (handle.HasVersion)
+            fields.Add(("version", Encode(handle.Version, depth + 1)));
+        return Typed("Handle", fields.ToArray());
+    }
+
+    private GameEventScript.Api.GesHandle DecodeHandle(GesValue value, int depth)
+    {
+        var hasPart = value.AsMap()?.ContainsKey("part") == true;
+        var hasVersion = value.AsMap()?.ContainsKey("version") == true;
+        var names = new List<string> { "type", "name", "id" };
+        if (hasPart)
+            names.Add("part");
+        if (hasVersion)
+            names.Add("version");
+        Fields(value, names.ToArray());
+        var name = String(Get(value, "name"));
+        if (!GesText.IsTypeName(name))
+            throw Error();
+        var id = HandleKey(Decode(Get(value, "id"), depth + 1));
+        var version = hasVersion ? Decode(Get(value, "version"), depth + 1) : default;
+        try
+        {
+            var handle = GameEventScript.Api.GesHandle.Create(name, id, version);
+            return hasPart ? GameEventScript.Api.GesHandle.CreateComposite(name, handle, HandleKey(Decode(Get(value, "part"), depth + 1))) : handle;
+        }
+        catch (ArgumentException)
+        {
+            throw Error();
+        }
+    }
+
+    // An id or part: a unitless Number with integer storage or a Text.
+    private static GesValue HandleKey(GesValue key)
+        => key.Kind == GesBytecodeTypeKind.Text || (key.Kind == Integer && key.Unit == GesQuantityUnit.UnitNone) ? key : throw Error();
 
     internal GesValue Decode(GesValue value, int depth)
     {
@@ -259,13 +308,36 @@ internal sealed class GesMessageJsonCodec
                 var keys = new string[entries.Length];
                 var fields = new GesValue[entries.Length];
                 var seen = new HashSet<string>(StringComparer.Ordinal);
+                GesValue[]? handleKeys = null;
+                HashSet<GameEventScript.Api.GesHandle>? seenHandles = null;
                 for (var i = 0; i < entries.Length; i++)
                 {
                     Fields(entries[i], "key", "value");
-                    keys[i] = String(Get(entries[i], "key"));
-                    if (!seen.Add(keys[i]))
-                        throw Error();
+                    var entryKey = Get(entries[i], "key");
+                    if (type == "Map" && entryKey.Kind == Map)
+                    {
+                        // A handle key has no version (specs/MessageFormat.md#value-objects).
+                        var handle = DecodeHandle(entryKey, depth + 1);
+                        if (handle.HasVersion || !(seenHandles ??= []).Add(handle))
+                            throw Error();
+                        (handleKeys ??= new GesValue[entries.Length])[i] = GesValue.GesHandle(handle);
+                    }
+                    else
+                    {
+                        keys[i] = String(entryKey);
+                        if (!seen.Add(keys[i]))
+                            throw Error();
+                    }
+
                     fields[i] = Decode(Get(entries[i], "value"), depth + 1);
+                }
+
+                if (handleKeys is not null)
+                {
+                    for (var i = 0; i < keys.Length; i++)
+                        if (handleKeys[i].IsNothing)
+                            handleKeys[i] = Text(keys[i]);
+                    return GesValue.GesMapOfKeys(handleKeys, fields);
                 }
 
                 var map = new GesValueMap(keys, fields, keys.Length);
@@ -367,6 +439,8 @@ internal sealed class GesMessageJsonCodec
             case "Message":
                 Fields(value, "type", "value");
                 return GesValue.GesMessage(DecodeMessage(Get(value, "value"), depth + 1));
+            case "Handle":
+                return GesValue.GesHandle(DecodeHandle(value, depth));
             default:
                 throw Error();
         }

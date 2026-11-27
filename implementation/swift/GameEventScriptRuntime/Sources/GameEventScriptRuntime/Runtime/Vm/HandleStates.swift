@@ -14,53 +14,122 @@ final class GesHandleBinding {
     }
 }
 
-// A resolved handle state: the normalized state Record, or Nothing for a missing object, and the object's version.
+// A resolved handle state: the normalized state Record of the read view, or Nothing for a missing or not visible object,
+// and the view's version. A projected read answered with the full state also keeps that state and its version, so the
+// cache serves later reads of other views.
 struct GesHandleState {
     let state: GesValue
     let version: GesValue
+    var notVisible = false
+    var full = GesValue.nothing
+    var fullVersion = GesValue.nothing
 }
 
 // Resolves handle states for the VM and refs for the host (specs/HostRuntime.md#handles).
 enum GesHandleStates {
-    // Asks the type's resolver for the state, checks it against the state schema with defaults applied and checks the
-    // versions. Failures throw a runtime fault that ends the handler.
-    static func resolve(_ binding: GesHandleBinding, _ call: GesHandleResolveCall, _ handle: GesHandle) throws -> GesHandleState {
-        let symbol = handle.description
-        let answer: GesHandleResolveCall.AnswerKind
-        let record: GesValue
-        let text: String?
-        let passed: GesValue
-        call.begin(handle, binding.type)
+    // Asks the type's resolver for the state of the handle's view, checks it against the schema it names and the view,
+    // with defaults applied, and checks the versions. Failures throw a runtime fault that ends the handler.
+    static func resolve(_ binding: GesHandleBinding, _ call: GesHandleResolveCall, _ handle: GesHandle, _ projection: GesSchema?, _ party: Int) throws -> GesHandleState {
+        call.begin(handle, binding.type, projection, party)
         defer { call.end() }
         do {
             try binding.resolver.resolve(call)
-            answer = call.answer
-            record = call.record
-            text = call.text
-            passed = call.version
         } catch let fault as any GesFatalRuntimeError {
             throw fault
         } catch {
-            throw fault(GesDiagnosticCodes.runtimeHandleResolveFailed, "The resolver of @\(handle.typeName) failed.", symbol, error)
+            throw fault(GesDiagnosticCodes.runtimeHandleResolveFailed, "The resolver of @\(handle.typeName) failed.", handle.description, error)
         }
+        return try check(binding.type, call)
+    }
 
+    // Asks the resolver for all calls of the batch at once; the caller checks each call and ends the batch.
+    static func resolveMany(_ binding: GesHandleBinding, _ batch: GesHandleResolveBatch) throws {
+        do {
+            try binding.resolver.resolveMany(batch)
+        } catch let fault as any GesFatalRuntimeError {
+            throw fault
+        } catch {
+            let first = batch[0].handle
+            throw fault(GesDiagnosticCodes.runtimeHandleResolveFailed, "The resolver of @\(first.typeName) failed.", first.description, error)
+        }
+    }
+
+    // Checks the answer of one call while it is still valid.
+    static func check(_ type: GesHandleType, _ call: GesHandleResolveCall) throws -> GesHandleState {
+        let handle = call.handle
+        let symbol = handle.description
+        let answer = call.answer
+        let passed = call.version
         if answer == .none || answer == .several {
             throw fault(GesDiagnosticCodes.runtimeInvalidHandleState, "The resolver of @\(handle.typeName) must give exactly one answer.", symbol)
         }
-        let type = binding.type
         if !passed.isNothing && !isVersionOf(type.version, passed) {
             throw fault(GesDiagnosticCodes.runtimeInvalidHandleState, "The resolver of @\(handle.typeName) passed no valid version of its type.", symbol)
         }
-        if answer == .missing { return GesHandleState(state: .nothing, version: try resolved(type, handle, passed, symbol, required: false)) }
-        let state = try checkedState(type, answer == .document ? text! : try print(type, record, symbol), symbol)
+        if answer == .missing || answer == .notVisible {
+            return GesHandleState(state: .nothing, version: try resolved(type, handle, passed, symbol, required: false), notVisible: answer == .notVisible)
+        }
+
+        let projection = call.projection
+        let text = answer == .document ? call.text! : try print(type, projection, call.record, symbol)
+        let (delivered, state) = try checkedState(type, projection, text, symbol)
+        let view = projection?.declaration ?? type.resolved.state!
+        let projected = delivered === view ? state : try project(view, state, symbol)
+        let full = delivered === type.resolved.state && projection != nil ? state : .nothing
         if type.version == .contentHash {
-            let computed = GesValue.bytes(try GesSchemaValues.contentHash(type, state: state).bytes)
-            if !passed.isNothing && !versionEquals(passed, computed) || handle.hasVersion && !versionEquals(handle.version, computed) {
+            let computed = try hash(type, delivered, state)
+            if !passed.isNothing && !versionEquals(passed, computed) {
                 throw fault(GesDiagnosticCodes.runtimeHandleVersionMismatch, "The content hash of \(symbol) differs.", symbol)
             }
-            return GesHandleState(state: state, version: computed)
+            let viewVersion = delivered === view ? computed : try hash(type, view, projected)
+            if handle.hasVersion && !versionEquals(handle.version, viewVersion) {
+                throw fault(GesDiagnosticCodes.runtimeHandleVersionMismatch, "The content hash of \(symbol) differs.", symbol)
+            }
+            return GesHandleState(state: projected, version: viewVersion, full: full, fullVersion: computed)
         }
-        return GesHandleState(state: state, version: try resolved(type, handle, passed, symbol, required: true))
+
+        let version = try resolved(type, handle, passed, symbol, required: true)
+        return GesHandleState(state: projected, version: version, full: full, fullVersion: version)
+    }
+
+    // The state of a narrower view derived from a cached wider state, with that view's version. A content hash the
+    // handle carries must be the view's.
+    static func narrow(_ type: GesHandleType, _ handle: GesHandle, _ projection: GesSchema, _ wider: GesHandleState) throws -> GesHandleState {
+        if wider.state.isNothing { return GesHandleState(state: .nothing, version: wider.version, notVisible: wider.notVisible) }
+        let symbol = handle.description
+        let projected = try project(projection.declaration, wider.state, symbol)
+        if type.version != .contentHash { return GesHandleState(state: projected, version: wider.version) }
+        let version = try hash(type, projection.declaration, projected)
+        if handle.hasVersion && !versionEquals(handle.version, version) {
+            throw fault(GesDiagnosticCodes.runtimeHandleVersionMismatch, "The content hash of \(symbol) differs.", symbol)
+        }
+        return GesHandleState(state: projected, version: version)
+    }
+
+    private static func hash(_ type: GesHandleType, _ declaration: GesResolvedDeclaration, _ state: GesValue) throws -> GesValue {
+        GesValue.bytes(try GesSchemaValues.projectedHash(type, declaration, state).bytes)
+    }
+
+    private static func project(_ view: GesResolvedDeclaration, _ state: GesValue, _ symbol: String) throws -> GesValue {
+        do {
+            return try GesSchemaValues.project(view, state)
+        } catch let error as GesWireError {
+            throw fault(GesDiagnosticCodes.runtimeInvalidHandleState, "The state of \(symbol) does not fit :\(view.name).", symbol, error)
+        }
+    }
+
+    // The schema an answer may name: the state schema, the read projection, or a projection between them.
+    private static func answerDeclaration(_ type: GesHandleType, _ projection: GesSchema?, _ name: String?) -> GesResolvedDeclaration? {
+        guard let name else { return nil }
+        if GesText.scalarEqual(name, type.stateName) { return type.resolved.state }
+        guard let projection else { return nil }
+        if GesText.scalarEqual(name, projection.name) { return projection.declaration }
+        if let between = type.findProjection(name), projection.declaration.narrows(between.declaration) { return between.declaration }
+        return nil
+    }
+
+    private static func expected(_ type: GesHandleType, _ projection: GesSchema?) -> String {
+        projection.map { ":\(type.stateName) or :\($0.name)" } ?? ":\(type.stateName)"
     }
 
     // The ref of a handle turned into its version by the type's resolver, or nil when the resolver knows no such ref.
@@ -121,35 +190,34 @@ enum GesHandleStates {
     }
 
     // A Record answer as document text, so it is checked exactly like a document answer.
-    private static func print(_ type: GesHandleType, _ record: GesValue, _ symbol: String) throws -> String {
-        guard record.kind == .record, let name = record.customTypeName, GesText.scalarEqual(name, type.stateName) else {
-            throw fault(GesDiagnosticCodes.runtimeInvalidHandleState, "The state of \(symbol) is no :\(type.stateName) Record.", symbol)
+    private static func print(_ type: GesHandleType, _ projection: GesSchema?, _ record: GesValue, _ symbol: String) throws -> String {
+        guard record.kind == .record, answerDeclaration(type, projection, record.customTypeName) != nil else {
+            throw fault(GesDiagnosticCodes.runtimeInvalidHandleState, "The state of \(symbol) is no \(expected(type, projection)) Record.", symbol)
         }
         do {
             return try GesDocument(record).text()
         } catch {
-            throw fault(GesDiagnosticCodes.runtimeInvalidHandleState, "The state of \(symbol) is no valid :\(type.stateName) Record.", symbol, error)
+            throw fault(GesDiagnosticCodes.runtimeInvalidHandleState, "The state of \(symbol) is no valid :\(record.customTypeName!) Record.", symbol, error)
         }
     }
 
-    // The document read and checked against the state schema, as a Record with defaults applied.
-    private static func checkedState(_ type: GesHandleType, _ text: String, _ symbol: String) throws -> GesValue {
-        let declaration: GesResolvedDeclaration = type.resolved.state
+    // The document read and checked against the schema it names, as a Record with defaults applied, with that schema.
+    private static func checkedState(_ type: GesHandleType, _ projection: GesSchema?, _ text: String, _ symbol: String) throws -> (GesResolvedDeclaration, GesValue) {
         do {
             let syntax = GesDocumentReader.read(text)
             let value = try GesDocumentReading.read(syntax).0
             var named: String?
             if case .type(let name) = syntax.schema { named = name }
-            guard let named, GesText.scalarEqual(named, type.stateName) else {
-                throw fault(GesDiagnosticCodes.runtimeInvalidHandleState, "The state document of \(symbol) does not name :\(type.stateName).", symbol)
+            guard let declaration = answerDeclaration(type, projection, named) else {
+                throw fault(GesDiagnosticCodes.runtimeInvalidHandleState, "The state document of \(symbol) does not name \(expected(type, projection)).", symbol)
             }
             let (failure, chosen) = try GesSchemaDocumentCheck.choosing(syntax, declaration, nil)
-            if let failure { throw fault(GesDiagnosticCodes.runtimeInvalidHandleState, "The state of \(symbol) does not fit :\(type.stateName).", symbol, failure) }
-            return try GesSchemaValues.normalizeState(declaration, GesSchemaValues.documentShapes(declaration, value, chosen: chosen), "", type.declarations)
+            if let failure { throw fault(GesDiagnosticCodes.runtimeInvalidHandleState, "The state of \(symbol) does not fit :\(declaration.name).", symbol, failure) }
+            return (declaration, try GesSchemaValues.normalizeState(declaration, GesSchemaValues.documentShapes(declaration, value, chosen: chosen), "", type.declarations))
         } catch let error as GesDocumentError {
             throw fault(GesDiagnosticCodes.runtimeInvalidHandleState, "The state document of \(symbol) does not read.", symbol, error)
         } catch let error as GesWireError {
-            throw fault(GesDiagnosticCodes.runtimeInvalidHandleState, "The state of \(symbol) does not fit :\(type.stateName).", symbol, error)
+            throw fault(GesDiagnosticCodes.runtimeInvalidHandleState, "The state of \(symbol) does not fit \(expected(type, projection)).", symbol, error)
         }
     }
 

@@ -223,7 +223,10 @@ final class GesMessageJsonCodec {
         case .list: return Self.typed("List", [("items", .list(try value.asList.map { try encode($0, depth + 1) }))])
         case .map, .record, .external:
             guard let map = try value.materializedMap() else { throw GesJson.error() }
-            let entries = try map.entries.map { entry in GesJson.object([("key", .text(entry.key)), ("value", try encode(entry.value, depth + 1))]) }
+            let entries = try (0..<map.length).map { index in
+                let key = try map.handleKey(at: index).map { try encodeHandle($0, depth + 1) } ?? .text(map.key(at: index))
+                return GesJson.object([("key", key), ("value", try encode(map.value(at: index), depth + 1))])
+            }
             if value.kind == .map { return Self.typed("Map", [("entries", .list(entries))]) }
             guard let name = value.customTypeName, GesNames.type(name) else { throw GesJson.error() }
             return Self.typed("Record", [("name", .text(name)), ("entries", .list(entries))])
@@ -250,8 +253,39 @@ final class GesMessageJsonCodec {
             _ = try Self.messageName(.text(signature.name))
             return Self.typed("Handler", [("name", .text(signature.name)), ("labels", .list(signature.parameters.map(GesValue.text)))])
         case .message: return Self.typed("Message", [("value", try encodeMessage(value.messageValue!, depth + 1))])
-        case .handle: throw GesJson.error()
+        case .handle: return try encodeHandle(value.handleValue!, depth)
         }
+    }
+
+    // A handle object; a ref is never written. A composite carries its root's id and version and its part.
+    func encodeHandle(_ handle: GesHandle, _ depth: Int) throws -> GesValue {
+        guard handle.ref.isNothing else { throw GesJson.error() }
+        var fields: [(String, GesValue)] = [("name", .text(handle.typeName)), ("id", try encode(handle.id, depth + 1))]
+        if handle.isComposite { fields.append(("part", try encode(handle.part, depth + 1))) }
+        if handle.hasVersion { fields.append(("version", try encode(handle.version, depth + 1))) }
+        return Self.typed("Handle", fields)
+    }
+
+    func decodeHandle(_ value: GesValue, _ depth: Int) throws -> GesHandle {
+        let hasPart = value.asMap?.get("part") != nil
+        let hasVersion = value.asMap?.get("version") != nil
+        try Self.fields(value, ["type", "name", "id"] + (hasPart ? ["part"] : []) + (hasVersion ? ["version"] : []))
+        let name = try Self.string(Self.get(value, "name"))
+        guard GesNames.type(name) else { throw GesJson.error() }
+        let id = try Self.handleKey(decode(Self.get(value, "id"), depth + 1))
+        let version = hasVersion ? try decode(Self.get(value, "version"), depth + 1) : .nothing
+        do {
+            let handle = try GesHandle(typeName: name, id: id, version: version)
+            return hasPart ? try GesHandle(typeName: name, root: handle, part: Self.handleKey(decode(Self.get(value, "part"), depth + 1))) : handle
+        } catch is GesApiError {
+            throw GesJson.error()
+        }
+    }
+
+    // An id or part: a unitless Number with integer storage or a Text.
+    static func handleKey(_ key: GesValue) throws -> GesValue {
+        guard key.kind == .text || (key.kind == .integer && !key.hasUnit) else { throw GesJson.error() }
+        return key
     }
 
     func decode(_ value: GesValue, _ depth: Int) throws -> GesValue {
@@ -295,12 +329,26 @@ final class GesMessageJsonCodec {
         case "Map", "Record":
             if type == "Map" { try fields("entries") } else { try fields("entries", "name") }
             var seen = Set<GesValue>()
+            var seenHandles = Set<GesHandle>()
+            var keys: [GesValue] = []
+            var hasHandleKeys = false
             let entries = try Self.list(get("entries")).map { item -> GesMapEntry in
                 try Self.fields(item, ["key", "value"])
-                let key = try Self.string(Self.get(item, "key"))
+                let entryKey = try Self.get(item, "key")
+                if type == "Map" && entryKey.kind == .map {
+                    // A handle key has no version (specs/MessageFormat.md#value-objects).
+                    let handle = try decodeHandle(entryKey, depth + 1)
+                    if handle.hasVersion || !seenHandles.insert(handle).inserted { throw GesJson.error() }
+                    keys.append(.handle(handle))
+                    hasHandleKeys = true
+                    return .init(key: handle.description, value: try decode(Self.get(item, "value"), depth + 1))
+                }
+                let key = try Self.string(entryKey)
                 if !seen.insert(.text(key)).inserted { throw GesJson.error() }
+                keys.append(.text(key))
                 return .init(key: key, value: try decode(Self.get(item, "value"), depth + 1))
             }
+            if hasHandleKeys { return try .map(keyValues: keys, values: entries.map(\.value)) }
             if type == "Map" { return .map(entries) }
             let name = try Self.string(get("name"))
             if !GesNames.type(name) { throw GesJson.error() }
@@ -349,6 +397,7 @@ final class GesMessageJsonCodec {
         case "Message":
             try fields("value")
             return .message(try decodeMessage(get("value"), depth + 1))
+        case "Handle": return .handle(try decodeHandle(value, depth))
         default: throw GesJson.error()
         }
     }

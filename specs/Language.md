@@ -2034,7 +2034,7 @@ Its type is declared in a schema source as a [handle type](Schemas.md#handles) a
 [handle catalog](PublicApi.md#handle-api); scripts write it with `@`, in a namespace of its own beside `:Types` and
 messages. A handle holds the identity of its object and, optionally, a version. It is never a Record: a script has no
 handle literal, no constructor and no cast to `@Name`; handles arrive in messages, documents, state, extension results
-and Map keys.
+and Map keys. A [catalog](Documents.md#catalogs) is the host's source of handles for content written by hand.
 
 ```ges
 on Spotted(target as @Target, by as @Drone | @Unit_Probe) {
@@ -2073,6 +2073,53 @@ name only Text keys. `[:Map]` checks treat both alike.
 
 **Timers.** A [named timer](#named-timers-and-heartbeats) may be named by a handle, so `emit after 5s named target
 Forget(target: target)` keeps one timer per target. A handle name differs from every Text name.
+
+#### Projections
+
+> **Since: Unreleased**
+
+A [projection](Schemas.md#projections) of a handle type's state names the part of the state a handle may read.
+`@Unit(:UnitDisplay)` is a handle of `@Unit` through which a script reads only `:UnitDisplay`, and `@Unit(:UnitDisplay)~`
+one that carries the version of that projection. `@Unit` is the full view.
+
+```ges
+on Listed(units as @Unit(:UnitDisplay)) {
+  emit Show(name: units.name, icon: units.icon)
+  let display be units as :UnitDisplay
+}
+```
+
+- **Types.** A projected handle type stands wherever `@Name` stands in a parameter or field type, also in a union
+  `@Unit(:UnitDisplay) | @Drone`. A name that is no projection of the type's state, a projection of a composite, and
+  `@Name` beside `@Name(:P)` in one union are `validate.invalidProjection`.
+- **Members.** `id`, `version` and `root` read the identity as for `@Unit`, and `version` is the projection's version.
+  Any other member must be a field of the projection: `units.mass` is `validate.invalidProjection` although `:Composition`
+  has `mass`. `h as :P` gives the projected state as a Record named `P`, and so does `h as :Q` for a projection `:Q` that
+  narrows `:P`.
+- **Narrowing.** A handle converts to a narrower view where a parameter or field declares one: `@Unit` and
+  `@Unit(:UnitDisplay)` both pass to `@Unit(:UnitLabel)`, since `:UnitLabel` narrows `:UnitDisplay`. An unpinned target
+  drops the carried version, since it named the wider state. A pinned target `@Unit(:UnitLabel)~` computes the
+  projection's version: the host reads the wider state and hashes the projection for a `:ContentHash` type; a revision
+  or owner's hash stays, as it versions the whole object. A value whose state cannot be read passes as `nothing`.
+- **No widening.** A script never reads more than its view, also not with `as`: passing `@Unit(:UnitDisplay)` to
+  `@Unit` or to a projection that does not narrow `:UnitDisplay`, and `h as :Composition` on it, are
+  `validate.handleWidening`. Only the object's owner sees the whole state, so a script on a server that runs a bot
+  with a projected view cannot see past it. A value whose static view is unknown, such as an untyped binding, is checked
+  at run time: a handle that carries a projection never passes to a wider view and reads as `nothing` there. For a
+  union `@Unit(:UnitLabel) | @Squad(:UnitDisplay)`, `h as :UnitDisplay` is accepted when one alternative can read
+  `:UnitDisplay`; it is `validate.handleWidening` only when every alternative with that projection would widen, and at
+  run time an alternative that cannot read it gives `nothing`. A member read on an expression of a projected type, such
+  as `(item as @Unit(:UnitDisplay)).name`, reads through that view.
+- **Identity.** The projection is part of the static type, not of the value's identity: a projected handle equals and
+  orders like the same handle without projection, is the same Map key and timer name, and writes the same
+  [text form](#handle-text-form) and wire form.
+
+`c as :UnitDisplay` converts a plain value too: a Record of `:Composition`, or of any schema `:UnitDisplay` narrows,
+becomes a Record named `UnitDisplay` with the taken fields read along their paths; any other value gives `nothing`. The
+conversion belongs to the schema and calls no resolver. A script knows the projections of the handle types the
+[handle catalog](PublicApi.md#handle-api) declares, and the host knows a schema only through a registered handle type,
+so the conversion links as a read of the first handle type with that projection: without its resolver the Program fails
+with `link.missingHandleResolver`.
 
 #### Handle text form
 

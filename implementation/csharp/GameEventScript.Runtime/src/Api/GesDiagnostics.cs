@@ -87,6 +87,13 @@ public static class GesDiagnosticCodes
     /// <c>h.version</c> of a type without versions, or a union mixing handle and other types.
     /// </summary>
     public const string ValidateInvalidHandleUse = "validate.invalidHandleUse";
+    /// <summary>
+    /// A projected handle type names no projection of the type's state, projects a composite, stands beside the same type
+    /// without projection in a union, or reads a member that is no field of its projection.
+    /// </summary>
+    public const string ValidateInvalidProjection = "validate.invalidProjection";
+    /// <summary>A projected handle passes to a wider view, or <c>as</c> converts it to a schema its projection does not narrow.</summary>
+    public const string ValidateHandleWidening = "validate.handleWidening";
     /// <summary>The compiler cannot lower a construct to bytecode.</summary>
     public const string CompileUnsupportedConstruct = "compile.unsupportedConstruct";
     /// <summary>A lowered intrinsic or handler form has the wrong number of arguments or parameters.</summary>
@@ -178,6 +185,11 @@ public static class GesDiagnosticCodes
     public const string RuntimeInvalidHandleState = "runtime.invalidHandleState";
     /// <summary>A passed or computed handle version differs from the version the handle carries or from the content hash.</summary>
     public const string RuntimeHandleVersionMismatch = "runtime.handleVersionMismatch";
+    /// <summary>
+    /// A handle resolver answered that the asking party may not see an object; reported to the runtime observer only, the
+    /// read gives <c>nothing</c> and the handler continues.
+    /// </summary>
+    public const string RuntimeHandleNotVisible = "runtime.handleNotVisible";
 
     /// <summary>
     /// The reserved code prefix for internally raised runtime diagnostics. Codes

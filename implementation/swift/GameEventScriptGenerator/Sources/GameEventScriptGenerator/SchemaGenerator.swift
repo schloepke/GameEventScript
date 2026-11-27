@@ -61,6 +61,7 @@ public enum GesSchemaGenerator {
     private static func wire(_ set: GesSchemaSet, _ roots: [String], _ parameters: GesSchemaParameters, _ options: GesSchemaGenerateOptions) throws -> (document: GesCodeDocument, layout: GesSchemaLayout) {
         if options.bindings { throw GesGeneratorError(GesGeneratorError.usage, "Bindings concern model code; wire code converts through Values.") }
         if options.documents { throw GesGeneratorError(GesGeneratorError.usage, "Documents concern model code; wire code converts through Values.") }
+        if options.catalogs { throw GesGeneratorError(GesGeneratorError.usage, "Catalogs concern model code; wire code converts through Values.") }
         // Both namespaces are checked first, so that an invalid one reports itself rather than a collision.
         let keywords = options.language == .csharp ? GesCSharpEmitter.keywords : GesSwiftEmitter.keywords
         let wireSpace = try GesSchemaPlanner.namespace(options.namespace, keywords)
@@ -192,9 +193,12 @@ public enum GesSchemaGenerator {
             throw GesGeneratorError(GesGeneratorError.usage, "Models concern wire code, which shares their types; models do not name another namespace.")
         }
         let layout = try GesModelLayoutBuilder.build(set, roots: roots)
-        // Reading documents converts through the plain values.
+        // Reading documents converts through the plain values, and catalogs read documents.
         var effective = options
-        if options.documents { effective.values = true }
+        if options.documents || options.catalogs {
+            effective.values = true
+            effective.documents = true
+        }
         let document = effective.language == .csharp ? try GesCSharpModelEmitter.emit(layout, effective) : try GesSwiftModelEmitter.emit(layout, effective, extended: extended)
         return (document, layout)
     }
@@ -241,9 +245,10 @@ public enum GesSchemaGenerator {
         json.string("namespace", options.namespace)
         json.string("access", options.access == .public ? "public" : "internal")
         // Document reading includes the value conversions, so the manifest names what the files contain.
-        json.boolean("values", options.values || options.documents)
+        json.boolean("values", options.values || options.documents || options.catalogs)
         json.boolean("bindings", options.bindings)
-        if options.documents { json.boolean("documents", true) }
+        if options.documents || options.catalogs { json.boolean("documents", true) }
+        if options.catalogs { json.boolean("catalogs", true) }
         json.boolean("checkedExclusivity", options.checkedExclusivity)
         if let extended = options.extendNamespace { json.string("extendNamespace", extended) }
         if let schemaSet = options.schemaSet { json.string("schemaSet", schemaSet) }

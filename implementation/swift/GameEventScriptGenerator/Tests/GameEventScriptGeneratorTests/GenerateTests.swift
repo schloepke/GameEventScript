@@ -535,4 +535,43 @@ final class GenerateTests: XCTestCase {
         XCTAssertEqual(documentFiles, try GesSchemaGenerator.generateModelFiles(set, roots: ["S"], options: both))
         XCTAssertTrue(try XCTUnwrap(documentFiles.last).text.contains("\"values\": true"))
     }
+
+    private func catalogs(_ language: GesSchemaLanguage) -> GesSchemaGenerateOptions {
+        GesSchemaGenerateOptions(language: language, namespace: "Names", access: .internal, catalogs: true)
+    }
+
+    func testCatalogNamesCollideWithNoTopLevelType() throws {
+        // A dependency parameter named roots, a catalog named like a top-level type and a state type named Entry.
+        let sources = [
+            "model(catalog) schema :Roots as { name: :Text max 8 }\nhandle @Roots of :Roots as { id: :Text max 8, version: :ContentHash }\n"
+                + "model(catalog) schema :Unit as { roots: @Roots }\nhandle @Unit of :Unit as { id: :Text max 8, version: :ContentHash }\n",
+            "model(catalog) schema :Unit as { name: :Text max 8 }\nhandle @Unit of :Unit as { id: :Text max 8, version: :ContentHash }\n"
+                + "model(catalog) schema :UnitCatalog as { name: :Text max 8 }\n",
+            "model(catalog) schema :Entry as { name: :Text max 8 }\nhandle @Entry of :Entry as { id: :Text max 8, version: :ContentHash }\n",
+        ]
+        for source in sources {
+            let set = try GesSchemaSet(parsing: source)
+            for language in [GesSchemaLanguage.csharp, .swift] {
+                XCTAssertEqual(code { try GesSchemaGenerator.generateModels(set, roots: GesSchemaGenerator.modelRoots(set, group: "catalog"), options: catalogs(language)) }, "generate.nameCollision")
+            }
+        }
+    }
+
+    func testHandleTypesWithoutAModelCatalogGenerateNone() throws {
+        // A Number id, a composite and a state that is no model root generate no catalog.
+        let set = try GesSchemaSet(
+            parsing: "model(catalog) schema :Contact as { label: :Text max 8 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 9, version: :Nothing }\n"
+                + "handle @Slot of :Contact composite @Target as { part: :Text max 8 }\nschema :Other as { label: :Text max 8 }\n"
+                + "handle @Other of :Other as { id: :Text max 8, version: :Nothing }\n"
+        )
+        for language in [GesSchemaLanguage.csharp, .swift] {
+            let generated = try GesSchemaGenerator.generateModels(set, roots: GesSchemaGenerator.modelRoots(set, group: "catalog"), options: catalogs(language))
+            XCTAssertFalse(generated.contains("Catalog: GesHandleResolver") || generated.contains("Catalog : IGesHandleResolver"))
+        }
+    }
+
+    func testWireCodeTakesNoCatalogs() throws {
+        let set = try GesSchemaSet(parsing: "model(catalog) schema :Unit as { name: :Text max 8 }\nhandle @Unit of :Unit as { id: :Text max 8, version: :ContentHash }\n")
+        XCTAssertEqual(code { try GesSchemaGenerator.generate(set, roots: ["Unit"], parameters: GesSchemaParameters(), options: catalogs(.swift)) }, "generate.usage")
+    }
 }

@@ -71,7 +71,7 @@ messages Combat as (Hit, Died)
 ### Grammar
 
 ```text
-source      = { constant | parameter | tagsdecl | network | handle | "abstract" schema | [ roles ] ( [ packed ] schema | message | messages ) }
+source      = { constant | parameter | tagsdecl | network | handle | "abstract" schema | [ roles ] ( [ packed ] schema | projection | message | messages ) }
 packed      = "packed" [ "(" ( "8" | "16" | "32" | "64" ) ")" ]
 tagsdecl    = "tags" ":" TypeName "as" tagset
 roles       = role [ role ]
@@ -80,6 +80,8 @@ constant    = "constant" "$" ConstantName "be" literal
 parameter   = "parameter" LowerName ":" ( ":Number" | ":Percentage" | quantity )
 schema      = "schema" ":" TypeName "as" "{" { field | let | with } "}"
 with        = "with" ":" TypeName [ "all" "optional" ] [ "without" "(" LowerName { "," LowerName } ")" ]
+projection  = "projection" ":" TypeName "of" ":" TypeName "as" "{" [ taken { sep taken } [ sep ] ] "}"
+taken       = LowerName [ ":" LowerName { "." LowerName } ]
 let         = "let" LowerName "be" ( literal | "$" ConstantName )
 message     = "message" MessageName "(" [ argument { "," argument } ] ")" [ "tags" tagset ]
 messages    = "messages" MessageName [ "(" argument { "," argument } ")" ] "as" "(" MessageName { "," MessageName } ")"
@@ -97,7 +99,7 @@ type        = ":Boolean"
             | ":List" [ "(" union ")" [ "max" maximum ] [ "depth" depth ] ]
             | ":" TypeName
             | ":Dice" [ "max" maximum ] constraints
-            | "@" TypeName [ "~" ]
+            | "@" TypeName [ "(" ":" TypeName ")" ] [ "~" ]
             | ":Map" "(" "@" TypeName ( "→" | "->" ) union ")" [ "max" maximum ]
             | ":Map" | ":Range" | ":Series" | ":Message" | ":Handler" | ":Nothing"
 numeric     = ( ":Number" | ":Percentage" | quantity ) constraints
@@ -118,8 +120,9 @@ entry       = LowerName ":" ( literal | "$" ConstantName | "true" | "false" | "#
 tagset      = "(" "#" TagName { "," "#" TagName } ")"
 network     = "network" ":" TypeName "as" "{" route { route } "}"
 route       = ( "client" | "server" ) ( ( "sends" | "publishes" ) ( ":" TypeName | MessageName )
-              ( "reliable" | "latest" | "bulk" ) [ "at" "most" "every" value ] | "owns" "@" TypeName )
-handle      = "handle" "@" TypeName "of" ":" TypeName
+              ( "reliable" | "latest" | "bulk" ) [ "at" "most" "every" value ]
+              | "owns" "@" TypeName [ "as" ":" TypeName ] [ "sending" "state" ] )
+handle      = "handle" "@" TypeName "of" ( ":" TypeName | ":Catalog" "(" "@" TypeName ")" )
               ( "as" "{" "id" ":" handleid sep "version" ":" version [ sep ] "}"
               | "composite" "@" TypeName "as" "{" "part" ":" handleid [ sep ] "}" )
 handleid    = ":Number" "integer" "between" bound "and" bound | ":Text" "max" integer
@@ -257,6 +260,8 @@ A source is a sequence of declarations in any order; a reference may come before
   hash. A network is no type; only code generation takes it as a root. *Since: 0.6.0.*
 - **`handle @Name of :State as { ... }`** declares a [handle type](#handles): a reference to an object that lives
   outside the host, with the schema of its state. *Since: Unreleased.*
+- **`projection :Name of :Source as { ... }`** declares a [projection](#projections): a schema of fields selected from
+  another schema, through which a handle can be read. *Since: Unreleased.*
 
 Schemas, tag sets and networks share one namespace across all sources, the data namespace; messages and message sets
 share the other, the message namespace. Handle types, always written with `@`, have a third, so `handle @Unit of :Unit`
@@ -791,6 +796,16 @@ identity and the part; it has the root's version and no version of its own, so `
 `@Repository` has a version, and carries the root's version. A composite's root is a handle type that is not composite
 itself: composites have one level, and a composite of a composite is `schema.invalidHandle`.
 
+**Catalog files.** *Since: Unreleased.* `handle @UnitFiles of :Catalog(@Unit) composite @Repository as { part: :Text max 256 }`
+declares the type of the files a [catalog](Documents.md#catalogs) of `@Unit` is read from: a handle names a root, such as a
+repository at a commit, and the part is the path of a file within it. Such a *catalog file type* is composite, its part
+is Text, and `@Unit` is a declared handle type with a Text id that is neither composite nor a catalog file type itself;
+anything else is `schema.invalidHandle`. A catalog file type has no state schema: a host reads its files through the
+type's resolver as document text, never as state. It is no field, argument, List element, union alternative or Map key
+type and no network `owns` target (`schema.invalidHandle`), and scripts cannot name it: the compiler does not receive it,
+so naming it is an unknown handle type. Reading a catalog through such handles is described in
+[Documents](Documents.md#reading-from-handles).
+
 **State.** The state schema is a declared, non-abstract schema; it may be a field type elsewhere too. A state field
 named `id`, `version` or `root` would collide with the handle's members and is `schema.invalidHandle`. Handle types take
 no role; a handle type is reached by the schemas that name it. The state schema is not part of a handle's
@@ -809,7 +824,13 @@ checking accepts it.
 
 **Networks.** A [network](Network.md#declaration) names the side that owns the objects of a handle type with
 `server owns @Target`. At most one `owns` route names a type per network; a composite type has no route of its own,
-since its root's owner owns it.
+since its root's owner owns it. `server owns @Unit as :UnitPublic` lets the other side read the state only as that
+[projection](#projections), and `sending state` declares that the owner sends the state along with its handles; the
+[network declaration](Network.md#declaration) owns their rules. Sessions do not yet transfer handle state or resolve
+handles over the network: `sending state` enters only the network hash and the generated layout.
+
+A projected side has no revision of its own, so revision handles cross towards it unpinned; a revision counter per
+projection that would let it pin them is an open point.
 
 ### Content hash
 
@@ -839,6 +860,97 @@ The state `[label: "Alpha", strength: 42]` of `:Contact` is
 
 with the content hash `a2951261887894b7bc7f72d4af023c7b7576677f76283d8a524f2496b19cdc50`. The shared corpus holds
 further vectors for numbers, Text normalization, field order, defaults and absent optional fields.
+
+### Projections
+
+> **Since: Unreleased**
+
+A projection is a schema whose fields are selected from another schema. A party that needs only part of an
+object's state, such as a unit list that shows names and icons, names the projection instead of the whole schema:
+
+```gess
+schema :Presentation as { icon: :Text max 64, color: :Text max 16 optional }
+schema :Composition as { name: :Text max 64, kinds: :List(:Text max 16) max 8, mass: :Quantity(kg) between 0kg and 100000kg, presentation: :Presentation }
+
+projection :UnitDisplay of :Composition as { name, kinds, icon: presentation.icon }
+projection :UnitLabel of :UnitDisplay as { name }
+
+handle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }
+```
+
+**Fields.** A projection names a declared, non-abstract schema or another projection as its *source* and lists its
+fields in order, separated by commas or line breaks, each once:
+
+- a bare name `name` takes the source's root field of that name, with its whole type, also a whole Record;
+- `icon: presentation.icon` takes the field the path reaches and names it `icon`. Every segment of the path except the
+  last names a field whose type is one schema, a Record; a path through a List, a union, a handle, a Map or any other type
+  is `schema.invalidProjection`. A path of one segment renames a root field, as in `title: name`.
+
+A taken field keeps its type, constraints, `optional` marker and [default](#defaults), as `with` copies a field, and its
+file's constants, parameters and lets; lets are not taken. A path through an optional field makes the taken field
+optional and drops its default, as `with ... all optional` does, since the whole Record may be absent. A key stays a key
+only when the projection takes it as a bare name, and then it must be the projection's first field, otherwise
+`schema.invalidKey`; a field taken through a path is never a key. A default that names a sibling field stays only when
+the projection takes the sibling under its own name at the root, otherwise it is `schema.invalidDefault`. A handle field
+is taken whole, with its version marker; a path into it is `schema.invalidProjection`.
+
+`schema.invalidProjection` also covers a source that is no declared non-abstract schema or projection, a name that is
+no field of the source or of a Record on the path, two fields of one name, a computed field, a field of a
+[recursive List](#recursion), a source that is packed, and projections whose sources form a cycle.
+
+**A projection is a schema.** Everywhere else a projection is the schema with the taken fields: a field type, a
+List element, a union alternative, a root with [roles](#roles), a bound or checked document root, and a type of
+generated code. Its wire form, ranges, optionality, defaults and generated type follow from the taken fields, so
+`:UnitDisplay` encodes exactly like
+
+```gess
+schema :UnitDisplay as { name: :Text max 64, kinds: :List(:Text max 16) max 8, icon: :Text max 64 }
+```
+
+and has the same [canonical form](#canonical-form) and hash: the canonical form writes the taken fields, never the
+source or the paths. A projection shares the data namespace with schemas.
+
+**Relation to `with ... without`.** `with :Composition without (mass, presentation)` also makes a flat schema with a
+subset of fields, but from inside: the new schema owns its fields, may add its own and does not know that it relates to
+`:Composition`. A projection selects from outside, renames along paths into nested Records and keeps its source, so a
+value of the source converts to it and a [handle](#handles) can be read through it. `with` composes schemas that grow
+independently; a projection is a view that follows its source.
+
+**Narrowing.** A projection *narrows* its source and every schema its source narrows: `:UnitLabel` narrows
+`:UnitDisplay` and `:Composition`, and `:UnitDisplay` narrows `:Composition`. Narrowing follows the declared sources,
+not a comparison of fields, so two projections with the same fields narrow neither each other nor each other's
+sources. A *projection of a handle type* is a projection that narrows the type's state schema.
+
+**Converting.** A value of the source, or of any schema the projection narrows, converts to the projection: each taken
+field is read along its path, an absent Record on the path leaves the field absent, and the result is a Record of the
+projection's name. The conversion belongs to the schemas, not to handles, so scripts write it as
+[`c as :UnitDisplay`](Language.md#projections) on plain data and generated models offer it (see
+[model types](#model-types)). Converting in the other direction, from a projection to its source, does not exist.
+
+**Projected handles.** `@Unit(:UnitDisplay)` is a handle of `@Unit` that can read only `:UnitDisplay`, and
+`@Unit(:UnitDisplay)~` one that carries the version of that projection. It stands wherever `@Unit` stands: as a field,
+argument or List element type and as a union alternative; a Map key is a handle type without projection. A projection
+that is no projection of the handle type, a projection of a composite or of a catalog file type, and a projection with
+`@Name` beside `@Name(:P)` of the same type in one union are `schema.invalidProjection`. The projection is part of the
+static type only: the wire form, the identity, equality, Map keys and the [handle text form](Language.md#handle-text-form)
+are those of `@Unit`, so `@Unit(:UnitDisplay)` encodes and compares like `@Unit`. The version of `@Unit(:UnitDisplay)~`
+depends on the version form:
+
+| Version | Version of a projected handle |
+| --- | --- |
+| `:ContentHash` | the [content hash](#content-hash) of the projection's Record, normalized against the projection |
+| `:Number integer` | the revision of the whole object; a receiver of a projection may see a new revision without a change of the projection |
+| `:Hash(...)` | the owner's hash of the whole object |
+| `:Nothing` | none; `@Name(:P)~` is `schema.invalidHandle` |
+
+The canonical form writes a projected handle as `@Name(P)` or `@Name(P)~` with the projection's name, so a wire
+schema whose fields name a projection changes its hash when another projection is named, although the bytes do not
+change: both sides must agree on what a handle lets them read.
+
+**Generation.** A projection takes roles like a schema and is otherwise a part, generated when a root reaches it. A
+field of type `@Name(:P)` reaches the handle type and `:P`, never the state schema. A model root that is the state of a
+handle type for which [catalogs](#model-catalogs) are generated also reaches the projections of that handle type, so a
+catalog can offer them.
 
 ### Constraints
 
@@ -962,6 +1074,7 @@ Source errors use the phase `schema` with line and column, in the manner of
 | `schema.invalidRoute` | a [network route](Network.md#declaration) breaks its rules |
 | `schema.duplicateRoute` | a [network route](Network.md#declaration) repeats a root with the same side and verb, or a second `owns` names the same handle type |
 | `schema.invalidHandle` | a [handle declaration](#handles) has fields other than `id` and `version` or `part`, a bound that is no literal or constant, a state that is not a declared non-abstract schema or has a field named `id`, `version` or `root`, a composite root that is composite itself, or a role; a `~` on a type without a version; a Map key other than one handle type without `~`; an `owns` route of a composite type |
+| `schema.invalidProjection` | a [projection](#projections) names a source that is no declared non-abstract, unpacked schema or projection, a field the source or a Record on a path lacks, a path through anything but a Record or into a handle, a field twice, a computed field or a field of a recursive List, or projections form a cycle; `@Name(:P)` names no projection of the handle type, a composite or catalog file type, or stands beside `@Name` of the same type in one union; in a network, an `owns ... as :P` whose `:P` does not narrow the state, or a route from the owner that carries the type in another view ([Network](Network.md#declaration)) *Since: Unreleased.* |
 | `schema.invalidDefault` | a [default](#defaults) lies outside its field's range or off its step, is fractional for an `integer` field, is no tag of the set or longer than `max`, has another kind than its field, stands on a key, a union or an optional field or argument with a literal, is no literal on an argument, names a sibling of another type or optionality, or names one for a type that generated code declares per field; a record literal on a field that is not one schema, or that names an unknown or computed field, a field twice, a field without a literal, a let or a parameter, or leaves out a required field without a default |
 
 `schema.notEncodable`, `schema.invalidRange`, `schema.invalidStep`, `schema.invalidBound`,
@@ -1074,6 +1187,7 @@ handle <HandleName>
 id <type>
 version <version>
 handle <HandleName> composite <HandleName>
+catalog <HandleName>
 part <type>
 ```
 
@@ -1081,9 +1195,17 @@ A [handle type](#handles) is a declaration reached like a schema: its `handle` l
 composite `part` followed by its root's declaration when first reached. Its state schema is not written. `<version>` is
 `Nothing`, `ContentHash`, `Hash(#sha256)`, `Hash(#sha1)` or `Number integer` with an optional range. The *handle hash*
 of a type is FNV-1a 64 over `gess1` and its declarations, so the [network hash](Network.md#network-hash) can name it.
+A [catalog file type](#handles) writes the `catalog` line with the name of its catalog's handle type after its `handle`
+line; the catalog's type is not written as a declaration. *Since: Unreleased* — catalog file types.
 Its *link hash*, which a Program records for the type, runs FNV-1a 64 over the same text followed by the line
 `state <hash>`, where `<hash>` is the state schema's hash as 16 lowercase hexadecimal digits; it therefore covers the
-name, the id, part and version forms, a composite's root and the state schema. *Since: Unreleased.*
+name, the id, part and version forms, a composite's root and the state schema. A catalog file type has no state, so
+its link hash is its handle hash. *Since: Unreleased.*
+When the state schema has [projections](#projections) in the schema set, the link hash adds one line
+`projection <Name> <hash>` per projection of the handle type, in scalar order of the name, after the `state` line,
+with the projection's schema hash, so a Program and a host agree on what each projection reads; without projections the
+link hash is unchanged. A projection's own canonical form is that of a schema with its taken fields, under its own name.
+*Since: Unreleased — projections.*
 
 A message set writes one `argument` line per [parameter](#set-parameters) after its `messages` line, before its `member`
 lines; a set without parameters writes none, so its form stays that of 0.6.0.
@@ -1121,6 +1243,7 @@ The variable of a projection is not written, so renaming it keeps the hash.
 | `:List(T) max n` | `List(<T>) max <n>`; `List(<T>)` and `List` without `max` or `T`; ` depth <d>` follows a [recursive List](#recursion) |
 | `:TypeName`, `:Map`, ... | `TypeName`, `Map`, ... |
 | `@Name`, `@Name~` | `@Name`, `@Name~` |
+| `@Name(:P)`, `@Name(:P)~` | `@Name(P)`, `@Name(P)~` *Since: Unreleased.* |
 | `:Map(@Name → T) max n` | `Map(@Name -> <T>) max <n>`; `Map(@Name -> <T>)` without `max` |
 
 A numeric type is followed by its constraints, and any field or argument then by its
@@ -2402,6 +2525,7 @@ needs no ranges, steps or parameters, and every reached schema becomes one type,
 | `:Name` | the model type `Name` | the model type `Name` |
 | `:Map` | `GesDataMap` | `GesDataMap` |
 | `@Name`, `@Name~` | `NameHandle` | `NameHandle` |
+| `@Name(:P)`, `@Name(:P)~` | `NameHandle`, the projection is part of the documentation only | `NameHandle` |
 | `:Map(@Name → T)` | `[NameHandle: T]` | `Dictionary<NameHandle, T>` |
 | `:List` without an element type | `GesDataList` | `GesDataList` |
 | union | an enum `<Field>Alternative` with one case and value per alternative | an abstract class `<Field>Alternative` with one sealed subclass per alternative, named after it, holding `Value` |
@@ -2411,11 +2535,20 @@ A union with a `:Nothing` alternative becomes a nullable value without it, and w
 alternative's type. A list element type is named `<Field>Item`, so a closed Tag in a list is `<Field>ItemTag`. `:Range`,
 `:Series`, `:Message` and `:Handler` have no model type yet: `generate.unsupported`.
 
+**Projections.** *Since: Unreleased.* A [projection](#projections) is a model type like a schema with its taken fields. It
+also converts from every schema it narrows that the generation declares: Swift `init(_ source: Composition)`, C# `static
+UnitDisplay From(Composition source)`, one per source, in the order of narrowing, nearest first. The conversion reads each
+taken field along its path and leaves a field absent when an optional Record on the path is absent; it never fails, since
+the model types already hold valid values. The result is a copy that shares no mutable value with its source. A source
+the generation does not declare gets no conversion.
+
 **Handles.** *Since: Unreleased.* Every handle type a generation reaches becomes one value type `<Name>Handle`, in
 models and wire code alike. A handle field reaches only its handle type and, for a composite, its root's handle type,
 whose `<Name>Handle` the composite holds; it never reaches the state schema, which a handle names in its documentation
 only. The state is a model type of a generation only when a root reaches it otherwise or is itself a model root, as in
-the [generation layout](#generation-layout). Wire code generated with
+the [generation layout](#generation-layout). Conversely, a model root that is the state schema of a handle type with a
+Text id that is not composite reaches that handle type, so its `<Name>Handle` exists for [catalogs](#model-catalogs).
+Wire code generated with
 `--models` declares none and names the models' `<Name>Handle`, as it does their packed types, so the model generation
 must reach the same handle types:
 
@@ -2645,6 +2778,63 @@ I/O: text goes in, a model comes out.
 - The embedded sources live in one internal helper per generation, beside the value conversions; split output puts the
   document type and the helper in the shared file, and the manifest adds `documents: true`.
 
+### Model catalogs
+
+> **Since: Unreleased**
+
+`--catalogs` (option `Catalogs`) generates a typed [catalog](Documents.md#catalogs) for every handle type whose state is a
+model root, whose id is Text and that is not composite: with `handle @Unit of :Unit as { id: :Text max 64, version:
+:ContentHash }` and the model root `:Unit`, the type `UnitCatalog` reads, holds and resolves the units. It includes
+`--documents` and concerns only model code; wire code with `--catalogs` is `generate.usage`. A catalog type of the
+name of another generated type, and a state type named `Entry`, which the catalog's nested `Entry` would hide, are
+`generate.nameCollision`.
+
+```swift
+let hulls = try HullCatalog.read(roots: [GesCatalogRoot(name: "content", path: "Hulls.gesd")], files: files)
+let units = try UnitCatalog.read(roots: [GesCatalogRoot(name: "content", path: "Units.gesd")], files: files, hull: hulls)
+units["ruin.radarTower"]?.value     // Unit
+units.module("ruin")                // [UnitCatalog.Entry], sorted by id
+units.index                         // [UnitHandle], sorted by id
+units.index(UnitDisplay.self)       // [UnitHandle] with the versions of :UnitDisplay, sorted by id
+units.module("ruin", UnitDisplay.self)
+builder.withHandleResolver(units, for: units.catalog.type)
+```
+
+| Member | Swift | C# |
+| --- | --- | --- |
+| type | `final class UnitCatalog: GesHandleResolver`, not `Sendable`, like `GesCatalog` | `sealed class UnitCatalog : IGesHandleResolver` |
+| read from files | `static func read(roots: [GesCatalogRoot], files: some GesCatalogFiles, hull: HullCatalog? = nil) throws -> UnitCatalog` | `static UnitCatalog Read(IReadOnlyList<GesCatalogRoot> roots, IGesCatalogFiles files, HullCatalog? hull = null)` |
+| read from handles | `static func read(roots: [GesHandle], resolver: some GesHandleResolver, hull: HullCatalog? = nil) throws -> UnitCatalog` | `static UnitCatalog Read(IReadOnlyList<GesHandle> roots, IGesHandleResolver resolver, HullCatalog? hull = null)` |
+| untyped catalog | `catalog: GesCatalog` | `GesCatalog Catalog` |
+| roots read | `sources: [GesHandle]` | `IReadOnlyList<GesHandle> Sources` |
+| entries | `entries: [Entry]`, sorted by id | `IReadOnlyList<Entry> Entries` |
+| entry by id | `subscript(_ id: String) -> Entry?` | `Entry? this[string id]` (null when unknown) |
+| module | `module(_ name: String) -> [Entry]` | `IReadOnlyList<Entry> Module(string name)` |
+| handles | `index: [UnitHandle]` | `IReadOnlyList<UnitHandle> Index` |
+| entry | `struct Entry` with `id: String`, `handle: UnitHandle`, `value: Unit`, `origin: GesSourceLocation` | `sealed class Entry` with `Id`, `Handle`, `Value`, `Origin` |
+| handles of a projection | `index(_: UnitDisplay.Type) -> [UnitHandle]` | `IReadOnlyList<UnitHandle> UnitDisplayIndex` |
+| module of a projection | `module(_ name: String, _: UnitDisplay.Type) -> [UnitHandle]` | `IReadOnlyList<UnitHandle> UnitDisplayModule(string name)` |
+
+- **Projections.** *Since: Unreleased.* The catalog keeps one index per [projection](#projections) of its handle type
+  that the generation declares: the handles of every entry, sorted by id, each with the version of the projection, the
+  [content hash](#content-hash) of the projected state for a `:ContentHash` type and the entry's version otherwise. Such a
+  handle is what a script receives as `@Unit(:UnitDisplay)~`, so a receiver caches per handle and projection, and the
+  untyped catalog computes the same hashes (`GesCatalog.Index(projection)`). The projected value of an entry is
+  `UnitDisplay(entry.value)` (C# `UnitDisplay.From(entry.Value)`).
+
+- **Dependencies.** A catalog takes one optional parameter per other generated catalog whose handle type its state
+  reaches through a field, a List element, a union alternative or a Map key, at any depth: the handle type's name in
+  lower camel case, ordered by name. A passed catalog becomes a [dependency](PublicApi.md#catalogs) of the read; a
+  parameter named `roots`, `files` or `resolver` is `generate.nameCollision`.
+- **Reading** delegates to `GesCatalog` and converts every entry's state to the model once, as `init(value:)` does;
+  errors are those of `GesCatalog` (C# `GesCatalogException`, `GesHandleException`, `ArgumentException`; Swift
+  `GesCatalogError`, `GesHandleError`, `GesApiError`), and Swift adds `GesSchemaError` when the embedded schema sources
+  no longer parse. Entries, modules and handles follow the untyped catalog's order.
+- **Resolving.** A generated catalog is the resolver of its handle type, as the untyped one is: register it with the
+  host for `units.catalog.type`, and scripts read the states of its entries.
+- The handle type of the catalog is the model's `<Name>Handle`, which the [reach rule](#model-types) provides. Split
+  output puts every catalog in its own file, named after it, and the manifest adds `catalogs: true`.
+
 ### Script bindings
 
 > **Since: 0.5.0**
@@ -2695,6 +2885,10 @@ set one with `kind` `messages`, its parameters as `fields` when it has any and `
 `schema`, which only a generation with a model set writes. *Since: Unreleased.* When a type reaches a handle type, the layout adds `handles` last, ordered by name, each with `name`, `hash`,
 `state`, `version` (`none`, `revision`, `sha1`, `sha256` or `contentHash`) and either `id` or, for a composite, `root`
 and `part`, a key with `kind` `integer` and `lower` and `upper` or `kind` `text` and `max`. *Since: Unreleased* — handles.
+*Since: Unreleased* — projections: a [projection](#projections) type adds `conversions` after `takes`, one per source the
+generation declares, nearest first, each with `source` and `paths`, the path of every taken field from that source's root
+as `.`-joined field names in field order; a handle adds `projections`, the generated projections of its state, ordered by
+name, when it has any.
 
 ### Generation layout
 
@@ -2745,7 +2939,8 @@ any, then `members` and `memberWidth`; a schema
   given parameters) and `routes` in route order; a route has `index`, `side` (`client` or `server`), `verb` (`sends` or
   `publishes`), `root`, `class` (`reliable`, `latest` or `bulk`) and `rateMicroseconds`, the rounded `at most every`
   interval or 0 without one. *Since: 0.6.0.* A network with `owns` routes adds `owners`, in ascending scalar order of the
-  handle type's name, each with `side` and `handle`, the handle type's name without `@`; they have no index.
+  handle type's name, each with `side` and `handle`, the handle type's name without `@`, `projection`, the name of
+  the projection after `as`, only with one, and `sendingState: true` only with `sending state`; they have no index.
   *Since: Unreleased.*
 - An encoding has `kind` and the members of its kind:
   - `boolean`: none.

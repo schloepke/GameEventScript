@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Categorizes GES document text token by token, also after an error: keys and labels before their colon, the schema
-// header, typed forms with their message and parameter names, scalars and comments. The diagnostic is the reader's.
+// header, typed forms with their message and parameter names, scalars and comments, and in a catalog file its header,
+// imports, module blocks and references. The diagnostic is the reader's.
 enum GesDocumentHighlighting {
     private enum Context {
         case container, form, messageForm, handlerForm, seriesForm, message, handler
@@ -10,7 +11,11 @@ enum GesDocumentHighlighting {
 
     static func highlight(_ text: String, _ spans: inout GesSpanBuilder) -> [GesSpanBuilder.Diagnostic] {
         let bytes = spans.bytes
+        let catalog = GesDocumentReader.readCatalog(text)
+        let isCatalog = catalog.isCatalog
         var contexts: [Context] = []
+        // Whether a module name follows, until its `{`.
+        var inModuleName = false
         // The form a `:Type` names until its `(` opens, and whether the next token is the first inside a context.
         var pending: Context?
         var first = false
@@ -34,6 +39,13 @@ enum GesDocumentHighlighting {
                 continue
             }
 
+            if isCatalog && contexts.isEmpty, let catalogKind = catalogSpan(bytes, &position, &inModuleName) {
+                spans.add(start, position, catalogKind)
+                pending = nil
+                first = false
+                afterSeriesKind = false
+                continue
+            }
             let opening = pending
             let firstInContext = first
             let seriesKindFollows = afterSeriesKind
@@ -47,7 +59,7 @@ enum GesDocumentHighlighting {
             } else if c == 58 && position + 1 < bytes.count && isLetter(bytes[position + 1]) {
                 position = nameEnd(bytes, position + 1)
                 let name = String(decoding: bytes[(start + 1)..<position], as: UTF8.self)
-                kind = name == "Schema" ? .keyword : .type
+                kind = name == "Schema" || (isCatalog && name == "Catalog") ? .keyword : .type
                 switch name {
                 case "Message": pending = .messageForm
                 case "Handler": pending = .handlerForm
@@ -56,6 +68,9 @@ enum GesDocumentHighlighting {
                 }
             } else if c == 64 && position + 1 < bytes.count && GesNames.upper(bytes[position + 1]) {
                 position = handleSpans(bytes, position, &spans)
+                continue
+            } else if c == 64 && position + 1 < bytes.count && isKeyByte(bytes[position + 1]) {
+                position = referenceSpans(bytes, position, &spans)
                 continue
             } else if c == 91 || c == 40 {
                 position += 1
@@ -101,9 +116,61 @@ enum GesDocumentHighlighting {
             spans.add(start, position, kind)
         }
 
-        guard let diagnostic = GesDocumentReader.read(text).diagnostic else { return [] }
+        guard let diagnostic = isCatalog ? catalog.diagnostic : GesDocumentReader.read(text, references: true).diagnostic else { return [] }
         return [GesSpanBuilder.Diagnostic(code: diagnostic.code, message: GesDocumentDiagnostic.explain(diagnostic.code, limitName: diagnostic.limitName, limitValue: diagnostic.limitValue), start: diagnostic.start, end: diagnostic.end)]
     }
+
+    // A token of a catalog file outside every bracket that the catalog grammar owns: braces, `import` and `module`
+    // without a key colon, a module name and a key. Returns nil for every other token, which documents categorize.
+    private static func catalogSpan(_ bytes: [UInt8], _ position: inout Int, _ inModuleName: inout Bool) -> GesSyntaxKind? {
+        let c = bytes[position]
+        if c == 123 || c == 125 {
+            inModuleName = false
+            position += 1
+            return .symbol
+        }
+        if inModuleName && c == 46 {
+            position += 1
+            return .symbol
+        }
+        if !isKeyByte(c) { return nil }
+        var end = position
+        while end < bytes.count && isKeyByte(bytes[end]) { end += 1 }
+        let word = String(decoding: bytes[position..<end], as: UTF8.self)
+        if inModuleName || followedByColon(bytes, end) {
+            position = end
+            return .identifier
+        }
+        if word == "import" || word == "module" {
+            inModuleName = word == "module"
+            position = end
+            return .keyword
+        }
+        return nil
+    }
+
+    // A reference: `@`, `.` and `~` are Symbol and each key Identifier. Returns the end.
+    private static func referenceSpans(_ bytes: [UInt8], _ start: Int, _ spans: inout GesSpanBuilder) -> Int {
+        spans.add(start, start + 1, .symbol)
+        var position = start + 1
+        while true {
+            let keyStart = position
+            while position < bytes.count && isKeyByte(bytes[position]) { position += 1 }
+            spans.add(keyStart, position, .identifier)
+            if position + 1 < bytes.count && bytes[position] == 46 && isKeyByte(bytes[position + 1]) {
+                spans.add(position, position + 1, .symbol)
+                position += 1
+                continue
+            }
+            if position < bytes.count && bytes[position] == 126 {
+                spans.add(position, position + 1, .symbol)
+                position += 1
+            }
+            return position
+        }
+    }
+
+    private static func isKeyByte(_ c: UInt8) -> Bool { isLetter(c) || isDigit(c) || c == 95 || c == 45 }
 
     // A handle: `@Type` is Type; `:`, `~` and `/` are Symbol; a quoted id, part or ref is String, a ref `#name` Tag, an
     // integer id, part or version and a hash Number, and other bare ids and parts Plain. Without a well-formed handle
@@ -111,7 +178,7 @@ enum GesDocumentHighlighting {
     private static func handleSpans(_ bytes: [UInt8], _ start: Int, _ spans: inout GesSpanBuilder) -> Int {
         let typeEnd = nameEnd(bytes, start + 1)
         spans.add(start, typeEnd, .type)
-        guard let end = GesHandleLiteral.read(bytes, start)?.end else { return typeEnd }
+        guard let end = GesHandleLiteral.read(bytes, start, allowPin: true)?.end else { return typeEnd }
         var position = typeEnd
         var isPart = false
         while position < end {

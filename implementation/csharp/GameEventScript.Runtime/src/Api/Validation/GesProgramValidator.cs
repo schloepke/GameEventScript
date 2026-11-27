@@ -184,12 +184,20 @@ internal static class GesProgramValidator
             Throw(GesProgramFormatErrorCode.InvalidProgram, "Handle type binding names must be unique.", (ushort)GesSectionType.Bindings, index);
     }
 
-    // Whether an `@Name` or `@Name~` type operand names a handle type binding; null for any other type name.
+    // Whether an `@Name`, `@Name~`, `@Name(:P)` or `@Name(:P)~` type operand names a handle type binding, with a type name
+    // as its projection; null for any other type name.
     private static bool? IsHandleTypeOperand(GameEventScriptProgram program, ushort stringIndex, HashSet<string>? handleTypeNames)
     {
         var text = program.StringConstants.Resolve(stringIndex);
         if (text.Length == 0 || text[0] != '@') return null;
         var name = text.EndsWith("~", StringComparison.Ordinal) ? text[1..^1] : text[1..];
+        var open = name.IndexOf('(');
+        if (open >= 0)
+        {
+            if (!name.EndsWith(")", StringComparison.Ordinal) || open + 2 >= name.Length - 1 || name[open + 1] != ':' || !GesText.IsTypeName(name[(open + 2)..^1])) return false;
+            name = name[..open];
+        }
+
         return handleTypeNames is not null && handleTypeNames.Contains(name);
     }
 

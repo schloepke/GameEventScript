@@ -41,6 +41,15 @@ struct GesModelType {
 
     // The wire layout of a packed schema, whose fields' encodings place them in its word; nil for other types.
     var packed: GesSchemaLayout?
+
+    // The conversions of a projection from the schemas it narrows that the layout holds, nearest first.
+    var conversions: [GesModelConversion] = []
+}
+
+// A projection's conversion from one schema it narrows: per taken field, the field names of its path within that schema.
+struct GesModelConversion {
+    var source = ""
+    var paths: [[String]] = []
 }
 
 // A handle type: its identity's form, which a model type `<Name>Handle` checks, and the state schema, a type of the layout.
@@ -54,6 +63,9 @@ struct GesModelHandle {
     var id: GesHandleKey?
     var root: String?
     var part: GesHandleKey?
+
+    // The projections of the state that the layout holds, by name.
+    var projections: [String] = []
 
     var isComposite: Bool { root != nil }
 
@@ -147,6 +159,14 @@ enum GesModelLayoutBuilder {
             rootNames.append(schema.name)
             try reach(schema, &reached, &handles)
         }
+        // A model root that is the state of a handle type with a Text id of its own reaches that type, whose catalog holds it.
+        // A handle's state is a schema, which a message of the same name does not stand for.
+        for handle in set.handleTypes
+        where handle.root == nil && handle.catalogOf == nil && handle.id?.isText == true && rootNames.contains(handle.stateName)
+            && reached[handle.stateName]?.kind == .schema
+        {
+            reach(handle, &handles)
+        }
         var types: [GesModelType] = []
         for name in reached.keys.sorted(by: GesSchemaLayoutBuilder.ordinal) {
             let schema = reached[name]!
@@ -164,10 +184,19 @@ enum GesModelLayoutBuilder {
             type.takes = schema.takes.filter(\.isUnchanged).map(\.schema.name)
             if schema.kind == .message { type.tags.append(contentsOf: schema.tags) }
             type.members = schema.members.map(\.name)
+            // A projection converts from its source and every schema below it that the layout holds.
+            for (source, paths) in schema.projectionSources where reached[source.name] === source {
+                type.conversions.append(GesModelConversion(source: source.name, paths: paths))
+            }
             types.append(type)
         }
         var layout = GesModelLayout(roots: rootNames, types: types)
-        for name in handles.keys.sorted(by: GesSchemaLayoutBuilder.ordinal) { layout.handles.append(GesModelHandle.of(handles[name]!)) }
+        for name in handles.keys.sorted(by: GesSchemaLayoutBuilder.ordinal) {
+            let handle = handles[name]!
+            var model = GesModelHandle.of(handle)
+            model.projections = handle.projections.filter { reached[$0.name] === $0 }.map(\.name)
+            layout.handles.append(model)
+        }
         layout.sources = set.sources.map { source in
             let scalars = source.name.unicodeScalars
             let start = scalars.lastIndex { $0 == "/" || $0 == "\\" }.map { scalars.index(after: $0) } ?? scalars.startIndex
@@ -462,6 +491,16 @@ enum GesModelLayoutJson {
             GesSchemaLayoutJson.constants(&json, type.constants)
             GesSchemaLayoutJson.computed(&json, type.computed)
             if !type.takes.isEmpty { json.strings("takes", type.takes) }
+            if !type.conversions.isEmpty {
+                json.beginArray("conversions")
+                for conversion in type.conversions {
+                    json.beginObject()
+                    json.string("source", conversion.source)
+                    json.strings("paths", conversion.paths.map { $0.joined(separator: ".") })
+                    json.endObject()
+                }
+                json.endArray()
+            }
             json.endObject()
         }
         json.endArray()
@@ -496,6 +535,7 @@ enum GesModelLayoutJson {
                     json.key("id")
                     key(&json, handle.id!)
                 }
+                if !handle.projections.isEmpty { json.strings("projections", handle.projections) }
                 json.endObject()
             }
             json.endArray()

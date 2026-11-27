@@ -86,13 +86,27 @@ internal static class GesSchemaFormatter
                     {
                         if (route.Owns)
                         {
-                            builder.Append("  ").Append(route.Server ? "server" : "client").Append(" owns @").Append(route.Root).Append('\n');
+                            builder.Append("  ").Append(route.Server ? "server" : "client").Append(" owns @").Append(route.Root);
+                            if (route.Projection.Length > 0) builder.Append(" as :").Append(route.Projection);
+                            if (route.SendingState) builder.Append(" sending state");
+                            builder.Append('\n');
                             continue;
                         }
 
                         builder.Append("  ").Append(route.Server ? "server " : "client ").Append(route.Publishes ? "publishes " : "sends ").Append(route.IsMessage ? "" : ":").Append(route.Root).Append(' ');
                         builder.Append(route.Class switch { GesSchemaRouteClass.Reliable => "reliable", GesSchemaRouteClass.Latest => "latest", _ => "bulk" });
                         if (route.Rate is { } rate) builder.Append(" at most every ").Append(Value(rate));
+                        builder.Append('\n');
+                    }
+
+                    builder.Append("}\n");
+                    break;
+                case GesSchemaDeclarationKind.Projection:
+                    builder.Append("projection :").Append(declaration.Name).Append(" of :").Append(declaration.State).Append(" as {\n");
+                    foreach (var taken in declaration.Taken)
+                    {
+                        builder.Append("  ").Append(taken.Name);
+                        if (taken.Path.Length != 1 || taken.Path[0] != taken.Name) builder.Append(": ").Append(string.Join(".", taken.Path));
                         builder.Append('\n');
                     }
 
@@ -522,6 +536,7 @@ internal static class GesSchemaFormatter
                 return;
             case GesSchemaTypeKind.Handle:
                 builder.Append('@').Append(type.Name);
+                if (type.Projection.Length > 0) builder.Append("(:").Append(type.Projection).Append(')');
                 if (type.Versioned) builder.Append('~');
                 return;
             case GesSchemaTypeKind.Map when type.Key.Length > 0:

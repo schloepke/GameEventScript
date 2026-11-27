@@ -170,6 +170,8 @@ def self_test():
 GOLDEN_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/fleet.gess"
 ROLES = ROOT / "conformance/fixtures/SchemaGeneration/roles"
 TREE_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/tree.gess"
+# Two catalog handle types whose states are model roots, one naming the other, for the typed catalogs of --catalogs.
+CATALOG_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/catalogs.gess"
 ARGUMENTS_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/arguments.gess"
 COMPUTED_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/computed.gess"
 SPATIAL_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/spatial.gess"
@@ -200,6 +202,8 @@ GOLDENS = (
     (TREE_FIXTURE.parent, [TREE_FIXTURE.name], ["--wire", "tree", "--values"], "swift", "TreeWire", SWIFT_GENERATED / "TreeWire.swift"),
     (TREE_FIXTURE.parent, [TREE_FIXTURE.name], ["--model", "tree", "--values"], "csharp", "GameEventScript.Tests.Generator.Tree.Model", CSHARP_GENERATED / "TreeModel.g.cs"),
     (TREE_FIXTURE.parent, [TREE_FIXTURE.name], ["--model", "tree", "--values"], "swift", "TreeModel", SWIFT_GENERATED / "TreeModel.swift"),
+    (CATALOG_FIXTURE.parent, [CATALOG_FIXTURE.name], ["--model", "catalog", "--catalogs"], "csharp", "GameEventScript.Tests.Generator.Catalog.Model", CSHARP_GENERATED / "CatalogModel.g.cs"),
+    (CATALOG_FIXTURE.parent, [CATALOG_FIXTURE.name], ["--model", "catalog", "--catalogs"], "swift", "CatalogModel", SWIFT_GENERATED / "CatalogModel.swift"),
     (ARGUMENTS_FIXTURE.parent, [ARGUMENTS_FIXTURE.name], ["--wire", "arguments", "--values"], "csharp", "GameEventScript.Tests.Generator.Arguments.Wire", CSHARP_GENERATED / "ArgumentsWire.g.cs"),
     (ARGUMENTS_FIXTURE.parent, [ARGUMENTS_FIXTURE.name], ["--wire", "arguments", "--values"], "swift", "ArgumentsWire", SWIFT_GENERATED / "ArgumentsWire.swift"),
     (COMPUTED_FIXTURE.parent, [COMPUTED_FIXTURE.name], ["--wire", "computed", "--values"], "csharp", "GameEventScript.Tests.Generator.Computed.Wire", CSHARP_GENERATED / "ComputedWire.g.cs"),

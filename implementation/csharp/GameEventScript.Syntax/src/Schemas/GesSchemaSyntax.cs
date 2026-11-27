@@ -22,7 +22,8 @@ internal enum GesSchemaDeclarationKind : byte
     Messages,
     TagSet,
     Network,
-    Handle
+    Handle,
+    Projection
 }
 
 internal enum GesSchemaRouteClass : byte
@@ -56,6 +57,14 @@ internal sealed class GesSchemaRouteSyntax
 
     // `server owns @Target`: Root names the handle type, and the route has no class or rate.
     internal bool Owns { get; init; }
+
+    // The projection of `owns @Unit as :UnitPublic`, which the other side reads, without `:`; empty without one.
+    internal string Projection { get; init; } = "";
+
+    internal int ProjectionOffset { get; init; }
+
+    // `owns @Target sending state`: the owner sends the state its party reads with each handle.
+    internal bool SendingState { get; init; }
 
     internal int Offset { get; init; }
 }
@@ -146,6 +155,11 @@ internal sealed class GesSchemaTypeSyntax
 
     // A handle type written `@Name~`, with its version.
     internal bool Versioned { get; init; }
+
+    // The projection of a handle type written `@Name(:P)`, without ':', and where it starts; empty otherwise.
+    internal string Projection { get; init; } = "";
+
+    internal int ProjectionOffset { get; init; }
 
     // The key handle type of a handle Map `:Map(@Name → T)`, empty for any other type, and where it starts.
     internal string Key { get; init; } = "";
@@ -373,11 +387,19 @@ internal sealed class GesSchemaDeclarationSyntax
     // The routes of a network in declared order.
     internal GesSchemaRouteSyntax[] Routes { get; init; } = [];
 
+    // The fields a projection takes from its source, which State names, in written order.
+    internal GesSchemaTakenSyntax[] Taken { get; init; } = [];
+
     // A handle declaration: its state schema, the composite root without `@`, the id or part type, the version form and the
     // revision's type, each with where it starts.
     internal string State { get; init; } = "";
 
     internal int StateOffset { get; init; }
+
+    // The handle type of a catalog file type, `:Catalog(@Type)`, without `@`; empty otherwise, when State names the state.
+    internal string Catalog { get; init; } = "";
+
+    internal int CatalogOffset { get; init; }
 
     internal string Root { get; init; } = "";
 
@@ -395,6 +417,19 @@ internal sealed class GesSchemaDeclarationSyntax
     internal string? WireGroup { get; set; }
 
     internal string? ModelGroup { get; set; }
+}
+
+// A field a projection takes: its name and the path of field names from the source's root, one segment for a bare name.
+internal sealed class GesSchemaTakenSyntax
+{
+    internal string Name { get; init; } = "";
+
+    internal string[] Path { get; init; } = [];
+
+    internal int Offset { get; init; }
+
+    // Where each path segment starts.
+    internal int[] PathOffsets { get; init; } = [];
 }
 
 internal sealed class GesSchemaDiagnostic
@@ -425,6 +460,7 @@ internal sealed class GesSchemaDiagnostic
     internal const string InvalidRoute = "schema.invalidRoute";
     internal const string DuplicateRoute = "schema.duplicateRoute";
     internal const string InvalidHandle = "schema.invalidHandle";
+    internal const string InvalidProjection = "schema.invalidProjection";
 
     internal GesSchemaDiagnostic(string code, string text, int offset, string message)
     {

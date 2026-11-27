@@ -801,6 +801,9 @@ internal static class GesAstValidator
                     ValidateCallExpression(parsedScriptContext, call, callables, errors);
                     for (var argumentIndex = 0; argumentIndex < call.ArgumentList.Arguments.Count; argumentIndex++)
                         ValidateExpressionReferences(parsedScriptContext, call.ArgumentList.Arguments[argumentIndex].Expression, callables, typeDefinitions, errors, declaredTypes);
+                    if (GesCallableSignatures.Resolve(callables.Definitions, call) is { } callee)
+                        for (var argumentIndex = 0; argumentIndex < call.ArgumentList.Arguments.Count && argumentIndex < callee.ParameterList.Count; argumentIndex++)
+                            ValidateHandleView(parsedScriptContext, call.ArgumentList.Arguments[argumentIndex].Expression, callee.ParameterList[argumentIndex].DeclaredType, callables, typeDefinitions, declaredTypes, errors);
 
                     return;
 
@@ -844,7 +847,7 @@ internal static class GesAstValidator
                     if (send.Delay is not null)
                     {
                         ValidateExpressionReferences(parsedScriptContext, send.Delay, callables, typeDefinitions, errors, declaredTypes);
-                        var delayType = ClassifyExpression(send.Delay, callables, typeDefinitions, declaredTypes, new CallableResults());
+                        var delayType = ClassifyExpression(send.Delay, callables, typeDefinitions, declaredTypes ?? new Dictionary<string, string>(StringComparer.Ordinal), new CallableResults());
                         if (delayType.TypeName is not null && delayType.Kind is not (StaticExpressionKind.Unknown or StaticExpressionKind.Nothing) && GesQuantityUnits.ParseQuantityTypeName(delayType.TypeName) != GesQuantityUnit.UnitSecond)
                             errors.Add(parsedScriptContext, "Send delay requires a time quantity", "Quantity(s)", GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidTypeConstructor, send.Delay);
                     }
@@ -900,7 +903,7 @@ internal static class GesAstValidator
 
                 case GesSeededRandomExpressionNode seededRandom:
                     ValidateExpressionReferences(parsedScriptContext, seededRandom.SeedExpression, callables, typeDefinitions, errors, declaredTypes);
-                    ValidateSeedExpression(parsedScriptContext, seededRandom.SeedExpression, callables, typeDefinitions, errors, declaredTypes);
+                    ValidateSeedExpression(parsedScriptContext, seededRandom.SeedExpression, callables, typeDefinitions, errors, declaredTypes ?? new Dictionary<string, string>(StringComparer.Ordinal));
                     expression = seededRandom.BodyExpression;
                     continue;
 
@@ -941,13 +944,19 @@ internal static class GesAstValidator
                     // A handle has no constructor and no cast; only parameter and field types check handles (specs/Language.md#handles).
                     if (GesHandleTypeNames.IsHandleType(typeCast.TypeName))
                         errors.Add(parsedScriptContext, $"'as {typeCast.TypeName}' is only a parameter or field type; use 'is {typeCast.TypeName}' to test a value.", typeCast.TypeName, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidHandleUse, typeCast);
+                    else if (ClassifyExpression(typeCast.Value, callables, typeDefinitions, declaredTypes ?? new Dictionary<string, string>(StringComparer.Ordinal), new CallableResults()).TypeName is { } castSource &&
+                             GesHandleTypeNames.IsHandleType(castSource) && GesHandleTypeNames.HasProjection(castSource))
+                        ValidateProjectedStateCast(parsedScriptContext, typeCast, castSource, callables.HandleTypes, errors);
                     expression = typeCast.Value;
                     continue;
 
                 case GesMemberAccessExpressionNode memberAccess:
-                    if (memberAccess.Member is "version" or "root" &&
-                        ClassifyExpression(memberAccess.Target, callables, typeDefinitions, declaredTypes, new CallableResults()).TypeName is { } targetType && GesHandleTypeNames.IsHandleType(targetType))
-                        ValidateHandleMember(parsedScriptContext, memberAccess, targetType, callables.HandleTypes, errors);
+                    if (ClassifyExpression(memberAccess.Target, callables, typeDefinitions, declaredTypes ?? new Dictionary<string, string>(StringComparer.Ordinal), new CallableResults()).TypeName is { } targetType && GesHandleTypeNames.IsHandleType(targetType))
+                    {
+                        if (memberAccess.Member is "version" or "root") ValidateHandleMember(parsedScriptContext, memberAccess, targetType, callables.HandleTypes, errors);
+                        else if (memberAccess.Member != "id" && GesHandleTypeNames.HasProjection(targetType)) ValidateProjectedMember(parsedScriptContext, memberAccess, targetType, callables.HandleTypes, errors);
+                    }
+
                     expression = memberAccess.Target;
                     continue;
 
@@ -1203,6 +1212,8 @@ internal static class GesAstValidator
             if (argument.Label is null) continue;
 
             if (!fieldNames.Contains(argument.Label)) AddTypeConstructorError(parsedScriptContext, constructor, $"Custom type constructor ':{constructor.TypeName}' has unknown constructor field '{argument.Label}'", errors);
+            else if (FindField(typeDefinition.Fields, argument.Label) is { } field)
+                ValidateHandleView(parsedScriptContext, argument.Expression, field.TypeName, callables, typeDefinitions, declaredTypes, errors);
         }
     }
 
@@ -1291,8 +1302,10 @@ internal static class GesAstValidator
     // Each alternative of a handle type or union is a declared `@Name`, and `@Name~` names a type with versions.
     private static void ValidateHandleTypeName(GesParsedScript parsedScriptContext, string typeName, IReadOnlyDictionary<string, GesHandleType> handleTypes, GesValidationErrors errors, GesScriptNode node)
     {
-        foreach (var alternative in typeName.Split('|'))
+        var alternatives = typeName.Split('|');
+        for (var index = 0; index < alternatives.Length; index++)
         {
+            var alternative = alternatives[index];
             if (!GesHandleTypeNames.IsHandleType(alternative))
             {
                 errors.Add(parsedScriptContext, $"A union is written only of handle types, not '{GesHandleTypeNames.SourceName(alternative)}'.", GesHandleTypeNames.SourceName(alternative), GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidHandleUse, node);
@@ -1300,11 +1313,107 @@ internal static class GesAstValidator
             }
 
             var (name, versioned) = GesHandleTypeNames.Split(alternative);
+            var projection = GesHandleTypeNames.Projection(alternative);
             if (!handleTypes.TryGetValue(name, out var type))
                 errors.Add(parsedScriptContext, $"Handle type '@{name}' is not declared.", "@" + name, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateUnknownHandleType, node);
             else if (versioned && type.Version == GesHandleVersionKind.None)
                 errors.Add(parsedScriptContext, $"'@{name}~' needs a handle type with versions.", alternative, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidHandleUse, node);
+            else if (projection.Length > 0 && type.Root is not null)
+                errors.Add(parsedScriptContext, $"'@{name}' is composite; a projection reads a handle type that is not.", alternative, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidProjection, node);
+            else if (projection.Length > 0 && type.FindProjection(projection) is null)
+                errors.Add(parsedScriptContext, $"':{projection}' is no projection of '@{name}', whose state is ':{type.StateName}'.", alternative, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidProjection, node);
+            else
+            {
+                for (var earlier = 0; earlier < index; earlier++)
+                {
+                    var other = alternatives[earlier];
+                    if (GesHandleTypeNames.IsHandleType(other) && GesHandleTypeNames.Split(other).Name == name &&
+                        (projection.Length > 0 || GesHandleTypeNames.Projection(other).Length > 0))
+                    {
+                        errors.Add(parsedScriptContext, $"A union holds '@{name}' with two projections or with and without one.", alternative, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidProjection, node);
+                        break;
+                    }
+                }
+            }
         }
+    }
+
+    // A member other than the identity of a projected handle must be a field of its projection (specs/Language.md#projections).
+    private static void ValidateProjectedMember(GesParsedScript parsedScriptContext, GesMemberAccessExpressionNode memberAccess, string typeName, IReadOnlyDictionary<string, GesHandleType> handleTypes, GesValidationErrors errors)
+    {
+        foreach (var alternative in typeName.Split('|'))
+        {
+            var projectionName = GesHandleTypeNames.Projection(alternative);
+            if (projectionName.Length == 0 || !handleTypes.TryGetValue(GesHandleTypeNames.Split(alternative).Name, out var type) || type.FindProjection(projectionName) is not { } projection) continue;
+            if (!HasSchemaField(projection, memberAccess.Member))
+            {
+                errors.Add(parsedScriptContext, $"'{memberAccess.Member}' is no field of ':{projectionName}', the view of '{alternative}'.", memberAccess.Member, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidProjection, memberAccess);
+                return;
+            }
+        }
+    }
+
+    // `h as :S` on a projected handle reads no more than its view: the state schema or a projection that does not narrow the
+    // view is widening; any other target is an ordinary cast.
+    private static void ValidateProjectedStateCast(GesParsedScript parsedScriptContext, GesTypeCastExpressionNode cast, string typeName, IReadOnlyDictionary<string, GesHandleType> handleTypes, GesValidationErrors errors)
+    {
+        // A union reads the view through every alternative that can, so only a cast none of them reads would widen.
+        string? widening = null;
+        string? wideningView = null;
+        foreach (var alternative in typeName.Split('|'))
+        {
+            if (!handleTypes.TryGetValue(GesHandleTypeNames.Split(alternative).Name, out var type)) continue;
+            var target = type.FindProjection(cast.TypeName);
+            if (!string.Equals(type.StateName, cast.TypeName, StringComparison.Ordinal) && target is null) continue;
+            var projectionName = GesHandleTypeNames.Projection(alternative);
+            if (projectionName.Length == 0 || type.FindProjection(projectionName) is not { } view) return;
+            if (target is not null && (target == view || target.Declaration.Narrows(view.Declaration))) return;
+            widening ??= alternative;
+            wideningView ??= projectionName;
+        }
+
+        if (widening is not null)
+            errors.Add(parsedScriptContext, $"'{widening}' reads only ':{wideningView}', so 'as :{cast.TypeName}' would read more.", cast.TypeName, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateHandleWidening, cast);
+    }
+
+    // A value of a statically projected handle type passes only to a view it narrows to (specs/Language.md#projections).
+    private static void ValidateHandleView(
+        GesParsedScript parsedScriptContext,
+        GesExpressionNode value,
+        string? declaredType,
+        ValidationCallables callables,
+        IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions,
+        IReadOnlyDictionary<string, string>? declaredTypes,
+        GesValidationErrors errors)
+    {
+        if (!GesHandleTypeNames.IsHandleType(declaredType)) return;
+        if (ClassifyExpression(value, callables, typeDefinitions, declaredTypes ?? new Dictionary<string, string>(StringComparer.Ordinal), new CallableResults()).TypeName is not { } sourceType ||
+            !GesHandleTypeNames.IsHandleType(sourceType) || !GesHandleTypeNames.HasProjection(sourceType)) return;
+        foreach (var alternative in sourceType.Split('|'))
+        {
+            var viewName = GesHandleTypeNames.Projection(alternative);
+            var name = GesHandleTypeNames.Split(alternative).Name;
+            if (viewName.Length == 0 || !callables.HandleTypes.TryGetValue(name, out var type) || type.FindProjection(viewName) is not { } view) continue;
+            foreach (var target in declaredType!.Split('|'))
+            {
+                if (!GesHandleTypeNames.IsHandleType(target) || GesHandleTypeNames.Split(target).Name != name) continue;
+                var targetName = GesHandleTypeNames.Projection(target);
+                var targetView = targetName.Length == 0 ? null : type.FindProjection(targetName);
+                if (targetView is null && targetName.Length > 0) break;
+                if (targetView is not null && (targetView == view || targetView.Declaration.Narrows(view.Declaration))) break;
+                errors.Add(parsedScriptContext, $"'{alternative}' reads only ':{viewName}', so it cannot pass to '{target}'.", target, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateHandleWidening, value);
+                return;
+            }
+        }
+    }
+
+    private static bool HasSchemaField(GesSchema schema, string name)
+    {
+        foreach (var field in schema.Fields)
+            if (string.Equals(field.Name, name, StringComparison.Ordinal)) return true;
+        foreach (var field in schema.ComputedFields)
+            if (string.Equals(field.Name, name, StringComparison.Ordinal)) return true;
+        return false;
     }
 
     // `h.version` needs a type with versions and `h.root` composites of one root type; other alternatives are not

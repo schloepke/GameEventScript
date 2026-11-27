@@ -95,6 +95,13 @@ public sealed class GesSchemaGenerateOptions
     public bool Documents { get; set; }
 
     /// <summary>
+    /// Gets or sets whether model generation also writes a typed catalog <c>&lt;Name&gt;Catalog</c> for every handle type whose
+    /// state is a model root, whose id is Text and that is not composite (specs/Schemas.md#model-catalogs). It reads, holds
+    /// and resolves the states of that type and includes <see cref="Documents"/>. Only model generation takes it.
+    /// </summary>
+    public bool Catalogs { get; set; }
+
+    /// <summary>
     /// Gets or sets whether generated Swift classes keep the dynamic exclusivity checks of their stored properties. By
     /// default they mark them <c>@exclusivity(unchecked)</c>, which halves the time of reading and writing; overlapping
     /// accesses to one record, such as passing a list <c>inout</c> while the record reads into it, are then undefined

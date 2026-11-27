@@ -123,7 +123,7 @@ internal sealed partial class GesSchemaSourceReader
             if (word is "constant" or "parameter" or "tags" or "network") throw new SyntaxFailure(offset, "Only a schema, message or message set can be a root.", Code.InvalidRole);
             if (model is not null && word is "message") throw new SyntaxFailure(offset, "A model root is a schema or message set.", Code.InvalidRole);
         }
-        else if (word.Length > 0 && word is not ("constant" or "parameter" or "schema" or "message" or "messages" or "tags" or "network" or "handle") && AtRoleEnd())
+        else if (word.Length > 0 && word is not ("constant" or "parameter" or "schema" or "message" or "messages" or "tags" or "network" or "handle" or "projection") && AtRoleEnd())
             throw new SyntaxFailure(offset, $"'{word}' is no role; a root is marked wire or model.", Code.InvalidRole);
 
         var declaration = ReadDeclaration(offset, wordOffset, word);
@@ -142,7 +142,7 @@ internal sealed partial class GesSchemaSourceReader
         if (_position < _text.Length && _text[_position] == '(') return true;
         var start = _position;
         SkipSpaces();
-        var role = _position > start && (AtWord("schema") || AtWord("message") || AtWord("messages") || AtWord("abstract") || AtWord("packed"));
+        var role = _position > start && (AtWord("schema") || AtWord("message") || AtWord("messages") || AtWord("abstract") || AtWord("packed") || AtWord("projection"));
         _position = start;
         return role;
     }
@@ -324,12 +324,15 @@ internal sealed partial class GesSchemaSourceReader
             }
             case "handle":
                 return ReadHandle(offset);
+            case "projection":
+                return ReadProjection(offset);
             default:
-                throw new SyntaxFailure(wordOffset, "Expected constant, parameter, tags, schema, message, messages, network or handle.");
+                throw new SyntaxFailure(wordOffset, "Expected constant, parameter, tags, schema, message, messages, network, handle or projection.");
         }
     }
 
-    // `handle @Name of :State as { id: ..., version: ... }` or `handle @Name of :State composite @Root as { part: ... }`.
+    // `handle @Name of :State as { id: ..., version: ... }` or `handle @Name of :State composite @Root as { part: ... }`, where
+    // `:Catalog(@Type)` may stand for the state.
     private GesSchemaDeclarationSyntax ReadHandle(int offset)
     {
         SkipSpaces();
@@ -339,6 +342,20 @@ internal sealed partial class GesSchemaSourceReader
         SkipSpaces();
         var stateOffset = _position;
         var state = ReadTypeName();
+        var catalog = "";
+        var catalogOffset = 0;
+        if (state == "Catalog" && _position < _text.Length && _text[_position] == '(')
+        {
+            // `:Catalog(@Unit)` declares a catalog file type; its state stays empty.
+            _position++;
+            SkipSpaces();
+            catalogOffset = _position;
+            catalog = ReadHandleName();
+            SkipSpaces();
+            Expect(')');
+            state = "";
+        }
+
         SkipSpaces();
         var root = "";
         var rootOffset = 0;
@@ -417,6 +434,8 @@ internal sealed partial class GesSchemaSourceReader
             Offset = offset,
             State = state,
             StateOffset = stateOffset,
+            Catalog = catalog,
+            CatalogOffset = catalogOffset,
             Root = root,
             RootOffset = rootOffset,
             Id = id,
@@ -450,6 +469,50 @@ internal sealed partial class GesSchemaSourceReader
         return type;
     }
 
+    // `projection :Name of :Source as { name, alias: path.to.field }`: the fields a projection takes, separated like fields.
+    private GesSchemaDeclarationSyntax ReadProjection(int offset)
+    {
+        var name = ReadTypeName();
+        SkipSpaces();
+        ExpectWord("of");
+        SkipSpaces();
+        var sourceOffset = _position;
+        var source = ReadTypeName();
+        SkipSpaces();
+        ExpectWord("as");
+        SkipTrivia();
+        Expect('{');
+        var taken = new List<GesSchemaTakenSyntax>();
+        SkipSeparators();
+        while (!Consume('}'))
+        {
+            var fieldOffset = _position;
+            var field = ReadName(GesText.IsFieldName, "field name");
+            SkipSpaces();
+            var path = new List<string> { field };
+            var offsets = new List<int> { fieldOffset };
+            if (Consume(':'))
+            {
+                SkipSpaces();
+                path.Clear();
+                offsets.Clear();
+                do
+                {
+                    offsets.Add(_position);
+                    path.Add(ReadName(GesText.IsFieldName, "field name"));
+                }
+                while (Consume('.'));
+                SkipSpaces();
+            }
+
+            taken.Add(new GesSchemaTakenSyntax { Name = field, Path = path.ToArray(), PathOffsets = offsets.ToArray(), Offset = fieldOffset });
+            EndEntry('}');
+            SkipSeparators();
+        }
+
+        return new GesSchemaDeclarationSyntax { Kind = GesSchemaDeclarationKind.Projection, Name = name, Offset = offset, State = source, StateOffset = sourceOffset, Taken = taken.ToArray() };
+    }
+
     // `@Name` of a handle type, returned without `@`.
     private string ReadHandleName()
     {
@@ -457,7 +520,8 @@ internal sealed partial class GesSchemaSourceReader
         return ReadName(GesText.IsTypeName, "handle type name");
     }
 
-    // `client|server sends|publishes :Root|Message reliable|latest|bulk [at most every value]` on one line.
+    // `client|server sends|publishes :Root|Message reliable|latest|bulk [at most every value]` or
+    // `client|server owns @Handle [as :Projection] [sending state]` on one line.
     private GesSchemaRouteSyntax ReadRoute()
     {
         var offset = _position;
@@ -472,7 +536,37 @@ internal sealed partial class GesSchemaSourceReader
             var handleOffset = _position;
             var handle = ReadHandleName();
             SkipSpaces();
-            return new GesSchemaRouteSyntax { Server = side == "server", Owns = true, Root = handle, RootOffset = handleOffset, Offset = offset };
+            var projection = "";
+            var projectionOffset = 0;
+            if (AtWord("as"))
+            {
+                ReadWord();
+                SkipSpaces();
+                projectionOffset = _position;
+                projection = ReadTypeName();
+                SkipSpaces();
+            }
+
+            var sending = AtWord("sending");
+            if (sending)
+            {
+                ReadWord();
+                SkipSpaces();
+                ExpectWord("state");
+                SkipSpaces();
+            }
+
+            return new GesSchemaRouteSyntax
+            {
+                Server = side == "server",
+                Owns = true,
+                Root = handle,
+                RootOffset = handleOffset,
+                Offset = offset,
+                Projection = projection,
+                ProjectionOffset = projectionOffset,
+                SendingState = sending
+            };
         }
 
         if (verb is not ("sends" or "publishes")) throw new SyntaxFailure(verbOffset, "Expected 'sends', 'publishes' or 'owns'.");
@@ -724,9 +818,21 @@ internal sealed partial class GesSchemaSourceReader
         if (Consume('@'))
         {
             var handle = ReadName(GesText.IsTypeName, "handle type name");
+            var projection = "";
+            var projectionOffset = 0;
+            if (Consume('('))
+            {
+                // `@Name(:P)`: a handle read through the projection `:P`.
+                SkipSpaces();
+                projectionOffset = _position;
+                projection = ReadTypeName();
+                SkipSpaces();
+                Expect(')');
+            }
+
             var versioned = Consume('~');
             SkipSpaces();
-            return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Handle, Name = handle, Versioned = versioned, Offset = offset };
+            return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Handle, Name = handle, Versioned = versioned, Projection = projection, ProjectionOffset = projectionOffset, Offset = offset };
         }
 
         Expect(':');
@@ -817,6 +923,7 @@ internal sealed partial class GesSchemaSourceReader
                 if (_position >= _text.Length || _text[_position] != '@') throw new SyntaxFailure(keyOffset, "A Map key is one handle type.", Code.InvalidHandle);
                 var key = ReadType();
                 if (key.Versioned) throw new SyntaxFailure(keyOffset, "A Map key is a handle type without '~'.", Code.InvalidHandle);
+                if (key.Projection.Length > 0) throw new SyntaxFailure(key.ProjectionOffset, "A Map key is a handle type without a projection.", Code.InvalidProjection);
                 SkipTrivia();
                 if (!Consume('→'))
                 {

@@ -81,9 +81,14 @@ internal static class GesHandleLiteral
 
     // Reads a handle at `start`, which holds `@`, without looking at what follows it. Returns the end of the handle, or
     // -1 when the text there is no well-formed handle. A `/` that begins a `//` comment never starts or continues a part.
-    internal static int Scan(string text, int start, out Parts parts)
+    internal static int Scan(string text, int start, out Parts parts) => Scan(text, start, false, out parts, out _);
+
+    // Reads a handle like Scan; with `allowPin`, a `~` that no version follows pins the handle of a catalog
+    // (specs/Documents.md#references) and `pin` is its offset, otherwise -1.
+    internal static int Scan(string text, int start, bool allowPin, out Parts parts, out int pin)
     {
         parts = default;
+        pin = -1;
         var position = start + 1;
         if (position >= text.Length || !GesText.IsAsciiUpper(text[position])) return -1;
         while (position < text.Length && (GesText.IsAsciiLetter(text[position]) || text[position] is >= '0' and <= '9' or '_')) position++;
@@ -97,7 +102,11 @@ internal static class GesHandleLiteral
         if (position < text.Length && text[position] == '~')
         {
             position++;
-            if (position < text.Length && text[position] == '#')
+            if (allowPin && (position == text.Length || IsDelimiter(text, position)))
+            {
+                pin = position - 1;
+            }
+            else if (position < text.Length && text[position] == '#')
             {
                 var tagStart = ++position;
                 while (position < text.Length && (GesText.IsAsciiLetter(text[position]) || text[position] is >= '0' and <= '9')) position++;
@@ -146,11 +155,14 @@ internal static class GesHandleLiteral
     // Reads a handle in a document at `start`, which holds `@`. Returns the end of the handle, or -1 when the text there
     // is no well-formed handle that a document delimiter follows. `identity` is the type, id and part, which compare
     // keys; `versioned` is whether a version or a ref follows the id.
-    internal static int Read(string text, int start, out string identity, out bool versioned)
+    internal static int Read(string text, int start, out string identity, out bool versioned) => Read(text, start, false, out identity, out versioned, out _);
+
+    // Reads like Read; with `allowPin`, a catalog handle may end with a pinning `~` at offset `pin`, otherwise -1.
+    internal static int Read(string text, int start, bool allowPin, out string identity, out bool versioned, out int pin)
     {
         identity = "";
         versioned = false;
-        var end = Scan(text, start, out var parts);
+        var end = Scan(text, start, allowPin, out var parts, out pin);
         if (end < 0 || (end < text.Length && !IsDelimiter(text, end))) return -1;
         var builder = new StringBuilder(parts.TypeName).Append(':');
         AppendIdentity(parts.Id, builder);
@@ -186,7 +198,7 @@ internal static class GesHandleLiteral
     }
 
     // A document delimiter ends a handle: whitespace, a separator, a closing bracket, a key colon or a comment.
-    private static bool IsDelimiter(string text, int position)
+    internal static bool IsDelimiter(string text, int position)
         => text[position] is ' ' or '\t' or '\r' or '\n' or ',' or ']' or ')' or ':' || IsComment(text, position);
 
     private static bool IsComment(string text, int position) => text[position] == '/' && position + 1 < text.Length && text[position + 1] == '/';
@@ -234,6 +246,9 @@ internal static class GesHandleLiteral
             if (character is not (>= '0' and <= '9' or >= 'a' and <= 'f')) return false;
         return true;
     }
+
+    // Whether the character may start a bare or quoted id.
+    internal static bool IsIdStart(char character) => character == '\'' || IsBareCharacter(character, false);
 
     private static bool IsBareCharacter(char character, bool isPart)
         => GesText.IsAsciiLetter(character) || character is >= '0' and <= '9' or '.' or '_' or '-' || (isPart && character == '/');

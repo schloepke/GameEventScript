@@ -24,7 +24,9 @@ internal static partial class GesCompiler
             {
                 // The validator reported every undeclared type before lowering.
                 var type = module.HandleTypes[name];
-                _builder.AddHandleType(name, type.LinkHash, type.StateName);
+                var projections = new string[type.Projections.Count];
+                for (var index = 0; index < projections.Length; index++) projections[index] = type.Projections[index].Name;
+                _builder.AddHandleType(name, type.LinkHash, type.StateName, projections);
             }
         }
 
@@ -40,6 +42,33 @@ internal static partial class GesCompiler
 
             if (context is null) throw CompileFailure(GesDiagnosticCodes.CompileUnsupportedConstruct, "GameEventScript binary compiler requires a lowering context for a handle union.");
             var matches = context.AddTemporary();
+            if (GesHandleTypeNames.HasProjection(typeName))
+            {
+                // Each alternative gives its own view, so a matching value casts to the alternative it matched.
+                var alternatives = typeName.Split('|');
+                var labels = new GesLabelRef[alternatives.Length];
+                var end = _builder.AddLabel();
+                for (var index = 0; index < alternatives.Length; index++)
+                {
+                    NameHandleType(GesHandleTypeNames.Split(alternatives[index]).Name);
+                    labels[index] = _builder.AddLabel();
+                    _builder.CheckCustomType(matches, value, alternatives[index]);
+                    _builder.JumpIfTrue(matches, labels[index]);
+                }
+
+                _builder.LoadNothing(destination);
+                _builder.Jump(end);
+                for (var index = 0; index < alternatives.Length; index++)
+                {
+                    _builder.MarkLabel(labels[index]);
+                    _builder.CastCustom(destination, value, alternatives[index]);
+                    if (index < alternatives.Length - 1) _builder.Jump(end);
+                }
+
+                _builder.MarkLabel(end);
+                return;
+            }
+
             var keep = _builder.AddLabel();
             var done = _builder.AddLabel();
             foreach (var alternative in typeName.Split('|'))
@@ -93,16 +122,37 @@ internal static partial class GesCompiler
 
             var names = GesHandleTypeNames.Names(typeName);
             foreach (var name in names) NameHandleType(name);
+            // A parameter already holds its view; a handle from elsewhere, such as a Record field a message delivered,
+            // takes the static view first, so the read never sees more than the type allows.
+            if (GesHandleTypeNames.HasProjection(typeName) && member.Target is not GesIdentifierExpressionNode)
+            {
+                var viewed = context.AddTemporary();
+                EmitHandleTypeCast(viewed, target, typeName, context);
+                target = viewed;
+            }
+
             _builder.HandleStateRead(destination, member.Member, target, names);
         }
 
-        // `h as :State` of a statically typed handle reads the state of the alternatives with that state schema.
+        // `h as :State` and `h as :P` of a statically typed handle read the state of the alternatives with that state schema
+        // or projection. `c as :P` of any other value projects a Record with a projection of a handle type's state, which
+        // the Program names so that the host links the schema it was compiled against.
         private void NoteHandleStateCast(GesTypeCastExpressionNode cast, LoweringContext context)
         {
-            if (StaticTypeName(cast.Value, context) is not { } typeName || !GesHandleTypeNames.IsHandleType(typeName)) return;
-            foreach (var name in GesHandleTypeNames.Names(typeName))
-                if (module.HandleTypes.TryGetValue(name, out var type) && string.Equals(type.StateName, cast.TypeName, StringComparison.Ordinal))
-                    NameHandleType(name);
+            if (StaticTypeName(cast.Value, context) is { } typeName && GesHandleTypeNames.IsHandleType(typeName))
+            {
+                foreach (var name in GesHandleTypeNames.Names(typeName))
+                    if (module.HandleTypes.TryGetValue(name, out var type) && (string.Equals(type.StateName, cast.TypeName, StringComparison.Ordinal) || type.FindProjection(cast.TypeName) is not null))
+                        NameHandleType(name);
+                return;
+            }
+
+            foreach (var type in module.HandleTypes.Values)
+            {
+                if (type.FindProjection(cast.TypeName) is null) continue;
+                NameHandleType(type.Name);
+                return;
+            }
         }
 
         // The static type of an expression as far as handle lowering needs it: bindings with a declared type, record

@@ -895,11 +895,94 @@ public enum GesSchemaValues {
     /// - Returns: The content hash.
     /// - Throws: `GesWireError` `wire.typeMismatch` with the path when the state, or a value of a field that only takes
     ///   Records, is no Record or Map; `wire.missingField` with the path when a field without default is missing and not
-    ///   optional; `message.invalidJson` when the state holds a value product JSON cannot write, such as a handle.
+    ///   optional; `message.invalidJson` when the state holds a value product JSON cannot write, such as a handle;
+    ///   `GesApiError.invalidArgument` when `handleType` is a catalog file type, which has no state.
     public static func contentHash(_ handleType: GesHandleType, state: GesValue) throws -> GesHash32 {
+        if handleType.catalogOf != nil { throw GesApiError.invalidArgument("The catalog file type '@\(handleType.name)' has no state.") }
         let normalized = try normalizeState(handleType.resolved.state, state, "", handleType.declarations)
         let json = try GesJson.write(try GesMessageJsonCodec().encode(normalized, 0))
         return GesHash32(bytes: GesSha256.digest(Array(json.utf8)))!
+    }
+
+    /// Computes the content hash of a handle's state read through a projection (specs/Schemas.md#projections): the content
+    /// hash of the projection's Record, normalized against the projection. It is the version of `@Name(:P)~` for a
+    /// ``GesHandleVersionKind/contentHash`` type.
+    /// - Parameters:
+    ///   - handleType: The handle type whose state the projection narrows.
+    ///   - projection: A projection of the handle type, one of ``GesHandleType/projections``.
+    ///   - state: A Record of the state schema, of a schema the projection narrows, or of the projection itself.
+    /// - Returns: The content hash of the projected state.
+    /// - Throws: `GesApiError.invalidArgument` when `projection` is no projection of the handle type; otherwise as
+    ///   ``project(_:state:)`` and ``contentHash(_:state:)``.
+    public static func contentHash(_ handleType: GesHandleType, projection: GesSchema, state: GesValue) throws -> GesHash32 {
+        if handleType.catalogOf != nil || !projection.declaration.narrows(handleType.resolved.state) {
+            throw GesApiError.invalidArgument("':\(projection.name)' is no projection of '@\(handleType.name)'.")
+        }
+        return try projectedHash(handleType, projection.declaration, try project(projection.declaration, state))
+    }
+
+    /// The content hash of a Record of the projection.
+    static func projectedHash(_ handleType: GesHandleType, _ projection: GesResolvedDeclaration, _ projected: GesValue) throws -> GesHash32 {
+        let normalized = try normalizeState(projection, projected, "", handleType.declarations)
+        let json = try GesJson.write(try GesMessageJsonCodec().encode(normalized, 0))
+        return GesHash32(bytes: GesSha256.digest(Array(json.utf8)))!
+    }
+
+    /// Converts a value of a projection's source, or of any schema the projection narrows, to the projection
+    /// (specs/Schemas.md#projections): each taken field is read along its path, and an absent or `nothing` Record on the
+    /// path leaves the field absent. A Record of the projection itself is returned unchanged.
+    /// - Parameters:
+    ///   - projection: The projection, a schema whose ``GesSchema/source`` is set.
+    ///   - state: A Record of a schema the projection narrows; a Map without name counts as a value of the schema at the
+    ///     end of the projection's sources.
+    /// - Returns: A Record of the projection's name with the taken fields that are present, in the projection's order.
+    /// - Throws: `GesApiError.invalidArgument` when `projection` is no projection; `GesWireError` `wire.typeMismatch` with
+    ///   the path when the value is no Record or Map, a Record of a schema the projection does not narrow, or a Record on a
+    ///   path is no Record or Map.
+    public static func project(_ projection: GesSchema, state: GesValue) throws -> GesValue {
+        if projection.source == nil { throw GesApiError.invalidArgument("':\(projection.name)' is no projection.") }
+        return try project(projection.declaration, state)
+    }
+
+    static func project(_ projection: GesResolvedDeclaration, _ state: GesValue) throws -> GesValue {
+        if state.asMap == nil { throw GesWireError(code: GesWireError.typeMismatch, path: "") }
+        if state.customTypeName == projection.name { return state }
+        let source = projection.source!
+        var state = state
+        // A value of the source passes as it is; one of a schema further down first converts to the source.
+        if source.isProjection && state.customTypeName != source.name {
+            state = try project(source, state)
+        } else if let name = state.customTypeName, name != source.name {
+            throw GesWireError(code: GesWireError.typeMismatch, path: "")
+        }
+        return try select(projection, state)
+    }
+
+    /// The taken fields of a value of the projection's source, along their paths.
+    static func select(_ projection: GesResolvedDeclaration, _ state: GesValue) throws -> GesValue {
+        var keys: [String] = []
+        var values: [GesValue] = []
+        keys.reserveCapacity(projection.fields.count)
+        values.reserveCapacity(projection.fields.count)
+        for index in projection.fields.indices {
+            let path = projection.paths[index]
+            var current = state
+            var present = true
+            var segment = 0
+            while segment < path.count && present {
+                guard let map = current.asMap else { throw GesWireError(code: GesWireError.typeMismatch, path: path[..<segment].map(\.name).joined(separator: ".")) }
+                if let next = map.get(path[segment].name), segment == path.count - 1 || !next.isNothing {
+                    current = next
+                } else {
+                    present = false
+                }
+                segment += 1
+            }
+            if !present { continue }
+            keys.append(projection.fields[index].name)
+            values.append(current)
+        }
+        return .record(typeName: projection.name, keys: keys, values: values)
     }
 
     /// The Record of a schema with defaults applied and absent or nothing optional fields, computed fields and undeclared

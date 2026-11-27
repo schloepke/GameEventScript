@@ -113,7 +113,7 @@
             if model != nil && written == "message" {
                 throw Failure(offset: offset, message: "A model root is a schema or message set.", code: Code.invalidRole)
             }
-        } else if !written.isEmpty && !["constant", "parameter", "schema", "message", "messages", "tags", "network", "handle"].contains(written) && atRoleEnd() {
+        } else if !written.isEmpty && !["constant", "parameter", "schema", "message", "messages", "tags", "network", "handle", "projection"].contains(written) && atRoleEnd() {
             throw Failure(offset: offset, message: "'\(written)' is no role; a root is marked wire or model.", code: Code.invalidRole)
         }
         var result = try declaration(offset: offset, wordOffset: wordOffset, word: written)
@@ -131,7 +131,7 @@
         if position < bytes.count && bytes[position] == 40 { return true }
         let start = position
         skipSpaces()
-        let role = position > start && (atWord("schema") || atWord("message") || atWord("messages") || atWord("abstract") || atWord("packed"))
+        let role = position > start && (atWord("schema") || atWord("message") || atWord("messages") || atWord("abstract") || atWord("packed") || atWord("projection"))
         position = start
         return role
     }
@@ -273,13 +273,56 @@
             if carrying == 0 { throw Failure(offset: offset, message: "A network has at least one route that sends or publishes.") }
         case "handle":
             return try handle(offset)
+        case "projection":
+            return try projection(offset)
         default:
-            throw Failure(offset: wordOffset, message: "Expected constant, parameter, tags, schema, message, messages, network or handle.")
+            throw Failure(offset: wordOffset, message: "Expected constant, parameter, tags, schema, message, messages, network, handle or projection.")
         }
         return result
     }
 
-    /// `handle @Name of :State as { id: ..., version: ... }` or `handle @Name of :State composite @Root as { part: ... }`.
+    /// `projection :Name of :Source as { name, alias: path.to.field }`: the fields a projection takes, separated like fields.
+    private mutating func projection(_ offset: Int) throws -> GesSchemaDeclarationSyntax {
+        var result = GesSchemaDeclarationSyntax()
+        result.kind = .projection
+        result.offset = offset
+        result.name = try typeName()
+        skipSpaces()
+        try expectWord("of")
+        skipSpaces()
+        result.stateOffset = position
+        result.state = try typeName()
+        skipSpaces()
+        try expectWord("as")
+        skipTrivia()
+        try expect(123)
+        skipSeparators()
+        while !consume(125) {
+            var taken = GesSchemaTakenSyntax()
+            taken.offset = position
+            taken.name = try name(GesNames.plain, "field name")
+            skipSpaces()
+            taken.path = [taken.name]
+            taken.pathOffsets = [taken.offset]
+            if consume(58) {
+                skipSpaces()
+                taken.path = []
+                taken.pathOffsets = []
+                repeat {
+                    taken.pathOffsets.append(position)
+                    taken.path.append(try name(GesNames.plain, "field name"))
+                } while consume(46)
+                skipSpaces()
+            }
+            result.taken.append(taken)
+            try endEntry(125)
+            skipSeparators()
+        }
+        return result
+    }
+
+    /// `handle @Name of :State as { id: ..., version: ... }` or `handle @Name of :State composite @Root as { part: ... }`, where
+    /// `:Catalog(@Type)` may stand for the state.
     private mutating func handle(_ offset: Int) throws -> GesSchemaDeclarationSyntax {
         var result = GesSchemaDeclarationSyntax()
         result.kind = .handle
@@ -291,6 +334,16 @@
         skipSpaces()
         result.stateOffset = position
         result.state = try typeName()
+        if result.state == "Catalog" && position < bytes.count && bytes[position] == 40 {
+            // `:Catalog(@Unit)` declares a catalog file type; its state stays empty.
+            position += 1
+            skipSpaces()
+            result.catalogOffset = position
+            result.catalog = try handleName()
+            skipSpaces()
+            try expect(41)
+            result.state = ""
+        }
         skipSpaces()
         if atWord("composite") {
             _ = word()
@@ -405,7 +458,8 @@
         return try name(GesNames.type, "handle type name")
     }
 
-    /// `client|server sends|publishes :Root|Message reliable|latest|bulk [at most every value]` on one line.
+    /// `client|server sends|publishes :Root|Message reliable|latest|bulk [at most every value]` or
+    /// `client|server owns @Handle [as :Projection] [sending state]` on one line.
     private mutating func route() throws -> GesSchemaRouteSyntax {
         var result = GesSchemaRouteSyntax()
         result.offset = position
@@ -419,6 +473,20 @@
             result.rootOffset = position
             result.root = try handleName()
             skipSpaces()
+            if atWord("as") {
+                _ = word()
+                skipSpaces()
+                result.projectionOffset = position
+                result.projection = try typeName()
+                skipSpaces()
+            }
+            if atWord("sending") {
+                _ = word()
+                skipSpaces()
+                try expectWord("state")
+                skipSpaces()
+                result.sendingState = true
+            }
             result.server = side == "server"
             result.owns = true
             return result
@@ -633,6 +701,14 @@
         if consume(64) {
             result.kind = .handle
             result.name = try name(GesNames.type, "handle type name")
+            if consume(40) {
+                // `@Name(:P)`: a handle read through the projection `:P`.
+                skipSpaces()
+                result.projectionOffset = position
+                result.projection = try typeName()
+                skipSpaces()
+                try expect(41)
+            }
             result.versioned = consume(126)
             skipSpaces()
             return result
@@ -725,6 +801,9 @@
                 if position >= bytes.count || bytes[position] != 64 { throw Failure(offset: result.keyOffset, message: "A Map key is one handle type.", code: Code.invalidHandle) }
                 let key = try type()
                 if key.versioned { throw Failure(offset: result.keyOffset, message: "A Map key is a handle type without '~'.", code: Code.invalidHandle) }
+                if !key.projection.isEmpty {
+                    throw Failure(offset: key.projectionOffset, message: "A Map key is a handle type without a projection.", code: Code.invalidProjection)
+                }
                 result.key = key.name
                 skipTrivia()
                 // `→` is E2 86 92.

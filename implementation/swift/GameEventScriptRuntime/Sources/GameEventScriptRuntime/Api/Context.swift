@@ -80,6 +80,11 @@ public final class GesContext {
 
     func reportLimit(_ name: String, _ limit: Int) { observer?.runtimeLimitReached(name, detail: Self.limitDetail(name), limit: limit) }
 
+    // A resolver's not-visible answer, which only the observer learns of (specs/HostRuntime.md#handles).
+    func recordHandleNotVisible(_ symbol: String) {
+        observer?.runtimeError(.init(phase: .runtime, code: GesDiagnosticCodes.runtimeHandleNotVisible, message: "\(symbol) is not visible to the asking party.", symbol: symbol))
+    }
+
     // What a limit stops, as the C# Runtime words it, so that both CLIs explain a reached limit.
     static func limitDetail(_ name: String) -> String {
         switch name {

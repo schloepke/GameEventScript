@@ -41,7 +41,8 @@ internal static partial class GesCSharpModelEmitter
         prologue.Line("using GameEventScript.Api;");
         // Model messages and sets convert to and from messages through the values class, which they need without --values.
         var messages = layout.Types.Exists(type => type.Kind != GesSchemaKind.Schema);
-        var valued = options.Values || messages;
+        // Projections convert from their sources through it too.
+        var valued = options.Values || messages || layout.Types.Exists(type => type.Conversions.Count > 0);
         if (options.Bindings || valued) prologue.Line("using GameEventScript.Runtime.Values;");
         prologue.Blank();
         var header = GesModelPlanner.Header(layout);
@@ -74,13 +75,16 @@ internal static partial class GesCSharpModelEmitter
         foreach (var handle in layout.Handles) document.Units.Add(new GesCodeUnit(GesModelPlanner.HandleName(handle.Name), code => Handle(code, layout.Handles, handle, access), handle: handle.Name));
         foreach (var (name, tags) in GesModelPlanner.TagSets(layout))
             document.Units.Add(new GesCodeUnit(name, code => TagEnum(code, name, tags, access, $"/// <summary>The tag set <c>:{name}</c>, in declared order.</summary>")));
+        var catalogs = options.Catalogs ? GesModelPlanner.Catalogs(layout, topLevel) : [];
+        var catalogSet = schemaSet is not null ? schemaSet.Qualified + ".Set" : "__GesModelDocuments" + suffix + ".Set";
+        foreach (var catalog in catalogs) document.Units.Add(new GesCodeUnit(catalog.Name, code => Catalog(code, catalog, access, qualifier, catalogSet)));
         if (options.Bindings) document.Units.Add(new GesCodeUnit("", code => Bindings(code, plain, access, qualifier, support, computed)));
         if (valued) document.Units.Add(new GesCodeUnit("", code => Values(code, layout, values, qualifier, support, computed)));
         if (messages) document.Units.Add(new GesCodeUnit("", code => SchemasHolder(code, layout, schemas, schemaSet)));
         if (documents is not null && plain.Roots.Count > 0)
         {
             document.Units.Add(new GesCodeUnit("", code => DocumentType(code, plain, documentType, documents, access, qualifier)));
-            if (schemaSet is null) document.Units.Add(new GesCodeUnit("", code => DocumentsHolder(code, layout, "__GesModelDocuments" + suffix)));
+            if (schemaSet is null) document.Units.Add(new GesCodeUnit("", code => DocumentsHolder(code, layout, "__GesModelDocuments" + suffix, catalogs.Count > 0)));
         }
 
         if (schemaSet?.Declared is { } setName)
@@ -152,16 +156,27 @@ internal static partial class GesCSharpModelEmitter
     }
 
     // The schema sources of this file, parsed when a document is first read.
-    private static void DocumentsHolder(GesSchemaPlanner.Code code, GesModelLayout layout, string holder)
+    // With catalogs it also offers the parsed set, which they look their handle types up in.
+    private static void DocumentsHolder(GesSchemaPlanner.Code code, GesModelLayout layout, string holder, bool catalogs)
     {
         code.Line("/// <summary>The schema sources of this file, which reading documents checks them against.</summary>");
         code.Line($"internal static class {holder}");
         code.Open("{");
         code.Line("private static GesSchemaSet? __set;");
         code.Blank();
-        code.Line("internal static GesSchemaDocument Read(string text, params string[] roots)");
-        code.Open("{");
-        code.Line("var set = __set ??= GesSchemaSet.Parse(");
+        if (catalogs)
+        {
+            code.Line("internal static GesSchemaDocument Read(string text, params string[] roots) => GesSchemaDocument.Read(Set, text, roots);");
+            code.Blank();
+            code.Line("internal static GesSchemaSet Set => __set ??= GesSchemaSet.Parse(");
+        }
+        else
+        {
+            code.Line("internal static GesSchemaDocument Read(string text, params string[] roots)");
+            code.Open("{");
+            code.Line("var set = __set ??= GesSchemaSet.Parse(");
+        }
+
         code.Indent();
         for (var index = 0; index < layout.Sources.Count; index++)
         {
@@ -173,8 +188,12 @@ internal static partial class GesCSharpModelEmitter
         }
 
         code.Dedent();
-        code.Line("return GesSchemaDocument.Read(set, text, roots);");
-        code.Close();
+        if (!catalogs)
+        {
+            code.Line("return GesSchemaDocument.Read(set, text, roots);");
+            code.Close();
+        }
+
         code.Close();
     }
 
@@ -221,6 +240,7 @@ internal static partial class GesCSharpModelEmitter
         if (values is not null)
             foreach (var reserved in new[] { "ToValue", "FromValue" }) names.Add((reserved, "the generated member " + reserved));
         if (documents is not null) names.Add(("FromDocument", "the generated member FromDocument"));
+        if (values is not null && type.Conversions.Count > 0) names.Add(("From", "the generated member From"));
         if (messageValues is not null)
             foreach (var reserved in MessageMembers) names.Add((reserved, "the generated member " + reserved));
         if (bindings && fields.Exists(field => field.Field.Name == "fields"))
@@ -338,6 +358,17 @@ internal static partial class GesCSharpModelEmitter
             code.Line("/// <returns>The record.</returns>");
             code.Line("/// <exception cref=\"GesWireException\">A field does not convert: <c>wire.typeMismatch</c> at its path.</exception>");
             code.Line($"public static {type.Name} FromValue(GesValue value) => {values}.Read{type.Name}(value, \"\");");
+            foreach (var conversion in type.Conversions)
+            {
+                var packed = layout.Type(conversion.Source).Packed is not null;
+                code.Blank();
+                code.Line($"/// <summary>Narrows a <c>:{conversion.Source}</c> to this projection: every taken field along its path, absent where an optional Record");
+                code.Line("/// on the path is absent. It never fails, since the source holds valid values.</summary>");
+                code.Line("/// <param name=\"source\">The value to narrow.</param>");
+                code.Line("/// <returns>The projected value.</returns>");
+                if (!packed) code.Line("/// <exception cref=\"ArgumentNullException\">Thrown when <paramref name=\"source\"/> is null.</exception>");
+                code.Line($"public static {type.Name} From({qualifier}{conversion.Source} source) => {values}.{type.Name}__{conversion.Source}({(packed ? "source" : "source ?? throw new ArgumentNullException(nameof(source))")});");
+            }
         }
 
         if (documents is not null)
@@ -1187,10 +1218,37 @@ internal static partial class GesCSharpModelEmitter
                 code.Close();
             }
 
+            foreach (var conversion in type.Conversions)
+            {
+                var paths = conversion.Paths.ConvertAll(path => "new[] { " + string.Join(", ", path.ConvertAll(segment => GesSchemaPlanner.Literal(segment, false))) + " }");
+                code.Blank();
+                code.Line($"private static readonly string[][] {type.Name}__{conversion.Source}Paths = {{ {string.Join(", ", paths)} }};");
+                code.Blank();
+                code.Line($"internal static {record} {type.Name}__{conversion.Source}({qualifier}{conversion.Source} source)");
+                code.Line($"    => Read{type.Name}(Select(Value(source), {GesSchemaPlanner.Literal(type.Name, false)}, {names}, {type.Name}__{conversion.Source}Paths), \"\");");
+            }
+
             var conversions = new List<GesModelPlanValue>();
             foreach (var field in fields) Conversions(field.Value, conversions);
             foreach (var conversion in conversions)
                 if (conversion.TagSet.Length == 0 || emitted.Add(conversion.TagSet)) Conversion(code, type.Name, qualifier, support, conversion, plain: true);
+        }
+
+        if (layout.Types.Exists(type => type.Conversions.Count > 0))
+        {
+            code.Blank();
+            code.Line("// The taken fields of a projection's source along their paths; a path through an absent Record gives nothing.");
+            code.Line("private static GesValue Select(in GesValue source, string name, string[] names, string[][] paths)");
+            code.Open("{");
+            code.Line("var values = new GesValue[paths.Length];");
+            code.Line("for (var index = 0; index < paths.Length; index++)");
+            code.Open("{");
+            code.Line("var current = source;");
+            code.Line("foreach (var segment in paths[index]) current = current.AsMap() is { } map && map.Get(segment) is { } next ? next : GesValue.GesNothing();");
+            code.Line("values[index] = current;");
+            code.Close();
+            code.Line("return GesValue.GesRecord(name, names, values);");
+            code.Close();
         }
 
         code.Blank();

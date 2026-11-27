@@ -14,8 +14,13 @@
     /// A Map with the UTF-8 offsets of its keys and values, which schema checks report. `handleKeys` marks the keys
     /// written as handles, whose text form is the key; it is empty when no key is a handle.
     case map(keys: [String], values: [GesDocumentNode], keyOffsets: [Int], valueOffsets: [Int], handleKeys: [Bool])
-    /// A handle such as `@Drone:7~120` in its text form as written; Runtime parses it.
-    case handle(String)
+    /// A handle such as `@Drone:7~120` in its text form as written; Runtime parses it. In a catalog's document, `pinned`
+    /// marks a trailing `~`, which the text leaves out and which pins the handle to the named entry's hash. `offset` is
+    /// the UTF-8 offset of its `@`.
+    case handle(String, pinned: Bool = false, offset: Int = 0)
+    /// A catalog reference such as `@hull.light~` by its name, whether a `~` pins it, and the UTF-8 offset of its `@`; a
+    /// catalog replaces it by a handle (specs/Documents.md#references).
+    case reference(String, pinned: Bool, offset: Int)
     case dice([Int32])
     case bytes([UInt8])
     case spatial(point: Bool, x: Double, y: Double, z: Double, unit: GesQuantityUnit)
@@ -67,6 +72,7 @@
     @_spi(Syntax) public static let misplacedSchemaHeader = "document.misplacedSchemaHeader"
     @_spi(Syntax) public static let limitExceeded = "document.limitExceeded"
     @_spi(Syntax) public static let invalidHandle = "document.invalidHandle"
+    @_spi(Syntax) public static let unexpectedModule = "document.unexpectedModule"
 
     // The English explanation of an error code for highlighters and tools; it is not part of the contract.
     @_spi(Syntax) public static func explain(_ code: String, limitName: String?, limitValue: Int) -> String {
@@ -81,9 +87,10 @@
         case unexpectedToken: return "An entry, separator or closing bracket is expected here."
         case unclosedBracket: return "This bracket is never closed."
         case unclosedText: return "This Text is never closed."
-        case invalidSchemaHeader: return "A schema header names one record type or a schema file."
+        case invalidSchemaHeader: return "A schema header names one record type or a schema file; a catalog header one handle type."
         case misplacedSchemaHeader: return "The schema header must come before the first entry."
         case invalidHandle: return "This is not a handle, or a handle key has a version."
+        case unexpectedModule: return "Module blocks belong only at the root of a catalog file."
         case limitExceeded: return "The document exceeds \(limitName ?? "a limit") (\(limitValue))."
         default: return "This is not a valid document."
         }
@@ -104,6 +111,17 @@
     /// order mark is not counted.
     @_spi(Syntax) public func location(_ offset: Int) -> (line: Int, column: Int) { Self.location(bytes, offset) }
 
+    init(bytes: [UInt8], root: GesDocumentNode?, schema: GesDocumentSchemaSyntax, diagnostic: GesDocumentDiagnostic?) {
+        self.bytes = bytes
+        self.root = root
+        self.schema = schema
+        self.diagnostic = diagnostic
+    }
+
+    /// A read document of a root in a text's UTF-8 bytes, such as a catalog entry's value whose references became
+    /// handles; it has no schema reference and no error.
+    @_spi(Syntax) public init(bytes: [UInt8], root: GesDocumentNode) { self.init(bytes: bytes, root: root, schema: .none, diagnostic: nil) }
+
     /// The 1-based line and column of a UTF-8 offset in any text, by the same rules.
     @_spi(Syntax) public static func location(_ bytes: [UInt8], _ offset: Int) -> (line: Int, column: Int) {
         var line = 1
@@ -122,4 +140,46 @@
         }
         return (line, column)
     }
+}
+
+/// What one item of a catalog file holds.
+@_spi(Syntax) public enum GesCatalogItemKind: Sendable {
+    /// A root `import 'path'` of a further catalog file.
+    case `import`
+    /// `key: value` at the root or in a module block.
+    case entry
+    /// `key: import 'path'`, whose state comes from a state document.
+    case entryImport
+}
+
+/// One item of a catalog file: an entry with its module, key and value, or an import with its path.
+@_spi(Syntax) public struct GesCatalogItem: Sendable {
+    @_spi(Syntax) public let kind: GesCatalogItemKind
+    /// The module name of the block holding the entry, empty at the root.
+    @_spi(Syntax) public let module: String
+    @_spi(Syntax) public let key: String
+    /// The UTF-8 offset of the key, or of the `import` word of a root import.
+    @_spi(Syntax) public let keyOffset: Int
+    /// The entry's Map value, which may contain references.
+    @_spi(Syntax) public let value: GesDocumentNode?
+    /// The UTF-8 offset of the entry's value.
+    @_spi(Syntax) public let valueOffset: Int
+    /// The import path as written.
+    @_spi(Syntax) public let path: String
+    /// The UTF-8 offset of the import path's opening quote, or -1.
+    @_spi(Syntax) public let pathOffset: Int
+}
+
+/// A read catalog file (specs/Documents.md#catalog-files): its handle type and items, or the first error. A text
+/// without a `:Catalog` header is no catalog file and has no error.
+@_spi(Syntax) public struct GesCatalogSyntax: Sendable {
+    /// The UTF-8 bytes of the text, which item and diagnostic offsets index.
+    @_spi(Syntax) public let bytes: [UInt8]
+    @_spi(Syntax) public let isCatalog: Bool
+    /// The handle type name of the header, without `@`.
+    @_spi(Syntax) public let typeName: String
+    /// The UTF-8 offset of the header's `:`.
+    @_spi(Syntax) public let headerOffset: Int
+    @_spi(Syntax) public let items: [GesCatalogItem]
+    @_spi(Syntax) public let diagnostic: GesDocumentDiagnostic?
 }

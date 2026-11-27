@@ -178,6 +178,18 @@
 
     func peek(_ offset: Int = 1) -> Unicode.Scalar { index + offset < scalars.count ? scalars[index + offset] : "\0" }
 
+    /// The scalar index after a handle type's projection `(:Name)` at the current position, or the current index when none follows.
+    func handleProjectionEnd() -> Int {
+        if index + 3 >= scalars.count || current != "(" || peek() != ":" || !Self.upper(peek(2)) { return index }
+        var end = index + 3
+        while end < scalars.count && (Self.letter(scalars[end]) || Self.digit(scalars[end])) { end += 1 }
+        while end + 1 < scalars.count && scalars[end] == "_" && Self.upper(scalars[end + 1]) {
+            end += 2
+            while end < scalars.count && (Self.letter(scalars[end]) || Self.digit(scalars[end])) { end += 1 }
+        }
+        return end < scalars.count && scalars[end] == ")" ? end + 1 : index
+    }
+
     mutating func advance() {
         guard index < scalars.count else { return }
         let c = current
@@ -276,6 +288,8 @@
                 advance()
                 while Self.letter(current) || Self.digit(current) { advance() }
             }
+            let projectionEnd = handleProjectionEnd()
+            while index < projectionEnd { advance() }
             if current == "~" { advance() }
             let attachedIllegal = current == "&" && peek() == "&" || current == "|" && peek() == "|" || current == "^" && ["&", "|", "^"].contains(peek())
             if attachedIllegal || (index < scalars.count && !Self.space(current) && !Self.boundaries.contains(current)) {

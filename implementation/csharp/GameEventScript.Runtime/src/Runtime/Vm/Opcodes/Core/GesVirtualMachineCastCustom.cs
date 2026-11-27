@@ -17,8 +17,10 @@ internal partial class GesVirtualMachine
         // A handle type checks without converting; a handle casts only to its type's state schema.
         if (typeName.Length > 0 && typeName[0] == '@')
         {
-            if (IsHandleType(in xValue, typeName)) SetValue(destinationRegister, in xValue);
-            else SetNothing(destinationRegister);
+            var text = new HandleTypeText(typeName);
+            if (!IsHandleType(in xValue, typeName)) SetNothing(destinationRegister);
+            else if (text.Projected) CastHandleView(destinationRegister, in xValue, (GesHandle)xValue.ObjectValue!, in text);
+            else SetValue(destinationRegister, in xValue);
             return;
         }
 
@@ -41,6 +43,8 @@ internal partial class GesVirtualMachine
             SetValue(destinationRegister, in dst);
             return;
         }
+
+        if (xValue.CustomTypeName is { } recordName && TryProjectRecord(destinationRegister, in xValue, recordName, typeName)) return;
 
         if (xValue.Kind is Map && xValue.ObjectValue is GesValueMap map)
         {

@@ -42,7 +42,8 @@ enum GesSwiftModelEmitter {
         let documentType = options.documents ? try GesModelPlanner.documentType(layout, document.space) : ""
         // Model messages and sets convert to and from messages through the values enum, which they need without --values.
         let messages = layout.types.contains { $0.kind != .schema }
-        let valued = options.values || messages
+        // Projections convert from their sources through it too.
+        let valued = options.values || messages || layout.types.contains { !$0.conversions.isEmpty }
         let schemas = "__GesModelSchemas" + suffix
         // Bindings and documents concern the schemas only.
         let plain = GesCSharpModelEmitter.schemasOnly(layout)
@@ -73,6 +74,9 @@ enum GesSwiftModelEmitter {
                 }
             )
         }
+        let catalogs = options.catalogs ? try GesModelPlanner.catalogs(layout, topLevel) : []
+        let catalogSet = schemaSet.map { $0.qualified + ".set" } ?? "__GesModelDocuments" + suffix + ".set.get()"
+        for catalog in catalogs { document.units.append(GesCodeUnit(owner: catalog.name) { code in self.catalog(&code, catalog, access, catalogSet) }) }
         if options.bindings { document.units.append(GesCodeUnit(owner: "") { code in bindings(&code, plain, access, support, computed) }) }
         if valued { document.units.append(GesCodeUnit(owner: "") { code in valueConversions(&code, layout, values, support, computed) }) }
         if messages { document.units.append(GesCodeUnit(owner: "") { code in schemasHolder(&code, layout, schemas, schemaSet) }) }
@@ -274,6 +278,12 @@ enum GesSwiftModelEmitter {
             code.line("/// Reads a Record of this schema, or a Map of only its fields, as `GesSchemaValues` encodes it.")
             code.line("/// - Throws: `GesWireError` with `wire.typeMismatch` at the path of a field that does not convert.")
             code.line("\(access)init(value: GesValue) throws(GesWireError) { self = try \(values).read\(type.name)(value, \"\") }")
+            for conversion in type.conversions {
+                code.blank()
+                code.line("/// Narrows a `:\(conversion.source)` to this projection: every taken field along its path, absent where an optional Record")
+                code.line("/// on the path is absent. It never fails, since the source holds valid values.")
+                code.line("\(access)init(_ source: \(conversion.source)) { self = \(values).\(type.name)__\(conversion.source)(source) }")
+            }
         }
         if let documents {
             code.blank()
@@ -457,6 +467,12 @@ enum GesSwiftModelEmitter {
             code.line("/// Reads a Record of this schema, or a Map of only its fields, as `GesSchemaValues` encodes it.")
             code.line("/// - Throws: `GesWireError` with `wire.typeMismatch` at the path of a field that does not convert.")
             code.line("\(access)init(value: GesValue) throws(GesWireError) { self = try \(values).read\(type.name)(value, \"\") }")
+            for conversion in type.conversions {
+                code.blank()
+                code.line("/// Narrows a `:\(conversion.source)` to this projection: every taken field along its path, absent where an optional Record")
+                code.line("/// on the path is absent. It never fails, since the source holds valid values.")
+                code.line("\(access)init(_ source: \(conversion.source)) { self = \(values).\(type.name)__\(conversion.source)(source) }")
+            }
         }
         if let documents {
             code.blank()
@@ -967,7 +983,29 @@ enum GesSwiftModelEmitter {
                 construct(&code, type.name, arguments, fields)
                 code.close()
             }
+            for conversion in type.conversions {
+                let paths = conversion.paths.map { path in "[" + path.map { literal($0) }.joined(separator: ", ") + "]" }
+                code.blank()
+                code.line("static let \(type.name)__\(conversion.source)Paths = [\(paths.joined(separator: ", "))]")
+                code.blank()
+                code.open("static func \(type.name)__\(conversion.source)(_ source: \(conversion.source)) -> \(type.name) {")
+                code.line("// The source holds valid values, so its fields read back.")
+                code.line("try! read\(type.name)(select(value(source), \(typeLiteral), \(names), \(type.name)__\(conversion.source)Paths), \"\")")
+                code.close()
+            }
             conversions(&code, type.name, fields, helper: name, support: support, plain: true)
+        }
+        if layout.types.contains(where: { !$0.conversions.isEmpty }) {
+            code.blank()
+            code.line("// The taken fields of a projection's source along their paths; a path through an absent Record gives nothing.")
+            code.open("static func select(_ source: GesValue, _ name: String, _ names: [String], _ paths: [[String]]) -> GesValue {")
+            code.open("let values = paths.map { path -> GesValue in")
+            code.line("var current = source")
+            code.line("for segment in path { current = current.asMap?.get(segment) ?? .nothing }")
+            code.line("return current")
+            code.close()
+            code.line("return .record(typeName: name, keys: names, values: values)")
+            code.close()
         }
         if layout.types.contains(where: { $0.kind != .schema }) { messageHelpers(&code) }
         code.blank()

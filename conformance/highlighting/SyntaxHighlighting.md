@@ -166,6 +166,10 @@ and ANSI text preservation.
 ```
 
 ```highlight
+{"name":"schema handles and catalog files","language":"gess","source":"handle @Unit of :Unit as { id: :Text max 64, version: :ContentHash }\nhandle @UnitFiles of :Catalog(@Unit) composite @Repository as { part: :Text max 256 }\n","expect":[{"text":"handle","kind":"keyword"},{"text":"@Unit","kind":"type"},{"text":"of","kind":"keyword"},{"text":":ContentHash","kind":"type"},{"text":"@UnitFiles","kind":"type"},{"text":":Catalog","kind":"type"},{"text":"@Unit","occurrence":1,"kind":"type"},{"text":"composite","kind":"keyword"},{"text":"@Repository","kind":"type"}],"diagnostics":[]}
+```
+
+```highlight
 {"name":"schema recursive list","language":"gess","source":"schema :Bind as { units: :List(:Bind) max 4 depth 3 }\n","expect":[{"text":":List","kind":"type"},{"text":"max","kind":"keyword"},{"text":"depth","kind":"keyword"},{"text":"3","kind":"number"}],"diagnostics":[]}
 ```
 
@@ -187,6 +191,10 @@ and ANSI text preservation.
 
 ```highlight
 {"name":"schema network routes","language":"gess","source":"wire schema :World as { tick: :Boolean }\nwire messages Commands as (Move)\nmessage Move()\nnetwork :Game as {\n  client sends Commands reliable\n  server publishes :World latest at most every 50ms\n  server sends :World bulk\n}\n","expect":[{"text":"network","kind":"keyword"},{"text":":Game","kind":"type"},{"text":"client","kind":"keyword"},{"text":"sends","occurrence":0,"kind":"keyword"},{"text":"reliable","kind":"keyword"},{"text":"server","occurrence":0,"kind":"keyword"},{"text":"publishes","kind":"keyword"},{"text":":World","occurrence":1,"kind":"type"},{"text":"latest","kind":"keyword"},{"text":"at","kind":"keyword"},{"text":"most","kind":"keyword"},{"text":"every","kind":"keyword"},{"text":"50ms","kind":"number"},{"text":"bulk","kind":"keyword"}],"diagnostics":[]}
+```
+
+```highlight
+{"name":"schema owns with a projection and sending state","language":"gess","source":"schema :C as { state: :Boolean }\nprojection :P of :C as { state }\nhandle @U of :C as { id: :Text max 8, version: :ContentHash }\nwire schema :W as { u: @U(:P) }\nnetwork :G as {\n  server publishes :W latest\n  server owns @U as :P sending state\n}\n","expect":[{"text":"state","occurrence":0,"kind":"identifier"},{"text":"projection","kind":"keyword"},{"text":"state","occurrence":1,"kind":"identifier"},{"text":"owns","kind":"keyword"},{"text":":P","occurrence":2,"kind":"type"},{"text":"sending","kind":"keyword"},{"text":"state","occurrence":2,"kind":"keyword"}],"diagnostics":[]}
 ```
 
 ```highlight
@@ -303,6 +311,18 @@ and ANSI text preservation.
 
 ```highlight
 {"name": "document handle key with a version", "language": "gesd", "source": "seen: [@Drone:7~3: true]\n", "expect": [{"text": "@Drone", "kind": "type"}, {"text": "3", "kind": "number"}], "diagnostics": [{"code": "document.invalidHandle", "text": "@Drone:7~3"}]}
+```
+
+```highlight
+{"name": "catalog file", "language": "gesd", "source": ":Catalog(@Unit)\nimport 'extra'\nscout-1: [name: 'Scout', hull: @Hull:light~, escort: @drone.brakk~]\nmodule drone.heavy {\n  Brakk: import 'brakk.gesd'\n}\nimport: [name: 'I']\n", "expect": [{"text": ":Catalog", "kind": "keyword"}, {"text": "@Unit", "kind": "type"}, {"text": "import", "kind": "keyword"}, {"text": "'extra'", "kind": "string"}, {"text": "scout-1", "kind": "identifier"}, {"text": "@Hull", "kind": "type"}, {"text": "light", "kind": "plain"}, {"text": "~", "kind": "symbol"}, {"text": "@", "kind": "symbol", "occurrence": 2}, {"text": "drone", "kind": "identifier"}, {"text": ".", "kind": "symbol"}, {"text": "brakk", "kind": "identifier"}, {"text": "~", "kind": "symbol", "occurrence": 1}, {"text": "module", "kind": "keyword"}, {"text": "drone", "kind": "identifier", "occurrence": 1}, {"text": ".", "kind": "symbol", "occurrence": 1}, {"text": "heavy", "kind": "identifier"}, {"text": "{", "kind": "symbol"}, {"text": "Brakk", "kind": "identifier"}, {"text": "import", "kind": "keyword", "occurrence": 1}, {"text": "}", "kind": "symbol"}, {"text": "import", "kind": "identifier", "occurrence": 2}], "diagnostics": []}
+```
+
+```highlight
+{"name": "catalog file reading error", "language": "gesd", "source": ":Catalog(@Unit)\nmodule a {\n  import 'x.gesd'\n}\n", "expect": [{"text": "module", "kind": "keyword"}, {"text": "import", "kind": "keyword"}], "diagnostics": [{"code": "document.unexpectedToken", "text": "import"}]}
+```
+
+```highlight
+{"name": "state document with references", "language": "gesd", "source": ":Schema(:Composition)\nname: 'Brakk', escort: @gnabblo, hull: @Hull:light~\n", "expect": [{"text": ":Schema", "kind": "keyword"}, {"text": "@", "kind": "symbol"}, {"text": "gnabblo", "kind": "identifier"}, {"text": "@Hull", "kind": "type"}, {"text": "~", "kind": "symbol"}], "diagnostics": []}
 ```
 
 ```highlight

@@ -2,25 +2,244 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// Reads GES document text: a bracket-free root of entries, an optional schema header, comments and line-break
-/// separators around the data literals of `parse`. Reading stops at the first error.
+/// separators around the data literals of `parse`. Reading stops at the first error. Catalog files and the references
+/// of their documents are read only on request (specs/Documents.md#catalogs).
 @_spi(Syntax) public struct GesDocumentReader {
     private typealias Code = GesDocumentDiagnostic
 
     private let bytes: [UInt8]
+    // Whether catalog references and pinned handles may appear, as in the documents of a catalog.
+    private let references: Bool
     private var position = 0, items = 0
     private var error: GesDocumentDiagnostic?
 
-    private init(_ bytes: [UInt8]) { self.bytes = bytes }
+    private init(_ bytes: [UInt8], references: Bool) {
+        self.bytes = bytes
+        self.references = references
+    }
 
-    @_spi(Syntax) public static func read(_ text: String) -> GesDocumentSyntax {
+    /// Reads a document; with `references`, a state document of a catalog entry, whose values may be references.
+    @_spi(Syntax) public static func read(_ text: String, references: Bool = false) -> GesDocumentSyntax {
         let bytes = Array(text.utf8)
-        if text.unicodeScalars.count > 1_048_576 {
-            return GesDocumentSyntax(bytes: bytes, root: nil, schema: .none, diagnostic: Code(Code.limitExceeded, 0, 0, limitName: "MaxLiteralInputScalars", limitValue: 1_048_576))
-        }
-        var reader = Self(bytes)
+        if text.unicodeScalars.count > 1_048_576 { return GesDocumentSyntax(bytes: bytes, root: nil, schema: .none, diagnostic: inputLimit()) }
+        var reader = Self(bytes, references: references)
         let (root, schema) = reader.document()
         let diagnostic = reader.error ?? (root == nil ? reader.diagnostic(Code.invalidLiteral, reader.position) : nil)
         return GesDocumentSyntax(bytes: bytes, root: diagnostic == nil ? root : nil, schema: schema, diagnostic: diagnostic)
+    }
+
+    private static func inputLimit() -> GesDocumentDiagnostic { Code(Code.limitExceeded, 0, 0, limitName: "MaxLiteralInputScalars", limitValue: 1_048_576) }
+
+    /// Reads a catalog file. A text without a `:Catalog` header is no catalog file; reading reports no error for it.
+    @_spi(Syntax) public static func readCatalog(_ text: String) -> GesCatalogSyntax {
+        let bytes = Array(text.utf8)
+        if text.unicodeScalars.count > 1_048_576 { return GesCatalogSyntax(bytes: bytes, isCatalog: true, typeName: "", headerOffset: 0, items: [], diagnostic: inputLimit()) }
+        var reader = Self(bytes, references: true)
+        var items: [GesCatalogItem] = []
+        let (isCatalog, typeName, headerOffset) = reader.catalogFile(&items)
+        return GesCatalogSyntax(bytes: bytes, isCatalog: isCatalog, typeName: typeName, headerOffset: headerOffset, items: items, diagnostic: reader.error)
+    }
+
+    private mutating func catalogFile(_ items: inout [GesCatalogItem]) -> (isCatalog: Bool, typeName: String, headerOffset: Int) {
+        if bytes.starts(with: [0xEF, 0xBB, 0xBF]) { position = 3 }
+        whitespace()
+        let headerOffset = position
+        guard isCatalogHeader() else { return (false, "", headerOffset) }
+        guard let typeName = catalogHeader() else { return (true, "", headerOffset) }
+        spacesAndComments()
+        if position < bytes.count && !atLineBreak {
+            fail(Code.unexpectedToken, position)
+            return (true, typeName, headerOffset)
+        }
+        whitespace()
+        _ = catalogItems(&items)
+        return (true, typeName, headerOffset)
+    }
+
+    // The items of a catalog file after its header; false after a failure.
+    private mutating func catalogItems(_ items: inout [GesCatalogItem]) -> Bool {
+        while position < bytes.count {
+            let itemStart = position
+            if isSchemaHeader() || isCatalogHeader() { return fail(Code.misplacedSchemaHeader, itemStart) != nil }
+            if self.items >= 65536 { return setLimit("MaxLiteralItems", 65536, itemStart) != nil }
+            self.items += 1
+            if isItemWord("import") {
+                position += 6
+                spacesAndComments()
+                guard let (path, pathOffset) = importPath() else { return false }
+                items.append(GesCatalogItem(kind: .import, module: "", key: "", keyOffset: itemStart, value: nil, valueOffset: -1, path: path, pathOffset: pathOffset))
+            } else if isItemWord("module") {
+                if !module(&items) { return false }
+            } else if !catalogEntry("", &items) {
+                return false
+            }
+            spacesAndComments()
+            if position == bytes.count { break }
+            if !consume(44) && !atLineBreak { return fail(Code.unexpectedToken, position) != nil }
+            whitespace()
+            if position < bytes.count && bytes[position] == 44 { return fail(Code.unexpectedToken, position) != nil }
+        }
+        return true
+    }
+
+    private func isCatalogHeader() -> Bool { startsWord(":Catalog") }
+
+    // `:Catalog(@TypeName)`; nil after a failure.
+    private mutating func catalogHeader() -> String? {
+        position += 8
+        whitespace()
+        let open = position
+        var failure: (code: String, at: Int)?
+        if !consume(40) {
+            failure = (Code.invalidSchemaHeader, position)
+        } else {
+            whitespace()
+            let argument = position
+            if position == bytes.count {
+                failure = (Code.unclosedBracket, open)
+            } else if !consume(64) {
+                failure = (Code.invalidSchemaHeader, argument)
+            } else if let name = name(), GesNames.type(name) {
+                whitespace()
+                if position == bytes.count {
+                    failure = (Code.unclosedBracket, open)
+                } else if consume(41) {
+                    return name
+                } else {
+                    failure = (Code.invalidSchemaHeader, position)
+                }
+            } else {
+                failure = (Code.invalidSchemaHeader, argument)
+            }
+        }
+        fail(failure!.code, failure!.at)
+        return nil
+    }
+
+    // Whether the text continues with the item word `import` or `module` and no `:` follows it, which would make the
+    // word a key.
+    private mutating func isItemWord(_ word: String) -> Bool {
+        if !starts(word) { return false }
+        let end = position + word.utf8.count
+        if end < bytes.count && Self.catalogKeyByte(bytes[end]) { return false }
+        let saved = position
+        position = end
+        spacesAndComments()
+        let isWord = position == bytes.count || bytes[position] != 58
+        position = saved
+        return isWord
+    }
+
+    // `module name { entries }`; module blocks do not nest and hold no imports. False after a failure.
+    private mutating func module(_ items: inout [GesCatalogItem]) -> Bool {
+        position += 6
+        spacesAndComments()
+        let nameStart = position
+        guard let nameEnd = catalogNameEnd(position) else { return fail(Code.invalidKey, nameStart) != nil }
+        let name = String(decoding: bytes[nameStart..<nameEnd], as: UTF8.self)
+        position = nameEnd
+        spacesAndComments()
+        let open = position
+        if !consume(123) { return fail(Code.unexpectedToken, position) != nil }
+        whitespace()
+        if consume(125) { return true }
+        if position == bytes.count { return fail(Code.unclosedBracket, open) != nil }
+        while true {
+            let entryStart = position
+            if isItemWord("module") { return fail(Code.unexpectedModule, entryStart, end: entryStart + 6) != nil }
+            if isItemWord("import") { return fail(Code.unexpectedToken, entryStart, end: entryStart + 6) != nil }
+            if isSchemaHeader() || isCatalogHeader() { return fail(Code.misplacedSchemaHeader, entryStart) != nil }
+            if self.items >= 65536 { return setLimit("MaxLiteralItems", 65536, entryStart) != nil }
+            self.items += 1
+            if !catalogEntry(name, &items) { return false }
+            let next = separator(125, open)
+            if next != 0 { return next > 0 }
+        }
+    }
+
+    // `key: value` or `key: import 'path'`; false after a failure.
+    private mutating func catalogEntry(_ module: String, _ items: inout [GesCatalogItem]) -> Bool {
+        let keyStart = position
+        var keyEnd = keyStart
+        while keyEnd < bytes.count && Self.catalogKeyByte(bytes[keyEnd]) { keyEnd += 1 }
+        if keyEnd == keyStart { return fail(Code.invalidKey, keyStart) != nil }
+        let key = String(decoding: bytes[keyStart..<keyEnd], as: UTF8.self)
+        position = keyEnd
+        spacesAndComments()
+        if !consume(58) { return fail(Code.missingColon, position) != nil }
+        spacesAndComments()
+        if starts("import") && (position + 6 == bytes.count || !Self.catalogKeyByte(bytes[position + 6])) {
+            position += 6
+            spacesAndComments()
+            guard let (path, pathOffset) = importPath() else { return false }
+            items.append(GesCatalogItem(kind: .entryImport, module: module, key: key, keyOffset: keyStart, value: nil, valueOffset: -1, path: path, pathOffset: pathOffset))
+            return true
+        }
+        let valueStart = position
+        let implied = keyOnly()
+        whitespaceBeforeValue(implied)
+        let offset = position
+        guard let value = implied ? .boolean(true) : self.value(depth: 0) else { return false }
+        guard case .map = value else { return fail(Code.unexpectedToken, valueStart) != nil }
+        items.append(GesCatalogItem(kind: .entry, module: module, key: key, keyOffset: keyStart, value: value, valueOffset: offset, path: "", pathOffset: -1))
+        return true
+    }
+
+    // A non-empty quoted import path on the import's line and the offset of its opening quote; nil after a failure.
+    private mutating func importPath() -> (String, Int)? {
+        let pathOffset = position
+        guard position < bytes.count, bytes[position] == 39 || bytes[position] == 34 else {
+            fail(Code.unexpectedToken, position)
+            return nil
+        }
+        guard let path = quoted() else {
+            fail(Code.unclosedText, pathOffset)
+            return nil
+        }
+        if path.isEmpty {
+            fail(Code.invalidLiteral, pathOffset, end: position)
+            return nil
+        }
+        return (path, pathOffset)
+    }
+
+    private static func catalogKeyByte(_ byte: UInt8) -> Bool { GesNames.alnum(byte) || byte == 95 || byte == 45 }
+
+    // The end of a catalog name, keys joined by `.`, from `start`; nil when no key starts there or a `.` ends it.
+    private func catalogNameEnd(_ start: Int) -> Int? {
+        var position = start
+        while true {
+            let keyStart = position
+            while position < bytes.count && Self.catalogKeyByte(bytes[position]) { position += 1 }
+            if position == keyStart { return nil }
+            if position == bytes.count || bytes[position] != 46 { return position }
+            position += 1
+        }
+    }
+
+    // Reads a handle, or with references a reference or pinned handle, at the `@` at `start`. A reference's identity is
+    // its name. Returns nil when no well-formed handle or reference that a delimiter follows is there.
+    private func scanHandle(_ start: Int) -> (end: Int, reference: Bool, identity: [Unicode.Scalar], versioned: Bool, pin: Int?)? {
+        guard references else {
+            guard let read = GesHandleLiteral.read(bytes, start) else { return nil }
+            return (read.end, false, read.identity, read.versioned, nil)
+        }
+        let nameEnd = catalogNameEnd(start + 1)
+        if let nameEnd, nameEnd + 1 < bytes.count, bytes[nameEnd] == 58, GesHandleLiteral.isIdStart(bytes[nameEnd + 1]),
+            GesNames.type(String(decoding: bytes[(start + 1)..<nameEnd], as: UTF8.self))
+        {
+            guard let read = GesHandleLiteral.read(bytes, start, allowPin: true) else { return nil }
+            return (read.end, false, read.identity, read.versioned, read.pin)
+        }
+        guard let nameEnd else { return nil }
+        var end = nameEnd
+        var pin: Int?
+        if end < bytes.count && bytes[end] == 126 {
+            pin = end
+            end += 1
+        }
+        if end < bytes.count && !GesHandleLiteral.isDelimiter(bytes, end) { return nil }
+        return (end, true, Array(String(decoding: bytes[(start + 1)..<nameEnd], as: UTF8.self).unicodeScalars), false, pin)
     }
 
     private mutating func document() -> (GesDocumentNode?, GesDocumentSchemaSyntax) {
@@ -45,6 +264,9 @@
         while position < bytes.count {
             let entryStart = position
             if isSchemaHeader() { return (fail(Code.misplacedSchemaHeader, entryStart), schema) }
+            // Catalog headers and module blocks belong only to catalog files.
+            if isCatalogHeader() { return (fail(Code.invalidSchemaHeader, entryStart), schema) }
+            if isItemWord("module") { return (fail(Code.unexpectedModule, entryStart, end: entryStart + 6), schema) }
             if items >= 65536 { return (setLimit("MaxLiteralItems", 65536, entryStart), schema) }
             items += 1
             if record && bytes[entryStart] == 64 { return (fail(Code.invalidKey, entryStart), schema) }
@@ -75,8 +297,8 @@
 
     private static func handleKeyFlags(_ flags: [Bool]) -> [Bool] { flags.contains(true) ? flags : [] }
 
-    // A Map key: a Text key, or a handle without a version or ref. `identity` compares keys; a handle's never equals a
-    // Text's. A malformed handle records its error.
+    // A Map key: a Text key, or a handle without a version or ref, or a reference without a pin. `identity` compares
+    // keys; a handle's never equals a Text's or a reference's. A malformed handle records its error.
     private mutating func entryKey() -> (key: String, isHandle: Bool, identity: [Unicode.Scalar])? {
         whitespace()
         guard position < bytes.count, bytes[position] == 64 else {
@@ -84,20 +306,21 @@
             return (key, false, ["t"] + Array(key.unicodeScalars))
         }
         let start = position
-        guard let handle = GesHandleLiteral.read(bytes, start), !handle.versioned else {
-            let end = GesHandleLiteral.read(bytes, start)?.end ?? start + 1
-            fail(Code.invalidHandle, start, end: end)
+        let scanned = scanHandle(start)
+        guard let handle = scanned, !handle.versioned, handle.pin == nil else {
+            fail(Code.invalidHandle, start, end: scanned?.end ?? start + 1)
             return nil
         }
         position = handle.end
-        return (String(decoding: bytes[start..<handle.end], as: UTF8.self), true, ["h"] + handle.identity)
+        return (String(decoding: bytes[start..<handle.end], as: UTF8.self), true, [handle.reference ? "r" : "h"] + handle.identity)
     }
 
     private mutating func handle() -> GesDocumentNode? {
         let start = position
-        guard let handle = GesHandleLiteral.read(bytes, start) else { return fail(Code.invalidHandle, start, end: start + 1) }
+        guard let handle = scanHandle(start) else { return fail(Code.invalidHandle, start, end: start + 1) }
         position = handle.end
-        return .handle(String(decoding: bytes[start..<handle.end], as: UTF8.self))
+        let text = String(decoding: bytes[(handle.reference ? start + 1 : start)..<(handle.pin ?? handle.end)], as: UTF8.self)
+        return handle.reference ? .reference(text, pinned: handle.pin != nil, offset: start) : .handle(text, pinned: handle.pin != nil, offset: start)
     }
 
     // A value starts after whitespace; a key-only entry has none.
@@ -554,7 +777,7 @@
         let saved = position
         let isMap: Bool
         if bytes[position] == 64 {
-            let end = GesHandleLiteral.read(bytes, position)?.end
+            let end = scanHandle(position)?.end
             if let end { position = end }
             spacesAndComments()
             isMap = end != nil && consume(58)

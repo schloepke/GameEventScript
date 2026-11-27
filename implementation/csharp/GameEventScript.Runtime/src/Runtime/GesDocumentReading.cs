@@ -1,6 +1,7 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+using System;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
 using GameEventScript.Syntax;
@@ -26,17 +27,24 @@ internal static class GesDocumentReading
             GesDocumentSchemaSyntax.File => new GesDocumentSchema(GesDocumentSchemaKind.File, syntax.SchemaName),
             _ => null
         };
+        return Entries(text, syntax.Root!, schema is { Kind: GesDocumentSchemaKind.Type } type ? type.Name : null);
+    }
+
+    /// <summary>Builds the value of a Map node of document entries: a Map, or a Record of the named type.</summary>
+    /// <exception cref="GesDocumentException">A literal is invalid or exceeds a parsing limit.</exception>
+    internal static GesValue Entries(string text, GesDocumentNode root, string? recordType)
+    {
         GesValue map;
         try
         {
-            map = GesLiteralEvaluation.EvaluateDocument(Value(syntax.Root!), out var invalidOffset)
+            map = GesLiteralEvaluation.EvaluateDocument(Value(root), out var invalidOffset)
                 ?? throw Error(text, Code.InvalidLiteral, invalidOffset);
         }
         catch (GesLiteralLimitException exception)
         {
             throw Error(text, Code.LimitExceeded, exception.Offset, exception.LimitName, exception.Limit);
         }
-        if (schema is not { Kind: GesDocumentSchemaKind.Type } type) return map;
+        if (recordType is null) return map;
         var fields = map.AsMap()!;
         var keys = new string[fields.Length];
         var values = new GesValue[fields.Length];
@@ -45,7 +53,7 @@ internal static class GesDocumentReading
             keys[i] = fields.KeyAt(i);
             values[i] = fields.ValueAt(i);
         }
-        return GesValue.GesRecord(type.Name, keys, values);
+        return GesValue.GesRecord(recordType, keys, values);
     }
 
     private static GesDocumentException Error(string text, string code, int offset, string? limitName = null, int? limit = null)
@@ -144,7 +152,9 @@ internal static class GesDocumentReading
             case GesDocumentNodeKind.Handle: return GesValue.GesHandle(GameEventScript.Api.GesHandle.Parse(node.Name));
             case GesDocumentNodeKind.Form: return new GesLiteralNode(node.Name, node.Labels, Values(node.Children), null, node.Offset).Value;
             case GesDocumentNodeKind.Message: return new GesLiteralNode("@message:" + node.Name, node.Labels, Values(node.Children), null, node.Offset).Value;
-            default: return GesValue.GesHandler(GesMessageSignature.Create(node.Name, node.Labels));
+            case GesDocumentNodeKind.Handler: return GesValue.GesHandler(GesMessageSignature.Create(node.Name, node.Labels));
+            // A catalog replaces every reference by its handle before a value is built.
+            default: throw new InvalidOperationException($"A {node.Kind} node has no value.");
         }
     }
 

@@ -62,7 +62,7 @@ There are no public Integer/Binary64 value tags.
 | `Series` | `kind`: `"fibonacci"` or `"factorial"`; `offset`: nonnegative Int64 numeric Text |
 | `Handler` | `name`: message name; `labels`: ordered argument labels |
 | `Message` | `value`: message object |
-| `Handle` | `name`: handle type name; `id`: a Number with integer storage and unit `""`, or a Text value object; for a composite instead `root`: the root's Handle object and `part`: like `id`; optionally `version`: a Number value object for a revision or a Bytes value object of 20 or 32 bytes; a composite's version is its root's. *Since: Unreleased* |
+| `Handle` | `name`: handle type name; `id`: a Number with integer storage and unit `""`, or a Text value object; for a composite additionally `part`: like `id`, with `name` the composite type's name and `id` its root's; optionally `version`: a Number value object for a revision or a Bytes value object of 20 or 32 bytes; a composite's version is its root's. *Since: Unreleased* |
 
 Numeric decoding and normalization follow [Numbers](Semantics/Numbers.md).
 Number payloads do not embed units or percent suffixes. NaN is not a Number

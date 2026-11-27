@@ -19,7 +19,7 @@ extension ToolHelp {
           ges schema generate <schema.gess> [more.gess ...] (--root <Name> ... | --all-roots | --wire <group> | --model <group>)
                               [--param <name>=<literal> ...]
                               --language csharp|swift [--namespace <A.B>] [--access public|internal] [--values]
-                              [--checked-exclusivity] [--message-suffix <text>] [--bindings] [--documents] [--models <namespace>] [--extend-namespace <A>]
+                              [--checked-exclusivity] [--message-suffix <text>] [--bindings] [--documents] [--catalogs] [--models <namespace>] [--extend-namespace <A>]
                               [--schemas <Name> | --use-schemas <A.Name>] [--import <Module> ...]
                               [-o <file> | -d <dir> [--split schema|file]] [--check]
 
@@ -52,6 +52,7 @@ extension ToolHelp {
           --import <Module>         Import this Swift module in every generated file, such as the module of --use-schemas.
           --bindings                Also offer generated model types to scripts as external types; only with --model.
           --documents               Also read model roots from GES document text; includes --values, only with --model.
+          --catalogs                Also generate a typed catalog per handle type whose state is a model root; includes --documents.
           --models <namespace>      Share the packed types of the model code in that namespace ("" for the global one) and
                                     convert wire records directly to and from the models of their schemas; only wire code.
           -d, --out-dir <dir>       Write the code as several files into a directory that generate owns, with a manifest.
@@ -87,6 +88,7 @@ extension Tool {
         var extendNamespace: String?
         var bindings = false
         var documents = false
+        var catalogs = false
         var models: String?
         var schemaSet: String?
         var useSchemaSet: String?
@@ -123,6 +125,8 @@ extension Tool {
                 bindings = true
             } else if argument == "--documents" && command == "generate" {
                 documents = true
+            } else if argument == "--catalogs" && command == "generate" {
+                catalogs = true
             } else if [
                 "--root", "--data", "--baseline", "--param", "-o", "--output", "--language", "--namespace", "--access", "--wire", "--model", "-d", "--out-dir", "--split", "--models", "--extend-namespace", "--schemas", "--use-schemas", "--import",
                 "--message-suffix",
@@ -189,6 +193,7 @@ extension Tool {
         if modelGroup != nil && messageSuffix != nil { throw ToolError.usage("--message-suffix concerns wire code, not --model.") }
         if bindings && modelGroup == nil { throw ToolError.usage("--bindings concerns model code and requires --model.") }
         if documents && modelGroup == nil { throw ToolError.usage("--documents concerns model code and requires --model.") }
+        if catalogs && modelGroup == nil { throw ToolError.usage("--catalogs concerns model code and requires --model.") }
         if models != nil && modelGroup != nil { throw ToolError.usage("--models concerns wire code, not --model.") }
         if command == "generate" && language != "csharp" && language != "swift" { throw ToolError.usage("generate requires --language csharp or --language swift.") }
         if extendNamespace != nil && language != "swift" {
@@ -239,6 +244,7 @@ extension Tool {
                         checkedExclusivity: checkedExclusivity,
                         bindings: bindings,
                         documents: documents,
+                        catalogs: catalogs,
                         split: outDir == nil ? .none : split == "file" ? .file : .schema,
                         models: models,
                         extendNamespace: extendNamespace,

@@ -26,7 +26,7 @@ internal sealed class AdapterHandles
         {
             Fields(answer, "handle", "answer", "text", "version");
             _ = GesHandle.Parse(answer.GetProperty("handle").GetString()!);
-            if (answer.GetProperty("answer").GetString() is not ("document" or "record" or "missing" or "fail")) throw new ArgumentException("Invalid handle answer.");
+            if (answer.GetProperty("answer").GetString() is not ("document" or "record" or "missing" or "notVisible" or "fail")) throw new ArgumentException("Invalid handle answer.");
         }
 
         foreach (var answer in catalog.GetProperty("refAnswers").EnumerateArray())
@@ -124,6 +124,9 @@ internal sealed class AdapterHandles
                     break;
                 case "missing":
                     call.SetMissing();
+                    break;
+                case "notVisible":
+                    call.SetNotVisible();
                     break;
                 default:
                     throw new InvalidOperationException("The case's resolver fails for " + call.Handle + ".");

@@ -37,6 +37,16 @@ final class GesVirtualMachine {
     // The states the running handler invocation has read; it survives pauses and ends with the invocation.
     var handleStates: [HandleStateKey: GesHandleState] = [:]
     lazy var handleResolveCall = GesHandleResolveCall()
+    lazy var handleResolveBatch = GesHandleResolveBatch()
+    var handleBatchSeen: Set<HandleStateKey> = []
+    // The Lists of the message that hold handles, collected at the first uncached read of the invocation.
+    var handleLists: [[GesValue]] = []
+    var handleListsCollected = false
+    var handleContext: GesContext?
+    // The party state reads are for: 0 for the host itself (specs/HostRuntime.md#handles).
+    var handleParty = 0
+    // The message the running invocation processes.
+    var processingMessage: GameEventScriptMessage?
 
     init(maxRegisters: Int, maxCallDepth: Int) {
         self.maxRegisters = maxRegisters
@@ -358,6 +368,7 @@ final class GesVirtualMachine {
         extensionCall.end()
         constructorCall.end()
         clearHandleStates()
+        processingMessage = nil
         if pendingCapacity > 0 {
             ensureRegisterCapacity(pendingCapacity)
             registersInUse = 0

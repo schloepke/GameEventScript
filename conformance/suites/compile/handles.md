@@ -20,7 +20,8 @@ tags: [handles, schemas, linking, diagnostics]
 > **Since: Unreleased**
 
 These cases verify where scripts may name [handle types](../../../specs/Language.md#handles), the diagnostics
-`validate.unknownHandleType` and `validate.invalidHandleUse`, the `HandleType` import
+`validate.unknownHandleType`, `validate.invalidHandleUse`, `validate.invalidProjection` and
+`validate.handleWidening` ([projections](../../../specs/Language.md#projections)), the `HandleType` import
 ([Bytecode](../../../specs/Bytecode.md)) and its link checks `link.missingHandleResolver` and
 `link.mismatchedHandleType` ([Host runtime](../../../specs/HostRuntime.md#handles)). Each case declares its handle
 catalog in a `handles` block ([Markdown format](../../../specs/Conformance/MarkdownFormat.md#handle-catalogs)).
@@ -697,6 +698,212 @@ errors:
     column: null
     endLine: null
     endColumn: null
+```
+
+---
+
+## Test: a projection must narrow the type's state
+
+`@Name(:P)` with a `:P` that is no projection of the type's state schema is `validate.invalidProjection`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: foreign-projection
+sources:
+  - name: foreign-projection.ges
+    program: main
+handles:
+  schemas: ["schema :Composition as { name: :Text max 32, icon: :Text max 16, mass: :Number integer between 0 and 1000, label: :Text max 8 }\nprojection :UnitDisplay of :Composition as { name, icon, label }\nprojection :UnitLabel of :UnitDisplay as { label }\nschema :Contact as { label: :Text max 16 }\nprojection :ContactLabel of :Contact as { label }\nhandle @Unit of :Composition as { id: :Number integer between 0 and 255, version: :Nothing }\nhandle @Target of :Contact as { id: :Number integer between 0 and 255, version: :Nothing }\n"]
+  resolvers: []
+```
+
+### Source code under test
+
+```ges
+module main
+on Seen(unit as @Unit(:ContactLabel)) { emit Out(unit: unit) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: validate
+  code: validate.invalidProjection
+  symbol: "@Unit(:ContactLabel)"
+  sourceName: foreign-projection.ges
+  line: 2
+  column: 9
+  endLine: 2
+  endColumn: 37
+```
+
+---
+
+## Test: a union holds one view per handle type
+
+A union that names one handle type with two projections, or with and without one, is `validate.invalidProjection`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-two-views
+sources:
+  - name: union-two-views.ges
+    program: main
+handles:
+  schemas: ["schema :Composition as { name: :Text max 32, icon: :Text max 16, mass: :Number integer between 0 and 1000, label: :Text max 8 }\nprojection :UnitDisplay of :Composition as { name, icon, label }\nprojection :UnitLabel of :UnitDisplay as { label }\nschema :Contact as { label: :Text max 16 }\nprojection :ContactLabel of :Contact as { label }\nhandle @Unit of :Composition as { id: :Number integer between 0 and 255, version: :Nothing }\nhandle @Target of :Contact as { id: :Number integer between 0 and 255, version: :Nothing }\n"]
+  resolvers: []
+```
+
+### Source code under test
+
+```ges
+module main
+on Seen(unit as @Unit(:UnitDisplay)|@Unit(:UnitLabel)) { emit Out(unit: unit) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: validate
+  code: validate.invalidProjection
+  symbol: "@Unit(:UnitLabel)"
+  sourceName: union-two-views.ges
+  line: 2
+  column: 9
+  endLine: 2
+  endColumn: 54
+```
+
+---
+
+## Test: a projected handle reads only its view's fields
+
+A member of a projected handle that is no field of its projection is `validate.invalidProjection`; the identity members stay.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: member-outside-view
+sources:
+  - name: member-outside-view.ges
+    program: main
+handles:
+  schemas: ["schema :Composition as { name: :Text max 32, icon: :Text max 16, mass: :Number integer between 0 and 1000, label: :Text max 8 }\nprojection :UnitDisplay of :Composition as { name, icon, label }\nprojection :UnitLabel of :UnitDisplay as { label }\nschema :Contact as { label: :Text max 16 }\nprojection :ContactLabel of :Contact as { label }\nhandle @Unit of :Composition as { id: :Number integer between 0 and 255, version: :Nothing }\nhandle @Target of :Contact as { id: :Number integer between 0 and 255, version: :Nothing }\n"]
+  resolvers: []
+```
+
+### Source code under test
+
+```ges
+module main
+on Seen(unit as @Unit(:UnitDisplay)) { emit Out(id: unit.id, mass: unit.mass) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: validate
+  code: validate.invalidProjection
+  symbol: "mass"
+  sourceName: member-outside-view.ges
+  line: 2
+  column: 68
+  endLine: 2
+  endColumn: 72
+```
+
+---
+
+## Test: `as :S` reads no more than the view
+
+`as` the state schema or a projection that does not narrow the handle's view is `validate.handleWidening`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: widening-cast
+sources:
+  - name: widening-cast.ges
+    program: main
+handles:
+  schemas: ["schema :Composition as { name: :Text max 32, icon: :Text max 16, mass: :Number integer between 0 and 1000, label: :Text max 8 }\nprojection :UnitDisplay of :Composition as { name, icon, label }\nprojection :UnitLabel of :UnitDisplay as { label }\nschema :Contact as { label: :Text max 16 }\nprojection :ContactLabel of :Contact as { label }\nhandle @Unit of :Composition as { id: :Number integer between 0 and 255, version: :Nothing }\nhandle @Target of :Contact as { id: :Number integer between 0 and 255, version: :Nothing }\n"]
+  resolvers: []
+```
+
+### Source code under test
+
+```ges
+module main
+on Seen(unit as @Unit(:UnitLabel)) { emit Out(view: unit as :UnitDisplay) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: validate
+  code: validate.handleWidening
+  symbol: "UnitDisplay"
+  sourceName: widening-cast.ges
+  line: 2
+  column: 53
+  endLine: 2
+  endColumn: 57
+```
+
+---
+
+## Test: a projected handle passes only to a narrower view
+
+Passing a projected handle to a Record field of the full view is `validate.handleWidening`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: widening-field
+sources:
+  - name: widening-field.ges
+    program: main
+handles:
+  schemas: ["schema :Composition as { name: :Text max 32, icon: :Text max 16, mass: :Number integer between 0 and 1000, label: :Text max 8 }\nprojection :UnitDisplay of :Composition as { name, icon, label }\nprojection :UnitLabel of :UnitDisplay as { label }\nschema :Contact as { label: :Text max 16 }\nprojection :ContactLabel of :Contact as { label }\nhandle @Unit of :Composition as { id: :Number integer between 0 and 255, version: :Nothing }\nhandle @Target of :Contact as { id: :Number integer between 0 and 255, version: :Nothing }\n"]
+  resolvers: []
+```
+
+### Source code under test
+
+```ges
+module main
+record :Report as { unit: @Unit }
+on Seen(unit as @Unit(:UnitDisplay)) { emit Out(report: :Report(unit: unit)) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: validate
+  code: validate.handleWidening
+  symbol: "@Unit"
+  sourceName: widening-field.ges
+  line: 3
+  column: 71
+  endLine: 3
+  endColumn: 75
 ```
 
 ---

@@ -83,18 +83,19 @@ struct GesSchemaDocumentCheck {
         }
     }
 
-    // The first error of a document against its schema, with its position and field path, or nil.
-    static func failing(_ syntax: GesDocumentSyntax, _ schema: GesResolvedDeclaration, _ parameters: GesSchemaParameters?) throws -> GesDocumentError? {
-        try choosing(syntax, schema, parameters).failure
+    // The first error of a document against its schema, with its position and field path, or nil. `rootStart` is where an
+    // error of the root Map itself points, such as a missing field: a catalog entry's value rather than the text's start.
+    static func failing(_ syntax: GesDocumentSyntax, _ schema: GesResolvedDeclaration, _ parameters: GesSchemaParameters?, rootStart: Int = 0) throws -> GesDocumentError? {
+        try choosing(syntax, schema, parameters, rootStart: rootStart).failure
     }
 
     // The first error, or nil with the alternative that held for each union of several.
-    static func choosing(_ syntax: GesDocumentSyntax, _ schema: GesResolvedDeclaration, _ parameters: GesSchemaParameters?) throws -> (failure: GesDocumentError?, chosen: [Choice: GesResolvedType]) {
+    static func choosing(_ syntax: GesDocumentSyntax, _ schema: GesResolvedDeclaration, _ parameters: GesSchemaParameters?, rootStart: Int = 0) throws -> (failure: GesDocumentError?, chosen: [Choice: GesResolvedType]) {
         if let parameters { try GesSchemaBinder.checkParameters(schema, parameters) }
         let check = Self(parameters: parameters)
         do {
             guard case .map(let keys, let values, let keyOffsets, let valueOffsets, _)? = syntax.root else { return (nil, [:]) }
-            try check.fields(keys, values, keyOffsets, valueOffsets, start: 0, schema)
+            try check.fields(keys, values, keyOffsets, valueOffsets, start: rootStart, schema)
             return (nil, check.attempts.chosen)
         } catch let failure as Failure {
             let (line, column) = syntax.location(failure.offset)
@@ -322,7 +323,7 @@ struct GesSchemaDocumentCheck {
             if case .form("handler", _, _, _) = value { return }
             try require(false)
         case .handle:
-            guard case .handle(let text) = value else { return try require(false) }
+            guard case .handle(let text, _, _) = value else { return try require(false) }
             try handle(type.handle!, versioned: type.versioned, text, start)
         case .nothing:
             if case .nothing = value { return }

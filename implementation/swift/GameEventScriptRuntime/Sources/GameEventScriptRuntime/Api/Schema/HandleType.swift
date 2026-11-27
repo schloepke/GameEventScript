@@ -23,7 +23,7 @@ public final class GesHandleType: @unchecked Sendable {
     let declarations: [String: GesResolvedDeclaration]
     /// The name, without the leading `@`.
     public let name: String
-    /// The name of the state schema, without the leading `:`.
+    /// The name of the state schema, without the leading `:`; empty for a catalog file type.
     public let stateName: String
     /// The form of the id; nil for a composite, whose identity is its root's id and its part.
     public let id: GesHandleKey?
@@ -33,6 +33,12 @@ public final class GesHandleType: @unchecked Sendable {
     public let version: GesHandleVersionKind
     /// The root type of a composite; nil for any other type.
     public internal(set) var root: GesHandleType?
+    /// The handle type of the catalog whose files this catalog file type names, `:Catalog(@Type)`; nil for any other type
+    /// (specs/Schemas.md#handles).
+    public internal(set) var catalogOf: GesHandleType?
+    /// The projections of the state schema in the schema set, the projections a handle of this type can read through, in
+    /// ascending name order; empty for a catalog file type (specs/Schemas.md#projections).
+    public internal(set) var projections: [GesSchema] = []
     /// The handle hash: FNV-1a 64 over the canonical form.
     public let hash: UInt64
     /// The canonical form, which the hash runs over: the declaration and, for a composite, its root's.
@@ -45,7 +51,7 @@ public final class GesHandleType: @unchecked Sendable {
         resolved = handle
         self.declarations = declarations
         name = handle.name
-        stateName = handle.state.name
+        stateName = handle.state?.name ?? ""
         let key = Self.key(handle.id)
         id = handle.root == nil ? key : nil
         part = handle.root == nil ? nil : key
@@ -54,8 +60,51 @@ public final class GesHandleType: @unchecked Sendable {
         hash = GesSchemaCanonical.hash(canonicalForm)
     }
 
-    // Called once the state schema has its hash, after every schema of the set is complete.
-    func completeLinkHash() { linkHash = GesSchemaCanonical.hash(canonicalForm + "state " + GesSchemaCanonical.hex(resolved.state.schema!.hash) + "\n") }
+    // The catalog file type of this type's catalog with a name, or nil when none of that name names it. A file type holds
+    // its catalog's type, so this side does not hold the file types: once the schema set and the file type are released,
+    // an equal description is built again.
+    func fileType(_ name: String) -> GesHandleType? {
+        for file in resolved.files where file.name == name {
+            if let type = file.publicType { return type }
+            let type = Self.rebuilt(file, declarations)
+            type.catalogOf = self
+            return type
+        }
+        return nil
+    }
+
+    // The public description of a resolved handle, built again with the same link hash when the schema set released it.
+    private static func rebuilt(_ handle: GesResolvedHandle, _ declarations: [String: GesResolvedDeclaration]) -> GesHandleType {
+        if let type = handle.publicType { return type }
+        let type = GesHandleType(handle, declarations)
+        type.root = handle.root.map { rebuilt($0, declarations) }
+        type.linkHash = handle.linkHash
+        if let state = handle.state { type.projections = projections(of: state, declarations) }
+        return type
+    }
+
+    // Called once the state schema has its hash, after every schema of the set is complete. A catalog file type has no
+    // state, so its link hash is its handle hash.
+    // Each projection of the state adds its name and schema hash, so a Program and a host agree on what it reads.
+    func completeLinkHash() {
+        if let state = resolved.state {
+            projections = Self.projections(of: state, declarations)
+            var text = canonicalForm + "state " + GesSchemaCanonical.hex(state.schema!.hash) + "\n"
+            for projection in projections { text += "projection " + projection.name + " " + GesSchemaCanonical.hex(projection.hash) + "\n" }
+            linkHash = GesSchemaCanonical.hash(text)
+        } else {
+            linkHash = hash
+        }
+        resolved.linkHash = linkHash
+    }
+
+    // The projections that narrow a state, in ascending name order; type names are ASCII, so bytes order them like C#.
+    private static func projections(of state: GesResolvedDeclaration, _ declarations: [String: GesResolvedDeclaration]) -> [GesSchema] {
+        declarations.values.filter { $0.narrows(state) }.compactMap(\.schema).sorted { Array($0.name.utf8).lexicographicallyPrecedes(Array($1.name.utf8)) }
+    }
+
+    /// The projection of this type's state with a name, or nil when none of that name narrows it.
+    @_spi(Compiler) public func findProjection(_ name: String) -> GesSchema? { projections.first { $0.name == name } }
 
     /// The nodes of the type on its own, with its version when it has one, which schema code generation lays out.
     @_spi(Generator) public func bindNodes() throws -> (nodes: [GesSchemaNode], infos: [GesSchemaNodeInfo]) { try GesSchemaBinder.bindHandle(resolved) }
@@ -78,13 +127,20 @@ final class GesResolvedHandle {
     let offset: Int
     let scope: GesFileScope
     let syntax: GesSchemaDeclarationSyntax
+    /// The state schema; nil for a catalog file type, which has none.
     var state: GesResolvedDeclaration!
+    /// The handle type of the catalog whose files a catalog file type names; nil for any other type.
+    var catalog: GesResolvedHandle?
+    /// The catalog file types that name this type's catalog, in declaration order.
+    var files: [GesResolvedHandle] = []
     /// The root of a composite, which is not composite itself.
     var root: GesResolvedHandle?
     /// The id, or a composite's part.
     var id: GesResolvedType!
     /// The type of a revision, an integer Number with an optional range.
     var revision: GesResolvedType?
+    /// The link hash of the public description, kept to build it again.
+    var linkHash: UInt64 = 0
     /// The public description, which the schema set holds. It holds this handle, so this side is weak.
     weak var publicType: GesHandleType?
 
@@ -103,7 +159,9 @@ final class GesResolvedHandle {
     func writeCanonical(_ output: inout String) {
         output += "handle " + name
         if let root {
-            output += " composite " + root.name + "\npart "
+            output += " composite " + root.name + "\n"
+            if let catalog { output += "catalog " + catalog.name + "\n" }
+            output += "part "
             GesSchemaCanonical.writeHandleType(id, &output)
             output += "\n"
             return

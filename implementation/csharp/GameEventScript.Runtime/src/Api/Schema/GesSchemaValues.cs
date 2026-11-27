@@ -1047,17 +1047,122 @@ public static class GesSchemaValues
     /// <param name="state">A Record or Map of the state schema; the kinds and ranges of other values are not checked.</param>
     /// <returns>The content hash.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="handleType"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="handleType"/> is a catalog file type, which has no state.</exception>
     /// <exception cref="GesWireException"><c>wire.typeMismatch</c> with the path when the state, or a value of a field that
     /// only takes Records, is no Record or Map; <c>wire.missingField</c> with the path when a field without default is missing and not optional.</exception>
     public static GesHash32 ContentHash(GesHandleType handleType, GesValue state)
     {
         if (handleType is null) throw new ArgumentNullException(nameof(handleType));
+        if (handleType.CatalogOf is not null) throw new ArgumentException($"The catalog file type '@{handleType.Name}' has no state.", nameof(handleType));
         var declarations = handleType.Declarations;
         var normalized = NormalizeState(handleType.Resolved.State, state, "", declarations);
         var json = GameEventScript.Runtime.GesJson.Write(new GameEventScript.Runtime.GesMessageJsonCodec().Encode(normalized, 0));
         var bytes = Encoding.UTF8.GetBytes(json);
         using var sha256 = SHA256.Create();
         return GesHash32.FromBytes(sha256.ComputeHash(bytes));
+    }
+
+    /// <summary>
+    /// Computes the content hash of a handle's state read through a projection (specs/Schemas.md#projections): the content
+    /// hash of the projection's Record, normalized against the projection. It is the version of <c>@Name(:P)~</c> for a
+    /// <see cref="GesHandleVersionKind.ContentHash"/> type.
+    /// </summary>
+    /// <param name="handleType">The handle type whose state the projection narrows.</param>
+    /// <param name="projection">A projection of the handle type, one of <see cref="GesHandleType.Projections"/>.</param>
+    /// <param name="state">A Record of the state schema, of a schema the projection narrows, or of the projection itself.</param>
+    /// <returns>The content hash of the projected state.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="handleType"/> or <paramref name="projection"/> is
+    /// <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="projection"/> is no projection of the handle type.</exception>
+    /// <exception cref="GesWireException">As <see cref="Project(GesSchema, GesValue)"/> and <see cref="ContentHash(GesHandleType, GesValue)"/>.</exception>
+    public static GesHash32 ContentHash(GesHandleType handleType, GesSchema projection, GesValue state)
+    {
+        if (handleType is null) throw new ArgumentNullException(nameof(handleType));
+        if (projection is null) throw new ArgumentNullException(nameof(projection));
+        if (handleType.CatalogOf is not null || !projection.Declaration.Narrows(handleType.Resolved.State))
+            throw new ArgumentException($"':{projection.Name}' is no projection of '@{handleType.Name}'.", nameof(projection));
+        return ProjectedHash(handleType, projection.Declaration, Project(projection.Declaration, state));
+    }
+
+    // The content hash of a Record of the projection.
+    internal static GesHash32 ProjectedHash(GesHandleType handleType, GesResolvedDeclaration projection, GesValue projected)
+    {
+        var normalized = NormalizeState(projection, projected, "", handleType.Declarations);
+        var json = GameEventScript.Runtime.GesJson.Write(new GameEventScript.Runtime.GesMessageJsonCodec().Encode(normalized, 0));
+        using var sha256 = SHA256.Create();
+        return GesHash32.FromBytes(sha256.ComputeHash(Encoding.UTF8.GetBytes(json)));
+    }
+
+    /// <summary>
+    /// Converts a value of a projection's source, or of any schema the projection narrows, to the projection
+    /// (specs/Schemas.md#projections): each taken field is read along its path, and an absent or <c>nothing</c> Record on
+    /// the path leaves the field absent. A Record of the projection itself is returned unchanged.
+    /// </summary>
+    /// <param name="projection">The projection, a schema whose <see cref="GesSchema.Source"/> is set.</param>
+    /// <param name="state">A Record of a schema the projection narrows; a Map without name counts as a value of the schema
+    /// at the end of the projection's sources.</param>
+    /// <returns>A Record of the projection's name with the taken fields that are present, in the projection's order.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="projection"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="projection"/> is no projection.</exception>
+    /// <exception cref="GesWireException"><c>wire.typeMismatch</c> with the path when the value is no Record or Map, a Record
+    /// of a schema the projection does not narrow, or a Record on a path is no Record or Map.</exception>
+    public static GesValue Project(GesSchema projection, GesValue state)
+    {
+        if (projection is null) throw new ArgumentNullException(nameof(projection));
+        if (projection.Source is null) throw new ArgumentException($"':{projection.Name}' is no projection.", nameof(projection));
+        return Project(projection.Declaration, state);
+    }
+
+    internal static GesValue Project(GesResolvedDeclaration projection, GesValue state)
+    {
+        if (state.AsMap() is null) throw new GesWireException(GesWireException.TypeMismatch, "");
+        if (state.CustomTypeName == projection.Name) return state;
+        var source = projection.Source!;
+        // A value of the source passes as it is; one of a schema further down first converts to the source.
+        if (source.IsProjection && state.CustomTypeName != source.Name)
+            state = Project(source, state);
+        else if (state.CustomTypeName is { } name && name != source.Name)
+            throw new GesWireException(GesWireException.TypeMismatch, "");
+        return Select(projection, state);
+    }
+
+    // The taken fields of a value of the projection's source, along their paths.
+    internal static GesValue Select(GesResolvedDeclaration projection, GesValue state)
+    {
+        var keys = new List<string>(projection.Fields.Length);
+        var values = new List<GesValue>(projection.Fields.Length);
+        for (var index = 0; index < projection.Fields.Length; index++)
+        {
+            var path = projection.Paths[index];
+            var current = state;
+            var present = true;
+            for (var segment = 0; segment < path.Length && present; segment++)
+            {
+                if (current.AsMap() is not { } map)
+                    throw new GesWireException(GesWireException.TypeMismatch, FieldPath(path, segment));
+                if (map.Get(path[segment].Name) is { } next && (segment == path.Length - 1 || next.Kind != GesBytecodeTypeKind.Nothing))
+                    current = next;
+                else present = false;
+            }
+
+            if (!present) continue;
+            keys.Add(projection.Fields[index].Name);
+            values.Add(current);
+        }
+
+        return GesValue.GesRecord(projection.Name, keys.ToArray(), values.ToArray());
+    }
+
+    private static string FieldPath(GesResolvedField[] path, int count)
+    {
+        var builder = new StringBuilder();
+        for (var index = 0; index < count; index++)
+        {
+            if (index > 0) builder.Append('.');
+            builder.Append(path[index].Name);
+        }
+
+        return builder.ToString();
     }
 
     // The Record of a schema with defaults applied and absent or nothing optional fields, computed fields and undeclared keys left out.

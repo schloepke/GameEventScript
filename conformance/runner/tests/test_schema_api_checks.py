@@ -98,6 +98,70 @@ class SchemaApiExternalInputTests(unittest.TestCase):
         self.assertEqual('failed', compare(case, seen({'failure': 'runtime.other'}))[0])
         self.assertEqual('failed', compare(case, seen({'bytes': '07'}))[0])
 
+    def catalog_case(self, name, change=None, expected=None):
+        case = copy.deepcopy(self.cases[name])
+        if change:
+            change(case.metadata['schemaApi']['catalog'])
+        if expected is not None:
+            case.expected['schema']['catalog'] = expected
+        return case
+
+    def test_handle_roots_reach_the_adapter_with_refs_and_versions(self):
+        request = prepare(self.cases['catalog-handle-roots'])['catalog']
+        self.assertEqual({'#main': 7}, request['refs'])
+        self.assertEqual(3, request['latest'])
+        self.assertEqual(['@UnitFiles:content~#main/units.gesd', '@UnitFiles:mod/mod.gesd'], request['catalogs'][0]['handles'])
+        self.assertIsNone(request['catalogs'][0]['roots'])
+        self.assertIsNone(request['files'][0]['version'])
+        self.assertEqual(4, prepare(self.cases['catalog-handle-version-mismatch'])['catalog']['files'][0]['version'])
+        named = prepare(self.cases['catalog-entries'])['catalog']
+        self.assertEqual(({}, None), (named['refs'], named['latest']))
+        self.assertIsNone(named['catalogs'][0]['handles'])
+
+    def test_malformed_handle_catalogs_are_document_errors(self):
+        def both(catalog):
+            catalog['catalogs'][0]['roots'] = []
+        changes = [both, lambda c: c.update(refs={'#main': -1}), lambda c: c.update(refs=[]), lambda c: c.update(latest=True),
+                   lambda c: c['files'][0].update(version='4'), lambda c: c['catalogs'][0].update(handles=['units.gesd']),
+                   lambda c: c['catalogs'][0].update(handles='@UnitFiles:mod/mod.gesd'), lambda c: c['catalogs'][0].pop('handles')]
+        for change in changes:
+            with self.assertRaises(InvalidDocument):
+                prepare(self.catalog_case('catalog-handle-roots', change))
+        for expected in ({'failure': 'catalog.importMissing'}, {'failure': 'runtime.handleVersionMismatch', 'entries': []},
+                         {'sources': []}, {'errors': [{'code': 'catalog.importMissing', 'location': {'root': 'a', 'path': 'b'}}], 'sources': []}):
+            with self.assertRaises(InvalidDocument):
+                prepare(self.catalog_case('catalog-handle-roots', expected=expected))
+
+    def test_sources_and_failures_are_compared(self):
+        case = self.cases['catalog-handle-roots']
+        wanted = dict(case.expected['schema']['catalog'])
+        seen = lambda catalog: {'status': 'ok', 'schema': {'catalog': catalog}}
+        self.assertEqual('passed', compare(case, seen(copy.deepcopy(wanted)))[0])
+        self.assertEqual('failed', compare(case, seen({**copy.deepcopy(wanted), 'sources': ['@UnitFiles:content~7/units.gesd']}))[0])
+        mismatch = self.cases['catalog-handle-version-mismatch']
+        self.assertEqual('passed', compare(mismatch, seen({'failure': 'runtime.handleVersionMismatch'}))[0])
+        self.assertEqual('failed', compare(mismatch, seen({'failure': 'runtime.handleResolveFailed'}))[0])
+        self.assertEqual('failed', compare(mismatch, seen({'entries': []}))[0])
+
+    def test_projection_indexes_are_requested_and_compared(self):
+        case = self.cases['catalog-projection-index']
+        self.assertEqual(['UnitDisplay', 'UnitLabel'], prepare(case)['catalog']['index'])
+        self.assertEqual([], prepare(self.cases['catalog-entries'])['catalog']['index'])
+        for index in ('UnitDisplay', [''], ['A', 'A'], [7]):
+            with self.assertRaises(InvalidDocument):
+                prepare(self.catalog_case('catalog-projection-index', lambda c: c.update(index=index)))
+        wanted = copy.deepcopy(case.expected['schema']['catalog'])
+        for expected in ({**wanted, 'indexes': {'UnitDisplay': wanted['indexes']['UnitDisplay']}},
+                         {**wanted, 'indexes': {'UnitDisplay': 'x', 'UnitLabel': []}},
+                         {'indexes': wanted['indexes'], 'failure': 'catalog.importMissing'}):
+            with self.assertRaises(InvalidDocument):
+                prepare(self.catalog_case('catalog-projection-index', expected=expected))
+        seen = lambda catalog: {'status': 'ok', 'schema': {'catalog': catalog}}
+        self.assertEqual('passed', compare(case, seen(copy.deepcopy(wanted)))[0])
+        swapped = copy.deepcopy(wanted)
+        swapped['indexes']['UnitLabel'] = list(reversed(swapped['indexes']['UnitLabel']))
+        self.assertEqual('failed', compare(case, seen(swapped))[0])
+
 
 if __name__ == '__main__':
     unittest.main()

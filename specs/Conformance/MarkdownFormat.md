@@ -727,8 +727,9 @@ handles:
 
 Each answer names one object by the handle's text form and has exactly one of `document` (GES document text, read
 against the state schema), `record` (a data literal of the state record), `missing: true` (the object does not
-exist) and `fail: true` (the resolver throws). A `document` or `record` answer may pass a `version` in the
-[portable value shape](#portable-message-and-value-shape), a `:Number.int64` or `:Bytes`; `fail` has none. The
+exist), `notVisible: true` (the reading party may not see the object, `SetNotVisible`; Since: Unreleased) and
+`fail: true` (the resolver throws). A `document` or `record` answer may pass a `version` in the
+[portable value shape](#portable-message-and-value-shape), a `:Number.int64` or `:Bytes`; `notVisible` and `fail` have none. The
 answers of one object are used in authored order, one per resolve call, and the last one repeats; a read of an
 object without an answer fails like `fail`.
 

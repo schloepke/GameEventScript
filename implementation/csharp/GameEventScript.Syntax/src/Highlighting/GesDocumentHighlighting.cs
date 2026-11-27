@@ -8,7 +8,8 @@ using Code = GameEventScript.Syntax.GesDocumentDiagnostic;
 namespace GameEventScript.Syntax;
 
 // Categorizes GES document text token by token, also after an error: keys and labels before their colon, the schema
-// header, typed forms with their message and parameter names, scalars and comments. The diagnostic is the reader's.
+// header, typed forms with their message and parameter names, scalars and comments, and in a catalog file its header,
+// imports, module blocks and references. The diagnostic is the reader's.
 internal static class GesDocumentHighlighting
 {
     private enum Context : byte
@@ -24,7 +25,11 @@ internal static class GesDocumentHighlighting
 
     internal static void Highlight(string text, GesSpanBuilder spans, List<GesHighlightDiagnostic> diagnostics)
     {
+        var catalog = GesDocumentReader.ReadCatalog(text);
+        var isCatalog = catalog.IsCatalog;
         var contexts = new List<Context>();
+        // Whether a module name follows, until its `{`.
+        var inModuleName = false;
         // The form a `:Type` names until its `(` opens, and whether the next token is the first inside a context.
         Context? pending = null;
         var first = false;
@@ -48,6 +53,14 @@ internal static class GesDocumentHighlighting
                 continue;
             }
 
+            if (isCatalog && contexts.Count == 0 && CatalogSpan(text, ref position, ref inModuleName) is { } catalogKind)
+            {
+                spans.Add(start, position - start, catalogKind);
+                pending = null;
+                first = false;
+                afterSeriesKind = false;
+                continue;
+            }
             var opening = pending;
             var firstInContext = first;
             var seriesKindFollows = afterSeriesKind;
@@ -64,7 +77,7 @@ internal static class GesDocumentHighlighting
             {
                 position = NameEnd(text, position + 1);
                 var name = text.Substring(start + 1, position - start - 1);
-                kind = name == "Schema" ? GesSyntaxKind.Keyword : GesSyntaxKind.Type;
+                kind = name == "Schema" || (isCatalog && name == "Catalog") ? GesSyntaxKind.Keyword : GesSyntaxKind.Type;
                 pending = name switch
                 {
                     "Message" => Context.MessageForm,
@@ -76,6 +89,11 @@ internal static class GesDocumentHighlighting
             else if (c == '@' && position + 1 < text.Length && GesText.IsAsciiUpper(text[position + 1]))
             {
                 position = HandleSpans(text, position, spans);
+                continue;
+            }
+            else if (c == '@' && position + 1 < text.Length && IsKeyCharacter(text[position + 1]))
+            {
+                position = ReferenceSpans(text, position, spans);
                 continue;
             }
             else if (c is '[' or '(')
@@ -130,10 +148,71 @@ internal static class GesDocumentHighlighting
             spans.Add(start, position - start, kind);
         }
 
-        var syntax = GesDocumentReader.Read(text);
-        if (syntax.Diagnostic is { } diagnostic)
+        var diagnostic = isCatalog ? catalog.Diagnostic : GesDocumentReader.Read(text, references: true).Diagnostic;
+        if (diagnostic is not null)
             diagnostics.Add(new GesHighlightDiagnostic(diagnostic.Code, Code.Explain(diagnostic.Code, diagnostic.LimitName, diagnostic.LimitValue), diagnostic.Start, diagnostic.End - diagnostic.Start));
     }
+
+    // A token of a catalog file outside every bracket that the catalog grammar owns: braces, `import` and `module`
+    // without a key colon, a module name and a key. Returns null for every other token, which documents categorize.
+    private static GesSyntaxKind? CatalogSpan(string text, ref int position, ref bool inModuleName)
+    {
+        var c = text[position];
+        if (c is '{' or '}')
+        {
+            inModuleName = false;
+            position++;
+            return GesSyntaxKind.Symbol;
+        }
+        if (inModuleName && c == '.')
+        {
+            position++;
+            return GesSyntaxKind.Symbol;
+        }
+        if (!IsKeyCharacter(c)) return null;
+        var end = position;
+        while (end < text.Length && IsKeyCharacter(text[end])) end++;
+        var word = text.Substring(position, end - position);
+        if (inModuleName)
+        {
+            position = end;
+            return GesSyntaxKind.Identifier;
+        }
+        if (FollowedByColon(text, end))
+        {
+            position = end;
+            return GesSyntaxKind.Identifier;
+        }
+        if (word is "import" or "module")
+        {
+            inModuleName = word == "module";
+            position = end;
+            return GesSyntaxKind.Keyword;
+        }
+        return null;
+    }
+
+    // A reference: `@`, `.` and `~` are Symbol and each key Identifier. Returns the end.
+    private static int ReferenceSpans(string text, int start, GesSpanBuilder spans)
+    {
+        spans.Add(start, 1, GesSyntaxKind.Symbol);
+        var position = start + 1;
+        while (true)
+        {
+            var keyStart = position;
+            while (position < text.Length && IsKeyCharacter(text[position])) position++;
+            spans.Add(keyStart, position - keyStart, GesSyntaxKind.Identifier);
+            if (position + 1 < text.Length && text[position] == '.' && IsKeyCharacter(text[position + 1]))
+            {
+                spans.Add(position++, 1, GesSyntaxKind.Symbol);
+                continue;
+            }
+            if (position < text.Length && text[position] == '~') spans.Add(position++, 1, GesSyntaxKind.Symbol);
+            return position;
+        }
+    }
+
+    private static bool IsKeyCharacter(char c) => GesText.IsAsciiLetter(c) || GesText.IsAsciiDigit(c) || c is '_' or '-';
 
     // A handle: `@Type` is Type; `:`, `~` and `/` are Symbol; a quoted id, part or ref is String, a ref `#name` Tag, an
     // integer id, part or version and a hash Number, and other bare ids and parts Plain. Without a well-formed handle only
@@ -142,7 +221,7 @@ internal static class GesDocumentHighlighting
     {
         var typeEnd = NameEnd(text, start + 1);
         spans.Add(start, typeEnd - start, GesSyntaxKind.Type);
-        var end = GesHandleLiteral.Read(text, start, out _, out _);
+        var end = GesHandleLiteral.Read(text, start, true, out _, out _, out _);
         if (end < 0) return typeEnd;
         var position = typeEnd;
         var isPart = false;

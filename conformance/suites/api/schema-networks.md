@@ -785,3 +785,164 @@ schemaApi:
 gesBlock: expect
 schema: {"error": {"code": "schema.syntax", "line": 7, "column": 1}}
 ```
+
+---
+
+## Test: owns routes with a projection and sending state
+
+`as :P` and `sending state` extend the `owns` line with the projection's name and schema hash and `sending`. Handles the owner sends read the projection or one that narrows it; a route towards the owner may carry the full view.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: network-owns-projection
+schemaApi:
+  sources: ["schema :Composition as { name: :Text max 64, mass: :Number integer between 0 and 999 }\nschema :Contact as { label: :Text max 16 }\nprojection :UnitPublic of :Composition as { name }\nprojection :UnitName of :UnitPublic as { name }\nprojection :ContactLabel of :Contact as { label }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nhandle @Drone of :Composition as { id: :Number integer between 0 and 99, version: :Number integer between 0 and 65535 }\nwire schema :World as { units: :List(@Unit(:UnitPublic)) max 8, names: :List(@Unit(:UnitName)) max 8, drone: @Drone(:UnitPublic) }\nwire schema :Order as { unit: @Unit, drone: @Drone~ }\nnetwork :Game as {\n  server publishes :World latest\n  client sends :Order reliable\n  server owns @Unit as :UnitPublic sending state\n  server owns @Drone as :UnitPublic\n}\n"]
+  network: "Game"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"network": {"canonical": "gesn1\nnetwork Game\nroute server publishes World latest 0 bd34856e6c61272a\nroute client sends Order reliable 0 36c5c80fa57d409d\nowns server Drone 7472eebcfd7fed1f c72fa4103594b877 as UnitPublic c4809d16c5c44c68\nowns server Unit 84dc8d47579275f1 c72fa4103594b877 as UnitPublic c4809d16c5c44c68 sending\n", "hash": "c838f5bcf06f1b45"}}
+```
+
+---
+
+## Test: the projection is part of the network hash
+
+Without `as` and `sending state` the `owns` line keeps its earlier form; compare the previous case.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: network-owns-projection-hash
+schemaApi:
+  sources: ["schema :Composition as { name: :Text max 64, mass: :Number integer between 0 and 999 }\nschema :Contact as { label: :Text max 16 }\nprojection :UnitPublic of :Composition as { name }\nprojection :UnitName of :UnitPublic as { name }\nprojection :ContactLabel of :Contact as { label }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nhandle @Drone of :Composition as { id: :Number integer between 0 and 99, version: :Number integer between 0 and 65535 }\nwire schema :World as { units: :List(@Unit(:UnitPublic)) max 8, names: :List(@Unit(:UnitName)) max 8, drone: @Drone(:UnitPublic) }\nwire schema :Order as { unit: @Unit, drone: @Drone~ }\nnetwork :Game as {\n  server publishes :World latest\n  client sends :Order reliable\n  server owns @Unit\n  server owns @Drone\n}\n"]
+  network: "Game"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"network": {"canonical": "gesn1\nnetwork Game\nroute server publishes World latest 0 bd34856e6c61272a\nroute client sends Order reliable 0 36c5c80fa57d409d\nowns server Drone 7472eebcfd7fed1f c72fa4103594b877\nowns server Unit 84dc8d47579275f1 c72fa4103594b877\n", "hash": "47c16d0cdd8a1a71"}}
+```
+
+---
+
+## Test: the owner sends a full view to a projected side
+
+A handle of the owned type in a route from its owner that reads more than the other side's projection is `schema.invalidProjection` at the route's root, also inside a List.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: network-owns-projection-full-view
+schemaApi:
+  sources: ["schema :Composition as { name: :Text max 64, mass: :Number integer between 0 and 999 }\nschema :Contact as { label: :Text max 16 }\nprojection :UnitPublic of :Composition as { name }\nprojection :UnitName of :UnitPublic as { name }\nprojection :ContactLabel of :Contact as { label }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nhandle @Drone of :Composition as { id: :Number integer between 0 and 99, version: :Number integer between 0 and 65535 }\nwire schema :World as { units: :List(@Unit) max 8 }\nnetwork :Game as {\n  server publishes :World latest\n  server owns @Unit as :UnitPublic\n}\n"]
+  network: "Game"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"error": {"code": "schema.invalidProjection", "line": 10, "column": 20}}
+```
+
+---
+
+## Test: the owner sends another projection
+
+A projection the other side's projection does not narrow is `schema.invalidProjection`, even when it narrows the state.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: network-owns-projection-other-view
+schemaApi:
+  sources: ["schema :Composition as { name: :Text max 64, mass: :Number integer between 0 and 999 }\nschema :Contact as { label: :Text max 16 }\nprojection :UnitPublic of :Composition as { name }\nprojection :UnitName of :UnitPublic as { name }\nprojection :ContactLabel of :Contact as { label }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nhandle @Drone of :Composition as { id: :Number integer between 0 and 99, version: :Number integer between 0 and 65535 }\nwire schema :World as { unit: @Unit(:UnitPublic) }\nnetwork :Game as {\n  server publishes :World latest\n  server owns @Unit as :UnitName\n}\n"]
+  network: "Game"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"error": {"code": "schema.invalidProjection", "line": 10, "column": 20}}
+```
+
+---
+
+## Test: a projection of another schema
+
+The projection of an `owns` route narrows the state of the handle type; otherwise it is `schema.invalidProjection` at the projection.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: network-owns-projection-foreign
+schemaApi:
+  sources: ["schema :Composition as { name: :Text max 64, mass: :Number integer between 0 and 999 }\nschema :Contact as { label: :Text max 16 }\nprojection :UnitPublic of :Composition as { name }\nprojection :UnitName of :UnitPublic as { name }\nprojection :ContactLabel of :Contact as { label }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nhandle @Drone of :Composition as { id: :Number integer between 0 and 99, version: :Number integer between 0 and 65535 }\nwire schema :World as { tick: :Number integer between 0 and 65535 }\nnetwork :Game as {\n  server publishes :World latest\n  server owns @Unit as :ContactLabel\n}\n"]
+  network: "Game"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"error": {"code": "schema.invalidProjection", "line": 11, "column": 24}}
+```
+
+---
+
+## Test: a projection that is not declared
+
+The projection must be declared.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: network-owns-projection-unknown
+schemaApi:
+  sources: ["schema :Composition as { name: :Text max 64, mass: :Number integer between 0 and 999 }\nschema :Contact as { label: :Text max 16 }\nprojection :UnitPublic of :Composition as { name }\nprojection :UnitName of :UnitPublic as { name }\nprojection :ContactLabel of :Contact as { label }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nhandle @Drone of :Composition as { id: :Number integer between 0 and 99, version: :Number integer between 0 and 65535 }\nwire schema :World as { tick: :Number integer between 0 and 65535 }\nnetwork :Game as {\n  server publishes :World latest\n  server owns @Unit as :Missing\n}\n"]
+  network: "Game"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"error": {"code": "schema.unknownName", "line": 11, "column": 24}}
+```
+
+---
+
+## Test: a pinned revision towards a projected side
+
+A projected side has no revision of the owned type, so a pinned `@Drone(:UnitPublic)~` of a revision type in a route from its owner is `schema.invalidHandle`; without `~` it is accepted.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: network-owns-projection-pinned-revision
+schemaApi:
+  sources: ["schema :Composition as { name: :Text max 64, mass: :Number integer between 0 and 999 }\nschema :Contact as { label: :Text max 16 }\nprojection :UnitPublic of :Composition as { name }\nprojection :UnitName of :UnitPublic as { name }\nprojection :ContactLabel of :Contact as { label }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nhandle @Drone of :Composition as { id: :Number integer between 0 and 99, version: :Number integer between 0 and 65535 }\nwire schema :World as { drone: @Drone(:UnitPublic)~ }\nnetwork :Game as {\n  server publishes :World latest\n  server owns @Drone as :UnitPublic\n}\n"]
+  network: "Game"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema: {"error": {"code": "schema.invalidHandle", "line": 10, "column": 20}}
+```

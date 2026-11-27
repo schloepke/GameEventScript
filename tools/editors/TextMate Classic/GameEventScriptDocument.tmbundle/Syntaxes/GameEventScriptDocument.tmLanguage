@@ -26,7 +26,15 @@
 		</dict>
 		<dict>
 			<key>include</key>
+			<string>#catalog</string>
+		</dict>
+		<dict>
+			<key>include</key>
 			<string>#handles</string>
+		</dict>
+		<dict>
+			<key>include</key>
+			<string>#references</string>
 		</dict>
 		<dict>
 			<key>include</key>
@@ -113,7 +121,7 @@
 			<array>
 				<dict>
 					<key>match</key>
-					<string>:Schema\b</string>
+					<string>:(?:Schema|Catalog)\b</string>
 					<key>name</key>
 					<string>keyword.other.declaration.schema.gameeventscript.document</string>
 				</dict>
@@ -271,7 +279,7 @@
 			<array>
 				<dict>
 					<key>match</key>
-					<string>(@[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*)(?:(:)('(?:[^']|'')*'|-?[A-Za-z0-9._-]+)(?:(~)(#[A-Za-z][A-Za-z0-9]*|'(?:[^']|'')*'|-?[0-9a-f]+))?(?:(/)('(?:[^']|'')*'|[A-Za-z0-9._/-]+))?)?</string>
+					<string>(@[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*)(?:(:)('(?:[^']|'')*'|-?[A-Za-z0-9._-]+)(?:(~)(#[A-Za-z][A-Za-z0-9]*|'(?:[^']|'')*'|-?[0-9a-f]+)?)?(?:(/)('(?:[^']|'')*'|[A-Za-z0-9._/-]+))?)?</string>
 					<key>captures</key>
 					<dict>
 						<key>1</key>
@@ -308,6 +316,92 @@
 						<dict>
 							<key>name</key>
 							<string>constant.other.handle-part.gameeventscript.document</string>
+						</dict>
+					</dict>
+				</dict>
+			</array>
+		</dict>
+		<key>catalog</key>
+		<dict>
+			<key>patterns</key>
+			<array>
+				<dict>
+					<key>match</key>
+					<string>^[ \t]*(module)[ \t]+([A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*)</string>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.other.module.gameeventscript.document</string>
+						</dict>
+						<key>2</key>
+						<dict>
+							<key>name</key>
+							<string>entity.name.namespace.gameeventscript.document</string>
+						</dict>
+					</dict>
+				</dict>
+				<dict>
+					<key>match</key>
+					<string>\b(import)\b(?=[ \t]*['"])</string>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.other.import.gameeventscript.document</string>
+						</dict>
+					</dict>
+				</dict>
+				<dict>
+					<key>match</key>
+					<string>[{}]</string>
+					<key>name</key>
+					<string>punctuation.section.block.gameeventscript.document</string>
+				</dict>
+				<dict>
+					<key>match</key>
+					<string>^[ \t]*([A-Za-z0-9_-]+)[ \t]*(?=:(?![A-Za-z]))</string>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>support.type.property-name.gameeventscript.document</string>
+						</dict>
+					</dict>
+				</dict>
+			</array>
+		</dict>
+		<key>references</key>
+		<dict>
+			<key>patterns</key>
+			<array>
+				<dict>
+					<key>match</key>
+					<string>(@)([A-Za-z0-9_-]+)((?:\.[A-Za-z0-9_-]+)*)(~)?</string>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>punctuation.definition.reference.gameeventscript.document</string>
+						</dict>
+						<key>2</key>
+						<dict>
+							<key>name</key>
+							<string>variable.other.reference.gameeventscript.document</string>
+						</dict>
+						<key>3</key>
+						<dict>
+							<key>name</key>
+							<string>variable.other.reference.gameeventscript.document</string>
+						</dict>
+						<key>4</key>
+						<dict>
+							<key>name</key>
+							<string>punctuation.separator.handle.gameeventscript.document</string>
 						</dict>
 					</dict>
 				</dict>

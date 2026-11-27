@@ -33,6 +33,8 @@ public final class GesProgramBuilder {
     var options = GesCompileOptions()
     var catalog: (any GesExternalTypeCatalog)?
     var handleTypes: [String: GesHandleType] = [:]
+    // The handle type names in first declaration order, as C#'s Dictionary enumerates them; a replacement keeps its place.
+    var handleTypeOrder: [String] = []
 
     /// Creates an empty source builder with default compile options. `GameEventScriptProgram.makeBuilder()` is
     /// equivalent.
@@ -67,11 +69,14 @@ public final class GesProgramBuilder {
 
     /// Declares the handle types the sources may name as `@Name`, usually from `GesSchemaSet.handleTypes`. A later
     /// declaration of the same name replaces an earlier one; composite roots are known through `GesHandleType.root`
-    /// and need not be declared separately. Returns this builder.
+    /// and need not be declared separately. Catalog file types (`GesHandleType.catalogOf`) are passed over, since scripts
+    /// cannot name them. Returns this builder.
     @discardableResult public func withHandleTypes(_ types: some Sequence<GesHandleType>) -> Self {
-        for type in types {
+        // A catalog file type is no script type; only reading a catalog uses it.
+        for type in types where type.catalogOf == nil {
             var current: GesHandleType? = type
             while let handle = current {
+                if handleTypes[handle.name] == nil { handleTypeOrder.append(handle.name) }
                 if handle === type || handleTypes[handle.name] == nil { handleTypes[handle.name] = handle }
                 current = handle.root
             }
@@ -90,7 +95,7 @@ public final class GesProgramBuilder {
         // Each source's own rules report first, in source order; the program-wide rules follow.
         var sourceDiagnostics: [GesDiagnostic] = []
         let modules = try sources.map { try GesSyntaxBinder.parse($0, validation: &sourceDiagnostics) }
-        let validator = GesAstValidator(modules: modules, catalog: catalog, handleTypes: handleTypes, diagnostics: sourceDiagnostics)
+        let validator = GesAstValidator(modules: modules, catalog: catalog, handleTypes: handleTypes, handleTypeOrder: handleTypeOrder, diagnostics: sourceDiagnostics)
         try validator.validate()
         return try GesCompiler(validator, sources: sources, options: configuration).compile()
     }

@@ -31,6 +31,14 @@ internal sealed class ToolDocumentSchemas
     internal static ToolDocumentSchemas? Load(IReadOnlyList<string> arguments, ref string? activePath)
         => ToolSchemas.Sources(arguments, ref activePath) is { } sources ? new ToolDocumentSchemas(sources) : null;
 
+    // The handle type of the set with this name, or null.
+    internal GesHandleType? HandleType(string name)
+    {
+        foreach (var type in _set.HandleTypes)
+            if (type.Name == name) return type;
+        return null;
+    }
+
     // Checks a readable document against the schema of its header and reports the first error; a document without a header
     // has nothing to check against.
     internal bool Check(string path, string text, GesDocument document)

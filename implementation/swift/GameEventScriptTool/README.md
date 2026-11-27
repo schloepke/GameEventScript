@@ -77,6 +77,7 @@ ges compile handlers.ges definitions.ges -o build/game.gesb --verbose
 ges check "scripts/*.ges"
 ges dump build/game.gesb --addresses
 ges document check data/drive.gesd
+ges document check --schema units.gess --catalog @Hull content/hulls.gesd --catalog @Unit content/units.gesd
 ges document format data/drive.gesd --color
 ges schema check bot.gess
 ges schema dump bot.gess --root Bot --param worldWidth=5000m --param worldHeight=5km --data data.bin
@@ -115,9 +116,10 @@ Compilation/check reports and ordinary dumps go to stdout.
 
 `document check` reads GES documents and reports the first error of each as
 `path(line,column): error document.code: message`, and with `--schema <file.gess>`
-also checks each document against the schema its header names; `document format` prints a
-document in the recommended layout or writes it with `-o`. Both behave like the
-C# commands documented in the C# CLI README.
+also checks each document against the schema its header names; `--catalog @Type <root.gesd>`
+(repeatable, with `--schema`) also reads the catalog of that handle type from its root files, in the order the types
+first appear. `document format` prints a document in the recommended layout or writes it with `-o`. Both behave like
+the C# commands documented in the C# CLI README.
 
 ### Handle types
 

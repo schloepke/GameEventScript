@@ -3,8 +3,8 @@
 
 import GameEventScriptRuntime
 
-// Static handle type names as the binder keeps them: `@Name`, `@Name~` and unions joined with `|`, as
-// GesHandleTypeNames of the C# compiler (specs/Language.md#handles).
+// Static handle type names as the binder keeps them: `@Name`, `@Name~`, `@Name(:P)`, `@Name(:P)~` and unions joined
+// with `|`, as GesHandleTypeNames of the C# compiler (specs/Language.md#handles, #projections).
 enum GesHandleTypeNames {
     // Whether a declared or static type names a handle type or a union, which is only of handle types.
     static func isHandleType(_ typeName: String?) -> Bool {
@@ -15,14 +15,28 @@ enum GesHandleTypeNames {
     // The alternatives of a type name in source order.
     static func alternatives(_ typeName: String) -> [String] { typeName.split(separator: "|", omittingEmptySubsequences: false).map(String.init) }
 
-    // The name without `@` and whether `~` requires a version.
+    // The name without `@` and projection and whether `~` requires a version.
     static func split(_ alternative: String) -> (name: String, versioned: Bool) {
         var scalars = Substring(alternative).unicodeScalars
         let versioned = scalars.last == "~"
         if versioned { scalars.removeLast() }
         if scalars.first == "@" { scalars.removeFirst() }
+        if let open = scalars.firstIndex(of: "(") { scalars = scalars[..<open] }
         return (String(scalars), versioned)
     }
+
+    // The projection an alternative reads through, without `:`, or "" for the full view.
+    static func projection(_ alternative: String) -> String {
+        let scalars = Substring(alternative).unicodeScalars
+        guard let open = scalars.firstIndex(of: "(") else { return "" }
+        var start = scalars.index(after: open)
+        if start < scalars.endIndex, scalars[start] == ":" { start = scalars.index(after: start) }
+        let close = scalars[open...].firstIndex(of: ")") ?? scalars.endIndex
+        return String(scalars[start..<max(start, close)])
+    }
+
+    // Whether any alternative reads through a projection.
+    static func hasProjection(_ typeName: String) -> Bool { typeName.unicodeScalars.contains("(") }
 
     // An alternative as written in source: a handle type as is, any other type with its `:` and its capitalized name,
     // such as `:Number` for the binder's `number`.

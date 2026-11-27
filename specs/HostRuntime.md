@@ -296,7 +296,8 @@ resolver per handle type that reads state. GES never owns, stores or changes the
 
 **Program and link.** A Program records every handle type it names, with the [link hash](Schemas.md#canonical-form) of
 the declaration the compiler used, which covers its state schema, and whether the Program reads state of that type: a
-member other than `id`, `version` and `root`, or a cast to the state schema. Load compares each recorded link hash with
+member other than `id`, `version` and `root`, or a cast to the state schema or, **Since: Unreleased**, to one of
+its projections. Load compares each recorded link hash with
 the host's catalog, if one is configured, and fails with
 `link.mismatchedHandleType` on a difference. A type whose state the Program reads needs a resolver, otherwise Load
 fails with `link.missingHandleResolver`, located at the first instruction that reads the type's state as
@@ -332,9 +333,39 @@ fails with `runtime.invalidHandleState`. A handle read without a version
 picks up the resolved version for `as :State` and later reads in the same handler, but `h.version` keeps
 reporting the version the value itself carries.
 
-**Cache.** Each handler invocation owns one cache keyed by handle type, identity and carried version. Every state
+**Projections.** *Since: Unreleased.* A handle that a parameter or field of type `@Name(:P)` bound carries the
+[projection](Schemas.md#projections) `P`; reading its state passes `P` to the resolver (C# `call.Projection`, Swift
+`call.projection`, absent for the full view). The resolver answers with the state of the whole object, which the host
+converts to `P`, or with a Record or document of `P` itself; the host checks the answer against the schema it names and
+then against `P`, so a resolver that knows the projection may deliver less. For a `:ContentHash` type the version is the
+content hash of the projected Record; a revision or owner's hash is the object's. A passed version is compared with the
+version of what the resolver delivered: the full state's hash for a full state, the projection's for a projected one.
+Narrowing to a pinned projection computes that projection's version in the same way when a parameter binds, and
+reads the object as missing when the resolver answers *missing* or *not visible*. Narrowing to an unpinned view drops
+the version and resolves nothing. A handle with a projection that reaches a parameter or field of a wider view, which
+only an untyped value can, binds `nothing`. A plain Record converted with `as :P` is projected with the schema of the
+host's registered handle type that has `P`, without a resolver call; its Program links only with that resolver
+(`link.missingHandleResolver`).
+
+**Parties and visibility.** *Since: Unreleased.* Each read names the party it is for (C# `call.Party`, Swift
+`call.party`): 0 for the host itself, otherwise the host-local number that a [network](Network.md) assigns to a
+connection. A resolver may answer *not visible* (`SetNotVisible`, Swift `setNotVisible()`) when that party may not see
+the object at all. The script cannot tell it from *missing*: every state read gives `nothing`, so the answer does not
+reveal that the object exists. The host reports it to the observer with the diagnostic code `runtime.handleNotVisible`,
+which no handler sees and which does not stop the handler. A not-visible answer is cached like a missing one.
+
+**Batches.** *Since: Unreleased.* The first state read of a handle that is an element of a List the handler's message
+delivered, at any depth of its arguments, resolves that List's other elements of the same type and projection that are
+not cached yet, together: the host calls the resolver's batch entry once (C# `ResolveMany`, Swift `resolveMany`) with
+all of them, the read handle first and the rest in List order, and caches every answer. Each element is answered with
+one of the answers above and checked alone, so one invalid answer fails the handler as a single read does. The default
+batch entry resolves each handle on its own, in that order, so a resolver need not implement it. Handles that the
+handler builds or takes from other values resolve one by one.
+
+**Cache.** Each handler invocation owns one cache keyed by handle type, identity, carried version and projection. Every state
 read of the same object in that invocation, including across pauses, uses the first answer, so a handler sees one
-consistent state per object. The cache ends with the invocation; nothing is shared between handlers or hosts. Cached
+consistent state per object. A full state answer also serves later reads of the same object through any projection,
+which the host derives from it. The cache ends with the invocation; nothing is shared between handlers or hosts. Cached
 states are immutable values, so entries, and the values a handler took from them, may share storage.
 Resolvers are called only from script execution on the host's serial path, never from loading or the pump itself.
 Pausing resolvers are not part of this version; a later version may let resolution pause the handler like a frame.

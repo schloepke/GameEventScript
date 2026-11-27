@@ -94,6 +94,15 @@ ids and parts are Plain. When the text after `@Type` is no well-formed handle,
 only `@Type` is categorized as a handle and the rest as other tokens. *Since:
 Unreleased — handles.*
 
+A document whose first item is a `:Catalog` header is highlighted as a [catalog](Documents.md#catalogs) file;
+every other document as a state document a catalog may import, so references are allowed in both. In a catalog
+file, `:Catalog` is Keyword and the `@Type` of its header Type; `import`
+and `module` that start an item, and `import` before an entry's path, are Keyword, and a module name is
+Identifier with its `.` as Symbol. A key is Identifier also when it starts with a digit, an uppercase letter or
+contains `-`. A reference such as `@hull.light~` is Identifier with its `@`, its `.` and `~` as Symbol; braces are
+Symbol. The diagnostics hold the first reading error of the file alone, never errors that need other files or the
+catalog; a reference in a document that is read on its own as a `GesDocument` is no highlighting error. *Since: Unreleased — catalogs.*
+
 The diagnostics hold the document's first reading error, with the code and
 position [Documents](Documents.md#errors) defines. Its range covers the token
 of `document.unquotedText`, `document.unknownUnit` and a token's
@@ -116,9 +125,9 @@ Number that runs up to whitespace, a line break, `,`, a parenthesis, a brace, `|
 one Number. A word of ASCII letters and digits is Keyword when it is one of `schema`, `message`, `messages`, `constant`,
 `parameter`, `as`, `be`, `between`, `and`, `wrapping`, `step`, `delta`, `within`, `integer`, `optional`, `key`, `max`,
 `depth`, `tags`, `wire`, `model`, `let`, `default`, `true`, `false`, `abstract`, `with`, `all`, `without`, `computed`,
-`by`, `when`, `otherwise`, `or`, `not`, `of`, `min`, `clamp`, `abs`, `has`, `handle`, `composite` and `owns`; otherwise a word that starts with an
+`by`, `when`, `otherwise`, `or`, `not`, `of`, `min`, `clamp`, `abs`, `has`, `handle`, `composite`, `owns`, `projection` and `sending`, or `state` directly after `sending`; otherwise a word that starts with an
 uppercase letter, joined like a Type, is Message, and any other word is Identifier. `@` before an uppercase letter
-starts a Type joined the same way, including a directly following `~`. *Since: Unreleased — handles.*
+starts a Type joined the same way, including a directly following `(:Name)` and `~`, as in `@Unit(:UnitDisplay)~`. *Since: Unreleased — handles, projections, `sending state`.*
 
 The diagnostics hold the first error of reading the source, with the code and position [Schemas](Schemas.md) defines.
 Its range covers the scalar at the position, both UTF-16 units of one outside the BMP, or has length zero at the end
@@ -136,7 +145,7 @@ Constant, Number, String, Comment, Symbol, Function, Module, Label and Register.
 | Builtin | intrinsics, selectors, `:namespace.name` extension names, units of `:Quantity(...)`, inline-assembly opcodes | — | `fibonacci` and `factorial` of `:Series` | — |
 | Identifier | variables, bindings, parameters, fields, members, argument labels, map keys | attribute names before `=` | keys, labels, handler parameters | other words starting in lowercase, such as field and parameter names |
 | Message | message and handler names | — | message names of `:Message` and `:Handler` | other words starting in uppercase |
-| Type | type names such as `:Number` and record types, handle types such as `@Target~` | capitalized words that name no label | `:Name` of typed forms and the schema type, the `@Type` of a handle | `:Name`, `@Name` and `@Name~` |
+| Type | type names such as `:Number` and record types, handle types such as `@Target~` and `@Unit(:UnitDisplay)` | capitalized words that name no label | `:Name` of typed forms and the schema type, the `@Type` of a handle | `:Name`, `@Name` and `@Name~` |
 | Tag | tags | segment names, units after `unit:` | tags | `#name` |
 | Constant | `$constant` references | — | — | `$name` |
 | Number | numeric literals with their whole unit spelling, such as `2m²`, `2m^2` and `4/s`, compact dice such as `2d6`, math constants | numbers, `#` immediates | numbers with units, `Infinity`, `NaN` | numbers with their unit spelling |

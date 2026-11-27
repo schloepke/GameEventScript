@@ -147,4 +147,9 @@ public sealed class GesContext
 
     internal void RecordRuntimeLimitReached(string limitName, string detail, int limit)
         => _runtimeObserver?.RuntimeLimitReached(limitName, detail, limit);
+
+    // A resolver's not-visible answer, which only the observer learns of (specs/HostRuntime.md#handles).
+    internal void RecordHandleNotVisible(string symbol)
+        => _runtimeObserver?.RuntimeError(new GesDiagnostic(GesDiagnosticPhase.Runtime, GesDiagnosticCodes.RuntimeHandleNotVisible,
+            $"{symbol} is not visible to the asking party.", Symbol: symbol));
 }

@@ -103,6 +103,8 @@ internal static class GesSchemaLayoutJson
                         json.BeginObject();
                         json.String("side", owner.Side);
                         json.String("handle", owner.Handle);
+                        if (owner.Projection.Length > 0) json.String("projection", owner.Projection);
+                        if (owner.SendingState) json.Boolean("sendingState", true);
                         json.EndObject();
                     }
 

@@ -119,11 +119,20 @@ enum GesProgramValidator {
         if !names.insert(name).inserted { throw failure(.invalidProgram, 4, index) }
     }
 
-    // Whether an `@Name` or `@Name~` type operand names a handle type binding; nil for any other type name.
+    // Whether an `@Name`, `@Name(:P)`, `@Name~` or `@Name(:P)~` type operand names a handle type binding; nil for any
+    // other type name.
     private static func isHandleTypeOperand(_ text: String, _ handleTypeNames: Set<String>) -> Bool? {
         guard text.utf8.first == UInt8(ascii: "@") else { return nil }
-        let name = text.utf8.last == UInt8(ascii: "~") ? String(text.dropFirst().dropLast()) : String(text.dropFirst())
-        return handleTypeNames.contains(name)
+        var name = text.utf8.last == UInt8(ascii: "~") ? Substring(text.unicodeScalars.dropFirst().dropLast()) : Substring(text.unicodeScalars.dropFirst())
+        if let open = name.firstIndex(of: "(") {
+            let afterOpen = name.index(after: open)
+            guard name.last == ")", afterOpen < name.endIndex, name[afterOpen] == ":" else { return false }
+            let start = name.index(after: afterOpen)
+            let end = name.index(before: name.endIndex)
+            guard start < end, GesText.isUpperName(String(name[start..<end])) else { return false }
+            name = name[..<open]
+        }
+        return handleTypeNames.contains(String(name))
     }
 
     static func failure(_ code: GesProgramFormatErrorCode, _ section: UInt16? = nil, _ entry: Int? = nil) -> GesProgramFormatError { .init(code, sectionType: section, entryIndex: entry) }

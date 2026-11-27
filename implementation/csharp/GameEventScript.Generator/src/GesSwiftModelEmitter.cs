@@ -47,7 +47,8 @@ internal static partial class GesSwiftModelEmitter
         var documentType = options.Documents ? GesModelPlanner.DocumentType(layout, document.Space) : "";
         // Model messages and sets convert to and from messages through the values enum, which they need without --values.
         var messages = layout.Types.Exists(type => type.Kind != GesSchemaKind.Schema);
-        var valued = options.Values || messages;
+        // Projections convert from their sources through it too.
+        var valued = options.Values || messages || layout.Types.Exists(type => type.Conversions.Count > 0);
         var schemas = "__GesModelSchemas" + suffix;
         // Bindings and documents concern the schemas only.
         var plain = GesCSharpModelEmitter.Schemas(layout);
@@ -62,6 +63,9 @@ internal static partial class GesSwiftModelEmitter
         foreach (var handle in layout.Handles) document.Units.Add(new GesCodeUnit(GesModelPlanner.HandleName(handle.Name), code => Handle(code, layout.Handles, handle, access), handle: handle.Name));
         foreach (var (name, tags) in GesModelPlanner.TagSets(layout))
             document.Units.Add(new GesCodeUnit(name, code => TagEnum(code, name, tags, access, $"/// The tag set `:{name}`, in declared order; the raw value is the tag's name.")));
+        var catalogs = options.Catalogs ? GesModelPlanner.Catalogs(layout, topLevel) : [];
+        var catalogSet = schemaSet is not null ? schemaSet.Qualified + ".set" : "__GesModelDocuments" + suffix + ".set.get()";
+        foreach (var catalog in catalogs) document.Units.Add(new GesCodeUnit(catalog.Name, code => Catalog(code, catalog, access, catalogSet)));
         if (options.Bindings) document.Units.Add(new GesCodeUnit("", code => Bindings(code, plain, access, support, computed)));
         if (valued) document.Units.Add(new GesCodeUnit("", code => Values(code, layout, values, support, computed)));
         if (messages) document.Units.Add(new GesCodeUnit("", code => SchemasHolder(code, layout, schemas, schemaSet)));
@@ -270,6 +274,13 @@ internal static partial class GesSwiftModelEmitter
             code.Line("/// Reads a Record of this schema, or a Map of only its fields, as `GesSchemaValues` encodes it.");
             code.Line("/// - Throws: `GesWireError` with `wire.typeMismatch` at the path of a field that does not convert.");
             code.Line($"{access}init(value: GesValue) throws(GesWireError) {{ self = try {values}.read{type.Name}(value, \"\") }}");
+            foreach (var conversion in type.Conversions)
+            {
+                code.Blank();
+                code.Line($"/// Narrows a `:{conversion.Source}` to this projection: every taken field along its path, absent where an optional Record");
+                code.Line("/// on the path is absent. It never fails, since the source holds valid values.");
+                code.Line($"{access}init(_ source: {conversion.Source}) {{ self = {values}.{type.Name}__{conversion.Source}(source) }}");
+            }
         }
 
         if (documents is not null)
@@ -457,6 +468,13 @@ internal static partial class GesSwiftModelEmitter
             code.Line("/// Reads a Record of this schema, or a Map of only its fields, as `GesSchemaValues` encodes it.");
             code.Line("/// - Throws: `GesWireError` with `wire.typeMismatch` at the path of a field that does not convert.");
             code.Line($"{access}init(value: GesValue) throws(GesWireError) {{ self = try {values}.read{type.Name}(value, \"\") }}");
+            foreach (var conversion in type.Conversions)
+            {
+                code.Blank();
+                code.Line($"/// Narrows a `:{conversion.Source}` to this projection: every taken field along its path, absent where an optional Record");
+                code.Line("/// on the path is absent. It never fails, since the source holds valid values.");
+                code.Line($"{access}init(_ source: {conversion.Source}) {{ self = {values}.{type.Name}__{conversion.Source}(source) }}");
+            }
         }
 
         if (documents is not null)
@@ -989,7 +1007,32 @@ internal static partial class GesSwiftModelEmitter
                 code.Close();
             }
 
+            foreach (var conversion in type.Conversions)
+            {
+                code.Blank();
+                code.Line($"static let {type.Name}__{conversion.Source}Paths = [{string.Join(", ", conversion.Paths.ConvertAll(path => "[" + string.Join(", ", path.ConvertAll(segment => GesSchemaPlanner.Literal(segment, true))) + "]"))}]");
+                code.Blank();
+                code.Open($"static func {type.Name}__{conversion.Source}(_ source: {conversion.Source}) -> {type.Name} {{");
+                code.Line("// The source holds valid values, so its fields read back.");
+                code.Line($"try! read{type.Name}(select(value(source), {typeLiteral}, {names}, {type.Name}__{conversion.Source}Paths), \"\")");
+                code.Close();
+            }
+
             Conversions(code, type.Name, fields, name, support, true);
+        }
+
+        if (layout.Types.Exists(type => type.Conversions.Count > 0))
+        {
+            code.Blank();
+            code.Line("// The taken fields of a projection's source along their paths; a path through an absent Record gives nothing.");
+            code.Open("static func select(_ source: GesValue, _ name: String, _ names: [String], _ paths: [[String]]) -> GesValue {");
+            code.Open("let values = paths.map { path -> GesValue in");
+            code.Line("var current = source");
+            code.Line("for segment in path { current = current.asMap?.get(segment) ?? .nothing }");
+            code.Line("return current");
+            code.Close();
+            code.Line("return .record(typeName: name, keys: names, values: values)");
+            code.Close();
         }
 
         if (layout.Types.Exists(type => type.Kind != GesSchemaKind.Schema)) MessageHelpers(code);

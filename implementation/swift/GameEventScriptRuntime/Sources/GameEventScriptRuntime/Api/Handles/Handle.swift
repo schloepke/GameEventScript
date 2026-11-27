@@ -4,10 +4,10 @@
 @_spi(Syntax) import GameEventScriptSyntax
 
 /// An immutable reference to an object outside the host: a handle type name, an id and, for a composite, a part,
-/// with an optional version or unresolved ref.
+/// with an optional version or unresolved ref and the projection it reads through.
 ///
-/// Equality, hashing and order use the type name, the id, whether the handle is composite and the part; they ignore
-/// the version and the ref. The id and part are an integer Number or a Text; the version is an integer Number for a
+/// Equality, hashing, order and the text form use the type name, the id, whether the handle is composite and the part;
+/// they ignore the version, the ref and the projection. The id and part are an integer Number or a Text; the version is an integer Number for a
 /// revision or 20 or 32 Bytes for a hash. A composite's id, version and ref are its root's.
 public final class GesHandle: Hashable, Comparable, @unchecked Sendable, CustomStringConvertible {
     // Every stored value is an immutable integer, Text, Tag or Bytes value, so instances can cross isolation domains.
@@ -24,8 +24,12 @@ public final class GesHandle: Hashable, Comparable, @unchecked Sendable, CustomS
     public let part: GesValue
     /// Whether the handle names a part of its root's object.
     public let isComposite: Bool
+    /// The name of the [projection](https://gameeventscript.org/specs/Schemas.html#projections) the handle reads its
+    /// state through, without the leading `:`; empty for the full view.
+    public let projection: String
 
-    private init(typeName: String, id: GesValue, version: GesValue, ref: GesValue, part: GesValue, isComposite: Bool) {
+    private init(typeName: String, id: GesValue, version: GesValue, ref: GesValue, part: GesValue, isComposite: Bool, projection: String = "") {
+        self.projection = projection
         self.typeName = typeName
         self.id = id
         self.version = version
@@ -68,7 +72,17 @@ public final class GesHandle: Hashable, Comparable, @unchecked Sendable, CustomS
     /// - Throws: `GesApiError.invalidArgument` for a version that is neither Nothing, an integer Number without unit
     ///   nor 20 or 32 Bytes.
     public func withVersion(_ version: GesValue) throws(GesApiError) -> GesHandle {
-        GesHandle(typeName: typeName, id: id, version: try Self.checkVersion(version), ref: .nothing, part: part, isComposite: isComposite)
+        GesHandle(typeName: typeName, id: id, version: try Self.checkVersion(version), ref: .nothing, part: part, isComposite: isComposite, projection: projection)
+    }
+
+    /// Returns the handle reading its state through a projection, or through the full view for an empty name.
+    ///
+    /// - Parameter projection: The projection's schema name without the leading `:`, or empty for the full view.
+    /// - Returns: The handle with the projection; its identity, version and ref are unchanged.
+    /// - Throws: `GesApiError.invalidArgument` for a name that is no type name.
+    public func withProjection(_ projection: String) throws(GesApiError) -> GesHandle {
+        if !projection.isEmpty && !GesNames.type(projection) { throw .invalidArgument("'\(projection)' is no projection name.") }
+        return projection.utf8.elementsEqual(self.projection.utf8) ? self : GesHandle(typeName: typeName, id: id, version: version, ref: ref, part: part, isComposite: isComposite, projection: projection)
     }
 
     // A handle from wire parts that its schema already checked.
@@ -77,11 +91,16 @@ public final class GesHandle: Hashable, Comparable, @unchecked Sendable, CustomS
     }
 
     func withoutVersion() -> GesHandle {
-        version.isNothing && ref.isNothing ? self : GesHandle(typeName: typeName, id: id, version: .nothing, ref: .nothing, part: part, isComposite: isComposite)
+        version.isNothing && ref.isNothing ? self : GesHandle(typeName: typeName, id: id, version: .nothing, ref: .nothing, part: part, isComposite: isComposite, projection: projection)
+    }
+
+    // A checked version and a projection name at once, as narrowing needs them.
+    func withView(_ version: GesValue, _ projection: String) -> GesHandle {
+        GesHandle(typeName: typeName, id: id, version: version, ref: .nothing, part: part, isComposite: isComposite, projection: projection)
     }
 
     static func withRef(_ handle: GesHandle, _ reference: GesValue) -> GesHandle {
-        GesHandle(typeName: handle.typeName, id: handle.id, version: .nothing, ref: reference, part: handle.part, isComposite: handle.isComposite)
+        GesHandle(typeName: handle.typeName, id: handle.id, version: .nothing, ref: reference, part: handle.part, isComposite: handle.isComposite, projection: handle.projection)
     }
 
     /// The canonical text form `@Type:id[~version|~#tag|~'ref'][/part]`.

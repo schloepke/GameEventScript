@@ -122,6 +122,7 @@ internal partial class GesVirtualMachine
         StageLength = 0;
         RandomGenerator = context.Random;
         _budget = context.RuntimeBudget;
+        _handleContext = context;
         var maxValueDepth = context.RuntimeBudget.Limits.MaxValueDepth;
         _maxValueDepth = maxValueDepth > 0 ? maxValueDepth : long.MaxValue;
         if (callAsArguments)

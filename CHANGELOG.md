@@ -21,6 +21,37 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   (`~#live`), product JSON `Handle` objects, wire encodings of ids and versions, network `owns` routes, generated
   `<Name>Handle` model types, `GesHandle`, `GesHash20`/`GesHash32`, `WithHandleTypes`, `WithHandleResolver`,
   `ResolveRef` and the `HandleType` import (0x22) (specs/PublicApi.md#handle-api).
+- Catalogs collect content objects of one Text-id handle type in documents: `:Catalog(@Unit)` files hold entries,
+  `module drone.heavy { ... }` blocks and `import 'path'` of further catalog files or of one entry's document; entries
+  refer to each other with `@scout`, `@drone.heavy` or `@Unit:scout` and pin with `~`, which fills in the content hash
+  of the target. Reading resolves every import within named roots and reports all errors at once with `catalog.*`
+  codes, an unknown reference with a suggestion (specs/Documents.md#catalogs). `GesCatalog.Read` (Swift
+  `GesCatalog.read`) reads one through a host file source and returns entries with handle, value and origin, sorted by
+  id (specs/PublicApi.md#catalogs). `document check --schema ... --catalog @Unit <path>` checks catalogs in both CLIs;
+  highlighting and the editor grammars know catalog files and references.
+- Catalogs can be read from versioned sources: `handle @UnitFiles of :Catalog(@Unit) composite @Repository as { part:
+  :Text max 256 }` declares the files of a catalog within a repository, and `GesCatalog.Read(type, roots, resolver)`
+  (Swift `read(_:roots:resolver:)`) requests every file through that type's resolver, pins each root to the version of
+  its first answer and reports the roots read as `Sources` (specs/Documents.md#reading-from-handles). A catalog is the
+  handle resolver of its type, so a host can register it for scripts. `generate --model --catalogs` writes a typed
+  `<Name>Catalog` for every model root that is a Text-id handle type's state, with typed entries, `module`, `index` and
+  its dependencies as parameters (specs/Schemas.md#model-catalogs).
+- Projections name the part of a state a handle may read: `projection :UnitDisplay of :Composition as { name, kinds,
+  icon: presentation.icon }` in a schema source takes fields of a schema, also through Records under a new name
+  (specs/Schemas.md#projections). Scripts declare `@Unit(:UnitDisplay)` and `@Unit(:UnitDisplay)~`, read only the
+  projection's fields, convert to narrower projections and never widen, also not with `as`
+  (`validate.invalidProjection`, `validate.handleWidening`); `c as :UnitDisplay` projects plain data too
+  (specs/Language.md#projections). A `:ContentHash` version hashes the projection. Resolvers see the asking
+  `Projection` and `Party`, may answer `SetNotVisible()` (`runtime.handleNotVisible` for the observer) and resolve the
+  handles of a List at once with `ResolveMany`; the cache keys by projection (specs/HostRuntime.md#handles). Generated
+  projection models convert from their sources (`UnitDisplay(composition)`, C# `UnitDisplay.From`), and generated
+  catalogs keep an index per projection (`units.index(UnitDisplay.self)`, C# `UnitDisplayIndex`), built on
+  `GesCatalog.Index(projection)` (Swift `index(_:)`); `GesHandleType.Projections` and `GesSchema.Source` describe them.
+- Network `owns` routes name the projection the other side reads and whether the owner sends state along:
+  `server owns @Unit as :UnitPublic sending state`. Routes from the owner must carry that projection or a narrower one
+  (`schema.invalidProjection`) and cannot pin revision handles (`schema.invalidHandle`); both enter the network hash
+  and `GesNetworkOwner.Projection`/`SendsState` (Swift `projection`/`sendsState`) (specs/Network.md#declaration).
+  Sessions do not yet send handle state or resolve handles over the network; `sending state` is declaration only.
 - Both CLIs take `--schema <file.gess>` (repeatable, with file-name patterns) for `compile`, `check` and `run`: the
   files are read as one schema set, and the handle types it declares reach every compilation, including scenarios,
   console input, `:load`, `:reload` and `:edit`. With `--schema`, every handle type a `.gesb` input imports must match

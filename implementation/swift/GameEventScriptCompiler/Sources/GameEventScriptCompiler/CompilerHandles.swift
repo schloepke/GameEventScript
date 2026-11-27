@@ -15,6 +15,24 @@ extension GesCompiler {
             return
         }
         let matches = r.temporary()
+        if GesHandleTypeNames.hasProjection(typeName) {
+            // Each alternative gives its own view, so a matching value casts to the alternative it matched.
+            var labels: [Int] = []
+            for alternative in alternatives {
+                namedHandleTypes.insert(GesHandleTypeNames.split(alternative).name)
+                r.emit(.checkCustomType, matches, value, builder.text(alternative))
+                labels.append(r.emit(.jumpIfTrue, 0, matches))
+            }
+            r.emit(.loadNothing, d)
+            var ends = [r.emit(.jump)]
+            for (index, alternative) in alternatives.enumerated() {
+                r.mark([labels[index]])
+                r.emit(.castCustom, d, value, builder.text(alternative))
+                if index < alternatives.count - 1 { ends.append(r.emit(.jump)) }
+            }
+            r.mark(ends)
+            return
+        }
         var keep: [Int] = []
         for alternative in alternatives {
             namedHandleTypes.insert(GesHandleTypeNames.split(alternative).name)
@@ -54,15 +72,32 @@ extension GesCompiler {
         default:
             let names = GesHandleTypeNames.names(typeName)
             for name in names { namedHandleTypes.insert(name) }
+            var stateTarget = value
+            // A parameter already holds its view; a handle from elsewhere, such as a Record field a message delivered,
+            // takes the static view first, so the read never sees more than the type allows.
+            if GesHandleTypeNames.hasProjection(typeName) && !target.isName {
+                stateTarget = r.temporary()
+                handleTypeCast(stateTarget, value, typeName, r)
+            }
             builder.handleStateReads.append(names)
-            r.emit(.memberAccess, d, builder.text(member), value, payload: UInt64(builder.handleStateReads.count))
+            r.emit(.memberAccess, d, builder.text(member), stateTarget, payload: UInt64(builder.handleStateReads.count))
         }
     }
 
-    // `h as :State` of a statically typed handle reads the state of the alternatives with that state schema.
+    // `h as :State` and `h as :P` of a statically typed handle read the state of the alternatives with that state schema
+    // or projection. `c as :P` of any other value projects a Record with a projection of a handle type's state, which
+    // the Program names so that the host links the schema it was compiled against.
     func noteHandleStateCast(_ value: GesExpression, _ type: String, _ scope: GesScope) {
-        guard let typeName = staticTypeName(value, scope), GesHandleTypeNames.isHandleType(typeName) else { return }
-        for name in GesHandleTypeNames.names(typeName) where handleTypes[name]?.stateName == type { namedHandleTypes.insert(name) }
+        if let typeName = staticTypeName(value, scope), GesHandleTypeNames.isHandleType(typeName) {
+            for name in GesHandleTypeNames.names(typeName) {
+                if let handle = handleTypes[name], handle.stateName == type || handle.findProjection(type) != nil { namedHandleTypes.insert(name) }
+            }
+            return
+        }
+        for name in handleTypeOrder where handleTypes[name]?.findProjection(type) != nil {
+            namedHandleTypes.insert(name)
+            return
+        }
     }
 
     // The static type of an expression as far as handle lowering needs it: bindings with a declared type, record
@@ -82,6 +117,14 @@ extension GesCompiler {
     }
 }
 
+extension GesExpression {
+    // Whether the expression is a bare name, such as a parameter.
+    fileprivate var isName: Bool {
+        if case .name = kind { return true }
+        return false
+    }
+}
+
 extension GesBinaryBuilder {
     // Handle type imports follow all other bindings in ordinal name order, each with its hash as four raw words, least
     // significant first, and the address of the first state read or the sentinel (specs/BinaryFormat.md#bindings).
@@ -96,7 +139,7 @@ extension GesBinaryBuilder {
                 code[address] = .init(opcode: instruction.opcode, unitAndFlags: instruction.unitAndFlags, word0: instruction.word0, word1: instruction.word1, word2: instruction.word2, payload: 0)
             } else if instruction.opcode == .castCustom && Int(instruction.word2) < strings.count {
                 let castName = strings[Int(instruction.word2)]
-                for (name, type) in handleTypes where type.stateName == castName && firstReads[name] == nil { firstReads[name] = UInt16(address) }
+                for (name, type) in handleTypes where (type.stateName == castName || type.projections.contains(castName)) && firstReads[name] == nil { firstReads[name] = UInt16(address) }
             }
         }
         return handleTypes.keys.sorted(by: GesBinaryBuilder.ordinal).map { name in

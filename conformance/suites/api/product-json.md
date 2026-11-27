@@ -1822,3 +1822,449 @@ gesBlock: expect
 message:
   error: "message.invalidValue"
 ```
+
+---
+
+## Test: handle-text-id
+
+A Handle carries its type name and a Text id.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "handle-text-id"
+messageApi:
+  signature:
+    name: "Done"
+    parameters:
+      - "value"
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"id\":{\"type\":\"Text\",\"value\":\"drone.brakk\"},\"name\":\"Unit\",\"type\":\"Handle\"}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+  roundTripJson: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"id\":{\"type\":\"Text\",\"value\":\"drone.brakk\"},\"name\":\"Unit\",\"type\":\"Handle\"}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+  messageSignatureId: "Done(value)"
+  argumentCount: 1
+```
+
+---
+
+## Test: handle-integer-id
+
+An integer id is a unitless Number.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "handle-integer-id"
+messageApi:
+  signature:
+    name: "Done"
+    parameters:
+      - "value"
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"id\":{\"type\":\"Number\",\"unit\":\"\",\"value\":\"42\"},\"name\":\"Target\",\"type\":\"Handle\"}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+  roundTripJson: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"id\":{\"type\":\"Number\",\"unit\":\"\",\"value\":\"42\"},\"name\":\"Target\",\"type\":\"Handle\"}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+  messageSignatureId: "Done(value)"
+  argumentCount: 1
+```
+
+---
+
+## Test: handle-revision
+
+A revision is an integer Number.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "handle-revision"
+messageApi:
+  signature:
+    name: "Done"
+    parameters:
+      - "value"
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"id\":{\"type\":\"Text\",\"value\":\"scout\"},\"name\":\"Unit\",\"type\":\"Handle\",\"version\":{\"type\":\"Number\",\"unit\":\"\",\"value\":\"7\"}}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+  roundTripJson: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"id\":{\"type\":\"Text\",\"value\":\"scout\"},\"name\":\"Unit\",\"type\":\"Handle\",\"version\":{\"type\":\"Number\",\"unit\":\"\",\"value\":\"7\"}}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+  messageSignatureId: "Done(value)"
+  argumentCount: 1
+```
+
+---
+
+## Test: handle-hash
+
+A hash version is 20 or 32 Bytes.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "handle-hash"
+messageApi:
+  signature:
+    name: "Done"
+    parameters:
+      - "value"
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"id\":{\"type\":\"Text\",\"value\":\"scout\"},\"name\":\"Unit\",\"type\":\"Handle\",\"version\":{\"base64\":\"AAECAwQFBgcICQoLDA0ODxAREhM=\",\"type\":\"Bytes\"}}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+  roundTripJson: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"id\":{\"type\":\"Text\",\"value\":\"scout\"},\"name\":\"Unit\",\"type\":\"Handle\",\"version\":{\"base64\":\"AAECAwQFBgcICQoLDA0ODxAREhM=\",\"type\":\"Bytes\"}}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+  messageSignatureId: "Done(value)"
+  argumentCount: 1
+```
+
+---
+
+## Test: handle-composite
+
+A composite writes its root's id and version and its part.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "handle-composite"
+messageApi:
+  signature:
+    name: "Done"
+    parameters:
+      - "value"
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"id\":{\"type\":\"Text\",\"value\":\"scout\"},\"name\":\"Slot\",\"part\":{\"type\":\"Number\",\"unit\":\"\",\"value\":\"3\"},\"type\":\"Handle\",\"version\":{\"type\":\"Number\",\"unit\":\"\",\"value\":\"7\"}}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+  roundTripJson: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"id\":{\"type\":\"Text\",\"value\":\"scout\"},\"name\":\"Slot\",\"part\":{\"type\":\"Number\",\"unit\":\"\",\"value\":\"3\"},\"type\":\"Handle\",\"version\":{\"type\":\"Number\",\"unit\":\"\",\"value\":\"7\"}}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+  messageSignatureId: "Done(value)"
+  argumentCount: 1
+```
+
+---
+
+## Test: handle-map-key
+
+Handle keys follow the Text keys of a Map.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "handle-map-key"
+messageApi:
+  signature:
+    name: "Done"
+    parameters:
+      - "value"
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"entries\":[{\"key\":\"label\",\"value\":{\"type\":\"Text\",\"value\":\"x\"}},{\"key\":{\"id\":{\"type\":\"Text\",\"value\":\"a\"},\"name\":\"Unit\",\"type\":\"Handle\"},\"value\":{\"type\":\"Number\",\"unit\":\"\",\"value\":\"1\"}},{\"key\":{\"id\":{\"type\":\"Text\",\"value\":\"b\"},\"name\":\"Unit\",\"type\":\"Handle\"},\"value\":{\"type\":\"Number\",\"unit\":\"\",\"value\":\"2\"}}],\"type\":\"Map\"}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+  roundTripJson: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"entries\":[{\"key\":\"label\",\"value\":{\"type\":\"Text\",\"value\":\"x\"}},{\"key\":{\"id\":{\"type\":\"Text\",\"value\":\"a\"},\"name\":\"Unit\",\"type\":\"Handle\"},\"value\":{\"type\":\"Number\",\"unit\":\"\",\"value\":\"1\"}},{\"key\":{\"id\":{\"type\":\"Text\",\"value\":\"b\"},\"name\":\"Unit\",\"type\":\"Handle\"},\"value\":{\"type\":\"Number\",\"unit\":\"\",\"value\":\"2\"}}],\"type\":\"Map\"}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+  messageSignatureId: "Done(value)"
+  argumentCount: 1
+```
+
+---
+
+## Test: handle-key-version
+
+A Map key Handle has no version.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "handle-key-version"
+messageApi:
+  signature:
+    name: "Done"
+    parameters:
+      - "value"
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"entries\":[{\"key\":{\"id\":{\"type\":\"Text\",\"value\":\"a\"},\"name\":\"Unit\",\"type\":\"Handle\",\"version\":{\"type\":\"Number\",\"unit\":\"\",\"value\":\"1\"}},\"value\":{\"type\":\"Number\",\"unit\":\"\",\"value\":\"1\"}}],\"type\":\"Map\"}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+  roundTripJson: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  error: "message.invalidValue"
+```
+
+---
+
+## Test: handle-key-duplicate
+
+Equal Handle keys are duplicates.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "handle-key-duplicate"
+messageApi:
+  signature:
+    name: "Done"
+    parameters:
+      - "value"
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"entries\":[{\"key\":{\"id\":{\"type\":\"Text\",\"value\":\"a\"},\"name\":\"Unit\",\"type\":\"Handle\"},\"value\":{\"type\":\"Number\",\"unit\":\"\",\"value\":\"1\"}},{\"key\":{\"id\":{\"type\":\"Text\",\"value\":\"a\"},\"name\":\"Unit\",\"type\":\"Handle\"},\"value\":{\"type\":\"Number\",\"unit\":\"\",\"value\":\"2\"}}],\"type\":\"Map\"}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+  roundTripJson: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  error: "message.invalidValue"
+```
+
+---
+
+## Test: handle-record-key
+
+Record keys are Text only.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "handle-record-key"
+messageApi:
+  signature:
+    name: "Done"
+    parameters:
+      - "value"
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"entries\":[{\"key\":{\"id\":{\"type\":\"Text\",\"value\":\"a\"},\"name\":\"Unit\",\"type\":\"Handle\"},\"value\":{\"type\":\"Number\",\"unit\":\"\",\"value\":\"1\"}}],\"name\":\"Item\",\"type\":\"Record\"}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+  roundTripJson: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  error: "message.invalidValue"
+```
+
+---
+
+## Test: handle-id-unit
+
+An id has no unit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "handle-id-unit"
+messageApi:
+  signature:
+    name: "Done"
+    parameters:
+      - "value"
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"id\":{\"type\":\"Number\",\"unit\":\"m\",\"value\":\"1\"},\"name\":\"Unit\",\"type\":\"Handle\"}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+  roundTripJson: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  error: "message.invalidValue"
+```
+
+---
+
+## Test: handle-id-binary64
+
+An id has integer storage.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "handle-id-binary64"
+messageApi:
+  signature:
+    name: "Done"
+    parameters:
+      - "value"
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"id\":{\"type\":\"Number\",\"unit\":\"\",\"value\":\"1.5\"},\"name\":\"Unit\",\"type\":\"Handle\"}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+  roundTripJson: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  error: "message.invalidValue"
+```
+
+---
+
+## Test: handle-name
+
+The name is a type name.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "handle-name"
+messageApi:
+  signature:
+    name: "Done"
+    parameters:
+      - "value"
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"id\":{\"type\":\"Text\",\"value\":\"a\"},\"name\":\"unit\",\"type\":\"Handle\"}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+  roundTripJson: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  error: "message.invalidValue"
+```
+
+---
+
+## Test: handle-version-bytes
+
+A hash version has 20 or 32 bytes.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "handle-version-bytes"
+messageApi:
+  signature:
+    name: "Done"
+    parameters:
+      - "value"
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"id\":{\"type\":\"Text\",\"value\":\"a\"},\"name\":\"Unit\",\"type\":\"Handle\",\"version\":{\"base64\":\"oLcL\",\"type\":\"Bytes\"}}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+  roundTripJson: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  error: "message.invalidValue"
+```
+
+---
+
+## Test: handle-extra-field
+
+A Handle has no other fields.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "handle-extra-field"
+messageApi:
+  signature:
+    name: "Done"
+    parameters:
+      - "value"
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"id\":{\"type\":\"Text\",\"value\":\"a\"},\"name\":\"Unit\",\"ref\":{\"type\":\"Text\",\"value\":\"x\"},\"type\":\"Handle\"}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+  roundTripJson: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  error: "message.invalidValue"
+```

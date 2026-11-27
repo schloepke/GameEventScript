@@ -59,6 +59,16 @@ internal sealed class GesModelType
 
     // The wire layout of a packed schema, whose fields' encodings place them in its word; null for other types.
     internal GesSchemaLayout? Packed;
+
+    // The conversions of a projection from the schemas it narrows that the layout holds, nearest first.
+    internal List<GesModelConversion> Conversions = [];
+}
+
+// A projection's conversion from one schema it narrows: per taken field, the field names of its path within that schema.
+internal sealed class GesModelConversion
+{
+    internal string Source = "";
+    internal List<List<string>> Paths = [];
 }
 
 // A schema that types take with `with`: generated as a protocol (Swift) or interface (C#) with read-only properties. It
@@ -76,6 +86,9 @@ internal sealed class GesModelHandle
     internal GesHandleKey Id;
     internal string? Root;
     internal GesHandleKey Part;
+
+    // The projections of the state that the layout holds, by name.
+    internal List<string> Projections = [];
 
     internal bool IsComposite => Root is not null;
 
@@ -192,6 +205,12 @@ internal static class GesModelLayoutBuilder
             Reach(schema, reached, handles);
         }
 
+        // A model root that is the state of a handle type with a Text id of its own reaches that type, whose catalog holds it.
+        foreach (var handle in set.HandleTypes)
+            if (handle.Root is null && handle.CatalogOf is null && handle.Id is { IsText: true } && rootNames.Contains(handle.StateName)
+                && reached.TryGetValue(handle.StateName, out var state) && state.Declaration == handle.Resolved.State)
+                Reach(handle, handles);
+
         var types = new List<GesModelType>();
         foreach (var schema in reached.Values)
         {
@@ -211,12 +230,19 @@ internal static class GesModelLayoutBuilder
                 if (take.IsUnchanged) type.Takes.Add(take.Schema.Name);
             if (schema.Kind == GesSchemaKind.Message) type.Tags.AddRange(schema.Tags);
             foreach (var member in schema.Members) type.Members.Add(member.Name);
+            Conversions(schema.Declaration, reached, type.Conversions);
             types.Add(type);
         }
 
         var layout = new GesModelLayout(rootNames, types);
         foreach (var handle in handles.Values)
-            layout.Handles.Add(GesModelHandle.Of(handle));
+        {
+            var model = GesModelHandle.Of(handle);
+            foreach (var projection in handle.Projections)
+                if (reached.TryGetValue(projection.Name, out var held) && held.Declaration == projection.Declaration) model.Projections.Add(projection.Name);
+            layout.Handles.Add(model);
+        }
+
         foreach (var source in set.Sources) layout.Sources.Add(new GesSchemaSource(source.Name.Substring(source.Name.LastIndexOfAny(['/', '\\']) + 1), source.Text));
         var protocols = new SortedDictionary<string, GesSchema>(StringComparer.Ordinal);
         foreach (var schema in reached.Values) Protocols(schema, protocols);
@@ -245,6 +271,29 @@ internal static class GesModelLayoutBuilder
 
         RenameLent(layout);
         return layout;
+    }
+
+    // A projection converts from its source and every schema below it that the layout holds. Each path starts in the nearest
+    // source; a source that is itself a projection replaces a path's first field by that field's path one level down.
+    private static void Conversions(GesResolvedDeclaration projection, SortedDictionary<string, GesSchema> reached, List<GesModelConversion> conversions)
+    {
+        if (projection.Source is not { } source) return;
+        var paths = new List<List<string>>();
+        foreach (var path in projection.Paths) paths.Add(new List<string>(Array.ConvertAll(path, field => field.Name)));
+        while (true)
+        {
+            if (reached.TryGetValue(source.Name, out var held) && held.Declaration == source)
+                conversions.Add(new GesModelConversion { Source = source.Name, Paths = paths.ConvertAll(path => new List<string>(path)) });
+            if (source.Source is not { } next) return;
+            foreach (var path in paths)
+            {
+                var below = source.Paths[Array.FindIndex(source.Fields, field => field.Name == path[0])];
+                path.RemoveAt(0);
+                path.InsertRange(0, Array.ConvertAll(below, field => field.Name));
+            }
+
+            source = next;
+        }
     }
 
     // The models that wire code generated with `--models` converts to. Each model group is generated with `--model` like any
@@ -572,6 +621,20 @@ internal static class GesModelLayoutJson
             GesSchemaLayoutJson.Constants(json, type.Constants);
             GesSchemaLayoutJson.Computed(json, type.Computed);
             if (type.Takes.Count > 0) json.Strings("takes", type.Takes);
+            if (type.Conversions.Count > 0)
+            {
+                json.BeginArray("conversions");
+                foreach (var conversion in type.Conversions)
+                {
+                    json.BeginObject();
+                    json.String("source", conversion.Source);
+                    json.Strings("paths", conversion.Paths.ConvertAll(path => string.Join(".", path)));
+                    json.EndObject();
+                }
+
+                json.EndArray();
+            }
+
             json.EndObject();
         }
 
@@ -617,6 +680,7 @@ internal static class GesModelLayoutJson
                     Key(json, handle.Id);
                 }
 
+                if (handle.Projections.Count > 0) json.Strings("projections", handle.Projections);
                 json.EndObject();
             }
 

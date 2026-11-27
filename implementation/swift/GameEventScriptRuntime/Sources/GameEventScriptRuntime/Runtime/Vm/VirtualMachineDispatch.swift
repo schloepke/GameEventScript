@@ -7,6 +7,7 @@ extension GesVirtualMachine {
         reset()
         self.linked = linked
         handlerName = signature
+        processingMessage = message
         ip = Int(entry)
         let count = matchArguments ? message.arguments.count : 1
         guard ensureRegisterCapacity(count) else { return }
@@ -17,6 +18,7 @@ extension GesVirtualMachine {
     }
 
     func runSlice(context: GesContext, budget: Int) -> Int {
+        handleContext = context
         if let profiler = linked?.profiler {
             return executeSlice(context: context, budget: budget, instrumentation: ActiveInstrumentation(profiler: profiler))
         }
@@ -79,11 +81,19 @@ extension GesVirtualMachine {
                     let type = text(instruction.word2)
                     // A handle type checks without converting; a handle casts only to its type's state schema.
                     if type.utf8.first == UInt8(ascii: "@") {
-                        if Self.isHandleType(value, type) { setValue(d, value) } else { setNothing(d) }
+                        let handleText = HandleTypeText(type)
+                        if !isHandleType(value, type) {
+                            setNothing(d)
+                        } else if handleText.projected {
+                            try castHandleView(d, value, value.handleValue!, handleText)
+                        } else {
+                            setValue(d, value)
+                        }
                     } else if let handle = value.handleValue {
                         if try !tryCastHandleState(d, handle, type) { setNothing(d) }
                     } else if value.customTypeName == type {
                         setValue(d, value)
+                    } else if let recordName = value.customTypeName, try tryProjectRecord(d, value, recordName, type) {
                     } else if value.kind == .map, let binding = linked!.recordsByName[type] {
                         clearStage()
                         for name in binding.argumentNames { stageValue(value.asMap!.get(text(name)) ?? .nothing) }
@@ -104,7 +114,7 @@ extension GesVirtualMachine {
                 case .checkType: setBoolean(d, GesCasts.check(value(x), GesBytecodeTypeKind(rawValue: instruction.word2)!))
                 case .checkCustomType:
                     let type = text(instruction.word2)
-                    setBoolean(d, type.utf8.count > 1 && type.utf8.first == UInt8(ascii: "@") ? Self.isHandleType(value(x), type) : value(x).customTypeName == type)
+                    setBoolean(d, type.utf8.count > 1 && type.utf8.first == UInt8(ascii: "@") ? isHandleType(value(x), type) : value(x).customTypeName == type)
                 case .checkUnit:
                     let value = self.value(x)
                     setBoolean(d, ((value.kind == .integer || value.kind == .float) || value.spatialValue != nil) && value.unit == instruction.decodedUnit)

@@ -65,7 +65,10 @@ public final class GesSchemaSet: @unchecked Sendable {
             handle.publicType = type
             return type
         }
-        for type in handleTypes { type.root = type.resolved.root?.publicType }
+        for type in handleTypes {
+            type.root = type.resolved.root?.publicType
+            type.catalogOf = type.resolved.catalog?.publicType
+        }
         self.handleTypes = handleTypes
         for file in files { try file.resolve(declarations, messages, tagSets) }
         var composed: Set<ObjectIdentifier> = []
@@ -103,6 +106,23 @@ public final class GesSchemaSet: @unchecked Sendable {
     private func compose(_ declaration: GesResolvedDeclaration, _ path: inout [GesResolvedDeclaration], _ composed: inout Set<ObjectIdentifier>) throws {
         if composed.contains(ObjectIdentifier(declaration)) { return }
         path.append(declaration)
+        if declaration.isProjection {
+            let syntax = declaration.syntax
+            guard let source = declarations[syntax.state], source.kind == .schema else {
+                throw declaration.scope.error(Code.invalidProjection, syntax.stateOffset, "The source of '\(declaration.name)', ':\(syntax.state)', is no declared schema or projection.")
+            }
+            if source.isAbstract { throw declaration.scope.error(Code.invalidProjection, syntax.stateOffset, "The source of '\(declaration.name)', ':\(syntax.state)', is abstract.") }
+            if source.isPacked { throw declaration.scope.error(Code.invalidProjection, syntax.stateOffset, "The source of '\(declaration.name)', ':\(syntax.state)', is packed.") }
+            if path.contains(where: { $0 === source }) {
+                throw declaration.scope.error(Code.invalidProjection, syntax.stateOffset, "'\(declaration.name)' projects ':\(syntax.state)', which projects it in turn.")
+            }
+            try compose(source, &path, &composed)
+            path.removeLast()
+            declaration.source = source
+            try declaration.scope.composeProjection(declaration)
+            composed.insert(ObjectIdentifier(declaration))
+            return
+        }
         for with in declaration.syntax.withs {
             guard let source = declarations[with.name], source.kind == .schema else {
                 throw declaration.scope.error(Code.unknownName, with.offset, "Schema '\(with.name)' is not declared.")
@@ -368,6 +388,8 @@ final class GesResolvedType {
     var handle: GesResolvedHandle?
     // A handle written `@Name~`, which carries its version.
     var versioned = false
+    // The projection of a handle written `@Name(:P)`, which it reads; nil without one.
+    var projection: GesResolvedDeclaration?
     // The label of a union alternative, or empty.
     var label = ""
     // The `depth` of a List whose element is the schema that declares it: how many records of it nest; 0 without one.
@@ -450,6 +472,10 @@ final class GesResolvedDeclaration {
     var isPacked: Bool { syntax.isPacked }
     var packedBits = 0
     var packedWidth = 0
+    // A projection's source and, per taken field, the source fields along its path, from the source's root.
+    var isProjection: Bool { syntax.kind == .projection }
+    var source: GesResolvedDeclaration?
+    var paths: [[GesResolvedField]] = []
     // The public description, which exists once all declarations are resolved. It holds this declaration, so this side is weak.
     weak var schema: GesSchema?
 
@@ -460,6 +486,16 @@ final class GesResolvedDeclaration {
         self.scope = scope
         self.syntax = syntax
         self.tags = tags
+    }
+
+    // Whether this schema is a projection that narrows the other: the other is its source or a schema its source narrows.
+    func narrows(_ other: GesResolvedDeclaration) -> Bool {
+        var source = self.source
+        while let current = source {
+            if current === other { return true }
+            source = current.source
+        }
+        return false
     }
 }
 
@@ -535,7 +571,7 @@ final class GesFileScope {
                 if parameters[declaration.name] != nil { throw error(Code.duplicateName, declaration.offset, "Parameter '\(declaration.name)' is declared twice.") }
                 parameters[declaration.name] = declaration.type
             default:
-                let kind: GesSchemaKind = declaration.kind == .schema ? .schema : declaration.kind == .message ? .message : .messages
+                let kind: GesSchemaKind = declaration.kind == .schema || declaration.kind == .projection ? .schema : declaration.kind == .message ? .message : .messages
                 let resolved = GesResolvedDeclaration(kind: kind, name: declaration.name, offset: declaration.offset, scope: self, syntax: declaration, tags: declaration.tags)
                 if GesSchemaTypeNames.isBuiltIn(declaration.name) {
                     throw error(Code.duplicateName, declaration.offset, "'\(declaration.name)' is a built-in type.")
@@ -565,11 +601,15 @@ final class GesFileScope {
         lets.removeAll()
         for handle in ownHandles {
             let syntax = handle.syntax
-            guard let state = all[syntax.state], state.kind == .schema else {
-                throw error(Code.invalidHandle, syntax.stateOffset, "The state of '@\(handle.name)', ':\(syntax.state)', is no declared schema.")
+            if !syntax.catalog.isEmpty {
+                handle.catalog = try catalogOf(handle)
+            } else {
+                guard let state = all[syntax.state], state.kind == .schema else {
+                    throw error(Code.invalidHandle, syntax.stateOffset, "The state of '@\(handle.name)', ':\(syntax.state)', is no declared schema.")
+                }
+                if state.isAbstract { throw error(Code.invalidHandle, syntax.stateOffset, "The state of '@\(handle.name)', ':\(syntax.state)', is abstract.") }
+                handle.state = state
             }
-            if state.isAbstract { throw error(Code.invalidHandle, syntax.stateOffset, "The state of '@\(handle.name)', ':\(syntax.state)', is abstract.") }
-            handle.state = state
             if !syntax.root.isEmpty {
                 let root = try self.handle(syntax.root, syntax.rootOffset)
                 if !root.syntax.root.isEmpty {
@@ -591,8 +631,27 @@ final class GesFileScope {
         }
     }
 
-    // A state field named `id`, `version` or `root` would collide with the handle's members.
+    // A catalog file type `:Catalog(@Unit)` is composite with a Text part, and its catalog's type is a declared handle type
+    // with a Text id that is neither composite nor a catalog file type itself.
+    private func catalogOf(_ handle: GesResolvedHandle) throws -> GesResolvedHandle {
+        let syntax = handle.syntax
+        if syntax.root.isEmpty {
+            throw error(Code.invalidHandle, syntax.catalogOffset, "The catalog file type '@\(handle.name)' is no composite; it names the files of a root.")
+        }
+        if syntax.id!.kind != .text {
+            throw error(Code.invalidHandle, syntax.id!.offset, "The part of the catalog file type '@\(handle.name)' is a path, a :Text with max.")
+        }
+        let target = try self.handle(syntax.catalog, syntax.catalogOffset)
+        if !target.syntax.catalog.isEmpty || !target.syntax.root.isEmpty || target.syntax.id!.kind != .text {
+            throw error(Code.invalidHandle, syntax.catalogOffset, "A catalog holds a handle type with a Text id that is not composite, unlike '@\(syntax.catalog)'.")
+        }
+        target.files.append(handle)
+        return target
+    }
+
+    // A state field named `id`, `version` or `root` would collide with the handle's members; a catalog file type has no state.
     func checkHandleState(_ handle: GesResolvedHandle) throws {
+        if handle.catalog != nil { return }
         for name in ["id", "version", "root"] where handle.state.fields.contains(where: { $0.name == name }) || handle.state.computed.contains(where: { $0.name == name }) {
             throw error(
                 Code.invalidHandle,
@@ -604,6 +663,12 @@ final class GesFileScope {
 
     func handle(_ name: String, _ offset: Int) throws -> GesResolvedHandle {
         guard let handle = handles[name] else { throw error(Code.unknownName, offset, "Handle type '@\(name)' is not declared.") }
+        return handle
+    }
+
+    private func keyHandle(_ name: String, _ offset: Int) throws -> GesResolvedHandle {
+        let handle = try handle(name, offset)
+        if !handle.syntax.catalog.isEmpty { throw error(Code.invalidHandle, offset, "'@\(name)' is a catalog file type, which only reading a catalog uses.") }
         return handle
     }
 
@@ -733,6 +798,77 @@ final class GesFileScope {
         lets = Dictionary(uniqueKeysWithValues: declaration.lets.map { ($0.name, $0) })
         defer { lets = [:] }
         try resolveDefaults(declaration)
+    }
+
+    // Copies the fields a projection takes from its composed source along their paths (specs/Schemas.md#projections). A
+    // field keeps its type, file and marker; a path through an optional Record makes it optional without default, a key
+    // stays one only when taken bare, and a sibling default only when the sibling is taken bare too.
+    func composeProjection(_ declaration: GesResolvedDeclaration) throws {
+        let source = declaration.source!
+        let taken = declaration.syntax.taken
+        var fields: [GesResolvedField] = []
+        var paths: [[GesResolvedField]] = []
+        var names: Set<String> = []
+        for (index, entry) in taken.enumerated() {
+            if !names.insert(entry.name).inserted { throw error(Code.invalidProjection, entry.offset, "'\(entry.name)' is taken twice by '\(declaration.name)'.") }
+            var holder = source
+            var path: [GesResolvedField] = []
+            var throughOptional = false
+            for (segment, name) in entry.path.enumerated() {
+                let offset = entry.pathOffsets[segment]
+                guard let field = holder.fields.first(where: { $0.name == name }) else {
+                    throw error(
+                        Code.invalidProjection,
+                        offset,
+                        holder.computed.contains { $0.name == name } ? "'\(name)' of '\(holder.name)' is computed; a projection takes stored fields." : "'\(name)' is no field of '\(holder.name)'."
+                    )
+                }
+                path.append(field)
+                if segment == entry.path.count - 1 { break }
+                guard field.alternatives.count == 1, field.alternatives[0].kind == .reference, let record = field.alternatives[0].reference else {
+                    throw error(Code.invalidProjection, entry.pathOffsets[segment + 1], "'\(name)' of '\(holder.name)' is no Record, so a path cannot continue through it.")
+                }
+                throughOptional = throughOptional || field.marker == .optional
+                holder = record
+            }
+            let last = path[path.count - 1]
+            if last.alternatives.contains(where: { $0.depth > 0 }) {
+                throw error(Code.invalidProjection, entry.pathOffsets[path.count - 1], "'\(last.name)' is a recursive List, which a projection does not take.")
+            }
+            let bare = path.count == 1 && entry.path[0] == entry.name
+            var marker = last.marker
+            if marker == .key {
+                if !bare {
+                    marker = .none
+                } else if index != 0 {
+                    throw error(Code.invalidKey, entry.offset, "A key is the first field of a schema, an integer or a Tag with a set, without delta within or a union.")
+                }
+            }
+            if throughOptional {
+                marker = last.alternatives.count > 1 && last.alternatives.contains(where: { $0.kind == .nothing }) ? .none : .optional
+            }
+            fields.append(
+                GesResolvedField(
+                    name: entry.name,
+                    unlabeled: last.unlabeled,
+                    alternatives: last.alternatives,
+                    marker: marker,
+                    offset: last.offset,
+                    defaultValue: throughOptional ? nil : last.defaultValue,
+                    scope: last.scope
+                )
+            )
+            paths.append(path)
+        }
+        for (index, field) in fields.enumerated() {
+            if let fallback = field.defaultValue, fallback.kind == .field,
+                paths[index].count != 1 || !taken.contains(where: { $0.name == fallback.name && $0.path == [fallback.name] })
+            {
+                throw error(Code.invalidDefault, taken[index].offset, "'\(field.name)' defaults to '\(fallback.name)', which '\(declaration.name)' does not take under its name.")
+            }
+        }
+        declaration.fields = fields
+        declaration.paths = paths
     }
 
     /// The computed fields in written order: own ones, and those of a schema taken by `with` where the `with` stands, without
@@ -942,7 +1078,14 @@ final class GesFileScope {
             // The type name decides: a unit does not distinguish alternatives, and a named tag set is a Tag.
             // `@Name` and `@Name~` share their name, so one union never holds both.
             let name = resolved.kind == .reference ? ":" + alternative.name : resolved.kind == .handle ? "@" + alternative.name : resolved.kind.rawValue
-            if !seen.insert(name).inserted { throw error(Code.invalidUnion, alternative.offset, "A union repeats a type name; a unit does not distinguish alternatives.") }
+            if !seen.insert(name).inserted {
+                let projected =
+                    resolved.kind == .handle
+                    && result.contains { $0 !== resolved && $0.kind == .handle && $0.handle === resolved.handle && $0.projection !== resolved.projection }
+                throw projected
+                    ? error(Code.invalidProjection, alternative.offset, "A union holds '@\(alternative.name)' with two projections or with and without one.")
+                    : error(Code.invalidUnion, alternative.offset, "A union repeats a type name; a unit does not distinguish alternatives.")
+            }
             if alternative.constraints.delta != nil { throw error(Code.invalidUnion, alternative.offset, "A union alternative has no delta within.") }
             // Generated code names an alternative after its label or its type, so both must stay apart.
             var label = resolved.kind == .reference || resolved.kind == .handle ? alternative.name : resolved.kind.rawValue
@@ -954,9 +1097,32 @@ final class GesFileScope {
         return result
     }
 
+    // `@Name(:P)` names a projection that narrows the state of a handle type that is neither composite nor a catalog file
+    // type. Narrowing follows the declared sources by name, since projections are composed only later.
+    private func handleProjection(_ handle: GesResolvedHandle, _ type: GesSchemaTypeSyntax, _ all: [String: GesResolvedDeclaration]) throws -> GesResolvedDeclaration {
+        if handle.root != nil {
+            throw error(Code.invalidProjection, type.projectionOffset, "'@\(type.name)' is composite; a projection reads a handle type that is not.")
+        }
+        guard let projection = all[type.projection], projection.isProjection else {
+            throw error(Code.invalidProjection, type.projectionOffset, "':\(type.projection)' is no declared projection.")
+        }
+        var source = projection
+        var steps = 0
+        while source.isProjection && steps <= all.count {
+            guard let next = all[source.syntax.state] else { break }
+            source = next
+            if source === handle.state { return projection }
+            steps += 1
+        }
+        throw error(Code.invalidProjection, type.projectionOffset, "':\(type.projection)' is no projection of '@\(type.name)', whose state is ':\(handle.state.name)'.")
+    }
+
     private func resolveType(_ type: GesSchemaTypeSyntax, _ all: [String: GesResolvedDeclaration]) throws -> GesResolvedType {
         if type.kind == .handle {
             let handle = try self.handle(type.name, type.offset)
+            if !handle.syntax.catalog.isEmpty {
+                throw error(Code.invalidHandle, type.offset, "'@\(type.name)' is a catalog file type, which only reading a catalog uses.")
+            }
             if type.versioned && !handle.versioned {
                 throw error(Code.invalidHandle, type.offset, "'@\(type.name)' has no version, so '@\(type.name)~' does not exist.")
             }
@@ -974,6 +1140,7 @@ final class GesFileScope {
             )
             resolved.handle = handle
             resolved.versioned = type.versioned
+            resolved.projection = type.projection.isEmpty ? nil : try handleProjection(handle, type, all)
             return resolved
         }
         // A named tag set stands for a Tag with its members; only its name differs, which belongs to no hash.
@@ -1035,7 +1202,7 @@ final class GesFileScope {
             offset: type.offset
         )
         resolved.depth = type.depth
-        if !type.key.isEmpty { resolved.handle = try handle(type.key, type.keyOffset) }
+        if !type.key.isEmpty { resolved.handle = try keyHandle(type.key, type.keyOffset) }
         return resolved
     }
 
@@ -1410,6 +1577,7 @@ enum GesSchemaCanonical {
         case .reference: output += type.referenceName
         case .handle:
             output += "@" + type.handle!.name
+            if let projected = type.projection { output += "(\(projected.name))" }
             if type.versioned { output += "~" }
         case .map:
             guard let key = type.handle else {

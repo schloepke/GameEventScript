@@ -77,6 +77,8 @@ enum GesSchemaLayoutJson {
                         json.beginObject()
                         json.string("side", owner.side)
                         json.string("handle", owner.handle)
+                        if !owner.projection.isEmpty { json.string("projection", owner.projection) }
+                        if owner.sendingState { json.boolean("sendingState", true) }
                         json.endObject()
                     }
                     json.endArray()

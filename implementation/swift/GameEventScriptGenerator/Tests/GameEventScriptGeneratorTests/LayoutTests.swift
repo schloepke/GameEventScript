@@ -5,7 +5,7 @@ import GameEventScriptGenerator
 import GameEventScriptRuntime
 import XCTest
 
-/// Checks the layout model that the shared corpus cannot reach: deduplication and dependencies.
+/// Checks the layout model that the shared corpus cannot reach: deduplication, dependencies and network owners.
 final class LayoutTests: XCTestCase {
     func testSharedTypesAppearOnceWithTheirDependencies() throws {
         let set = try GesSchemaSet(
@@ -31,6 +31,26 @@ final class LayoutTests: XCTestCase {
         XCTAssertEqual(text.components(separatedBy: "\"name\": \"Cell\",\n      \"kind\"").count, 2)
         XCTAssertTrue(text.contains("\"maxByteCountDepends\": [\n        \"size\"\n      ]"))
         XCTAssertThrowsError(try GesSchemaGenerator.layout(set, roots: [], parameters: parameters)) { XCTAssertEqual(($0 as? GesGeneratorError)?.code, "generate.usage") }
+    }
+
+    func testOwnersCarryTheirProjectionAndSendingState() throws {
+        let set = try GesSchemaSet(
+            parsing: """
+                schema :Composition as { name: :Text max 8, mass: :Number integer between 0 and 9 }
+                projection :UnitPublic of :Composition as { name }
+                handle @Unit of :Composition as { id: :Text max 8, version: :ContentHash }
+                handle @Drone of :Composition as { id: :Number integer between 0 and 9, version: :ContentHash }
+                wire schema :World as { unit: @Unit(:UnitPublic), drone: @Drone }
+                network :Game as {
+                  server publishes :World latest
+                  server owns @Unit as :UnitPublic sending state
+                  server owns @Drone
+                }
+                """
+        )
+        let text = try GesSchemaGenerator.layout(set, roots: ["Game"], parameters: GesSchemaParameters())
+        XCTAssertTrue(text.contains("\"handle\": \"Drone\"\n"))
+        XCTAssertTrue(text.contains("\"handle\": \"Unit\",\n          \"projection\": \"UnitPublic\",\n          \"sendingState\": true\n"))
     }
 
     func testTheLayoutIsCanonicalJson() throws {

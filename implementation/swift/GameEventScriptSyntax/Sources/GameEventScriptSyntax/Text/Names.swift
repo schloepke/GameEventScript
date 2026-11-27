@@ -27,6 +27,15 @@
         return position
     }
 
+    /// The end of a handle type's projection `(:Name)` directly at `position`, or `position` when none follows.
+    static func handleProjectionEnd(_ bytes: [UInt8], _ position: Int) -> Int {
+        if position + 3 >= bytes.count || bytes[position] != 40 || bytes[position + 1] != 58 || !upper(bytes[position + 2]) { return position }
+        var end = position + 3
+        while end < bytes.count && alnum(bytes[end]) { end += 1 }
+        end = upperNameEnd(bytes, end)
+        return end < bytes.count && bytes[end] == 41 ? end + 1 : position
+    }
+
     @_spi(Syntax) public static func message(_ text: String) -> Bool { type(text) || systemEndpoint(text) }
 
     /// The system endpoints `initialization` and `undeliverable`, which only the host delivers.

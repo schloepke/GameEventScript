@@ -194,6 +194,16 @@ internal static class GesText
         return position;
     }
 
+    // The end of a handle type's projection `(:Name)` directly at position, or position when none follows.
+    internal static int HandleProjectionEnd(string text, int position)
+    {
+        if (position + 3 >= text.Length || text[position] != '(' || text[position + 1] != ':' || !IsAsciiUpper(text[position + 2])) return position;
+        var end = position + 3;
+        while (end < text.Length && (IsAsciiLetter(text[end]) || IsAsciiDigit(text[end]))) end++;
+        end = UpperNameEnd(text, end);
+        return end < text.Length && text[end] == ')' ? end + 1 : position;
+    }
+
     private static bool IsModuleSegment(string value, int start, int end)
     {
         if (start >= end || !IsAsciiLower(value[start])) return false;

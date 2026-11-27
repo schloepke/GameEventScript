@@ -36,6 +36,26 @@ public sealed class GesSchemaLayoutTests
     }
 
     [TestMethod]
+    public void OwnersCarryTheirProjectionAndSendingState()
+    {
+        var set = GesSchemaSet.Parse("""
+            schema :Composition as { name: :Text max 8, mass: :Number integer between 0 and 9 }
+            projection :UnitPublic of :Composition as { name }
+            handle @Unit of :Composition as { id: :Text max 8, version: :ContentHash }
+            handle @Drone of :Composition as { id: :Number integer between 0 and 9, version: :ContentHash }
+            wire schema :World as { unit: @Unit(:UnitPublic), drone: @Drone }
+            network :Game as {
+              server publishes :World latest
+              server owns @Unit as :UnitPublic sending state
+              server owns @Drone
+            }
+            """);
+        var text = GesSchemaGenerator.Layout(set, ["Game"], new GesSchemaParameters());
+        Assert.Contains("\"handle\": \"Drone\"\n", text);
+        Assert.Contains("\"handle\": \"Unit\",\n          \"projection\": \"UnitPublic\",\n          \"sendingState\": true\n", text);
+    }
+
+    [TestMethod]
     public void TheLayoutIsCanonicalJson()
     {
         var set = GesSchemaSet.Parse("schema :S as {\n  on: :Boolean\n}\n");

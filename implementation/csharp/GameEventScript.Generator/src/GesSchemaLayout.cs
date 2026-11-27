@@ -77,12 +77,17 @@ internal sealed class GesLayoutNetwork(string name, ulong hash, List<GesLayoutRo
     internal List<GesLayoutRoute> Routes { get; } = routes;
 }
 
-// One `owns` route: the side, `client` or `server`, and the handle type's name without `@`.
-internal sealed class GesLayoutOwner(string side, string handle)
+// One `owns` route: the side, `client` or `server`, the handle type's name without `@`, the projection the other side
+// reads, empty without one, and whether the owner sends state along.
+internal sealed class GesLayoutOwner(string side, string handle, string projection, bool sendingState)
 {
     internal string Side { get; } = side;
 
     internal string Handle { get; } = handle;
+
+    internal string Projection { get; } = projection;
+
+    internal bool SendingState { get; } = sendingState;
 }
 
 // A handle type: its name without `@`, its handle hash, its state schema's type name and the encodings of its identity, an
@@ -480,7 +485,7 @@ internal static class GesSchemaLayoutBuilder
             routes.Add(new GesLayoutRoute(route.Index, route.Side == GesNetworkSide.Client ? "client" : "server", route.Verb == GesNetworkVerb.Sends ? "sends" : "publishes",
                 route.Root.Name, TypeName(route.Root, messageSuffix), set.RootName(route.Root), route.Root.Kind == GesSchemaKind.Schema, GesBoundNetwork.ClassName(route.DeliveryClass), route.RateMicroseconds));
         var owners = new List<GesLayoutOwner>();
-        foreach (var owner in network.Owners) owners.Add(new GesLayoutOwner(owner.Side == GesNetworkSide.Client ? "client" : "server", owner.Handle.Name));
+        foreach (var owner in network.Owners) owners.Add(new GesLayoutOwner(owner.Side == GesNetworkSide.Client ? "client" : "server", owner.Handle.Name, owner.Projection?.Name ?? "", owner.SendsState));
         owners.Sort((first, second) => string.CompareOrdinal(first.Handle, second.Handle));
         return new GesLayoutNetwork(network.Name, network.Bind(parameters).Hash, routes, owners);
     }

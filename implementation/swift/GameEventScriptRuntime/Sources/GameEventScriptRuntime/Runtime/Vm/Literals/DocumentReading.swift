@@ -21,8 +21,14 @@ struct GesDocumentReading {
         case .type(let name): schema = try GesDocumentSchema(kind: .type, name: name)
         case .file(let path): schema = try GesDocumentSchema(kind: .file, name: path)
         }
+        return (try entries(syntax, syntax.root!, recordType: schema?.kind == .type ? schema?.name : nil), schema)
+    }
+
+    /// Builds the value of a Map node of document entries: a Map, or a Record of the named type. Throws GesDocumentError
+    /// for an invalid literal or an exceeded literal parsing limit, located in `syntax`'s text.
+    static func entries(_ syntax: GesDocumentSyntax, _ node: GesDocumentNode, recordType: String?) throws -> GesValue {
         var reading = Self()
-        let root = reading.value(syntax.root!)
+        let root = reading.value(node)
         let map: GesValue
         do {
             let evaluated = try GesLiteralEvaluation.evaluateDocument(root, nodes: reading.nodes)
@@ -31,8 +37,8 @@ struct GesDocumentReading {
         } catch let limit as GesLiteralLimitError {
             throw error(syntax, GesDocumentDiagnostic.limitExceeded, limit.offset, limitName: limit.limitName, limit: limit.limit)
         }
-        guard let schema, schema.kind == .type else { return (map, schema) }
-        return (.record(typeName: schema.name, fields: map.asMap!), schema)
+        guard let recordType else { return map }
+        return .record(typeName: recordType, fields: map.asMap!)
     }
 
     private static func error(_ syntax: GesDocumentSyntax, _ code: String, _ offset: Int, limitName: String? = nil, limit: Int? = nil) -> GesDocumentError {
@@ -98,10 +104,12 @@ struct GesDocumentReading {
         case .bytes(let values): return .bytes(values)
         case .list(let items, _): return .list(items.map { value($0) })
         case .map(let keys, let values, _, _, let handleKeys): return literal("@map", keys, values, offset: 0, keys: Self.mapKeys(keys, handleKeys))
-        case .handle(let text): return (try? GesHandle(parsing: text)).map { .handle($0) } ?? .nothing
+        case .handle(let text, _, _): return (try? GesHandle(parsing: text)).map { .handle($0) } ?? .nothing
         case .form(let type, let labels, let arguments, let offset): return literal(type, labels, arguments, offset: offset)
         case .message(let name, let labels, let arguments, let offset): return literal("@message:" + name, labels, arguments, offset: offset)
         case .handler(let name, let labels): return (try? .handler(GesMessageSignature(name: name, parameters: labels))) ?? .nothing
+        // A catalog replaces every reference by its handle before a value is built.
+        case .reference: preconditionFailure("A reference node has no value.")
         }
     }
 

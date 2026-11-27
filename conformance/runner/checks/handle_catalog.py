@@ -7,7 +7,7 @@ from core.corpus import InvalidDocument, closed
 from checks import runtime_checks
 
 KINDS = {'scriptApi', 'loadError', 'compileError', 'compileMetadata', 'bytecode', 'bytecodeSnapshot'}
-ANSWERS = ('document', 'record', 'missing', 'fail')
+ANSWERS = ('document', 'record', 'missing', 'notVisible', 'fail')
 REF_ANSWERS = ('version', 'missing', 'fail')
 TYPE_NAME = re.compile(r'[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*\Z')
 HANDLE = re.compile(r'@[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*:.+', re.S)
@@ -27,13 +27,13 @@ def answer(raw):
         raise InvalidDocument('A handle answer names a handle in its text form')
     kinds = [key for key in ANSWERS if key in raw]
     if len(kinds) != 1:
-        raise InvalidDocument('A handle answer has exactly one of document, record, missing and fail')
+        raise InvalidDocument('A handle answer has exactly one of document, record, missing, notVisible and fail')
     kind = kinds[0]
-    if kind in ('missing', 'fail'):
+    if kind in ('missing', 'notVisible', 'fail'):
         if raw[kind] is not True:
-            raise InvalidDocument('missing and fail are written as true')
-        if kind == 'fail' and 'version' in raw:
-            raise InvalidDocument('A failing answer has no version')
+            raise InvalidDocument('missing, notVisible and fail are written as true')
+        if kind != 'missing' and 'version' in raw:
+            raise InvalidDocument('A failing or not visible answer has no version')
         text = None
     elif not isinstance(raw[kind], str):
         raise InvalidDocument('A document or record answer is text')

@@ -55,6 +55,9 @@ spelling is their value, so a name in backticks never matches one.
 
 `@` directly followed by an ASCII uppercase letter starts one handle-type token over
 the name, joined like a type name, and a directly following `~`, as in `@Unit~`.
+A directly following `(:Name)` of a type name joins the token before the `~`, as in
+`@Unit(:UnitDisplay)~` (**Since: Unreleased** — projections); with whitespace or
+anything else inside the parentheses the token ends before `(`.
 `@` before anything else keeps its existing meaning.
 
 Offsets are indices of the port's string storage; lines and columns are
@@ -138,6 +141,15 @@ the document value from that tree and constructs the explicit forms, which
 reports construction errors and the Range materialization total. The
 recognition of number text and the parameters of the explicit forms live in
 Syntax and are shared with Runtime's `parse`.
+
+> **Since: Unreleased** — catalogs
+
+The reader also reads [catalog files](Documents.md#catalog-files) into their header
+type, imports, module blocks and entries, and reads state documents in a mode that
+accepts [references](Documents.md#references) and pinned handles as reference nodes.
+Each file reports at most its first reading error. Runtime's catalog reading resolves
+the imports through the host's files, the ids and references and the schema check, and
+builds the values; no step that needs other files lives in Syntax.
 
 ## Verification
 

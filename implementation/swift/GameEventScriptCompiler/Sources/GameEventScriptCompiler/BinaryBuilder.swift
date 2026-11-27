@@ -21,7 +21,7 @@ final class GesBinaryBuilder {
     var operandLayouts: [Int: OperandSlots] = [:]
     var sourcePositions: [UInt32: [UInt64: Int]] = [:]
     // The handle types the Program names with their hash and state schema, and the type lists of state reads.
-    var handleTypes: [String: (hash: UInt64, stateName: String)] = [:]
+    var handleTypes: [String: (hash: UInt64, stateName: String, projections: [String])] = [:]
     var handleStateReads: [[String]] = []
 
     init(sources: [GesSource], options: GesCompileOptions, fallbackLocation: GesSourceLocation) {

@@ -12,12 +12,14 @@ namespace GameEventScript.Api;
 
 /// <summary>
 /// An immutable handle: the identity of an object that lives outside the host, of one handle type, and optionally its
-/// version or a ref that names one. Equality, hashing and order use the type and the identity and ignore version and ref.
+/// version or a ref that names one, and the projection it reads through. Equality, hashing, order and the text form use the
+/// type and the identity and ignore version, ref and projection.
 /// </summary>
 public sealed class GesHandle : IEquatable<GesHandle>, IComparable<GesHandle>
 {
-    private GesHandle(string typeName, GesValue id, GesValue version, GesValue reference, GesValue part, bool isComposite)
+    private GesHandle(string typeName, GesValue id, GesValue version, GesValue reference, GesValue part, bool isComposite, string projection = "")
     {
+        Projection = projection;
         TypeName = typeName;
         Id = id;
         Version = version;
@@ -43,6 +45,12 @@ public sealed class GesHandle : IEquatable<GesHandle>, IComparable<GesHandle>
 
     /// <summary>Gets whether the handle is a composite: a part of a root object.</summary>
     public bool IsComposite { get; }
+
+    /// <summary>
+    /// Gets the name of the <see href="https://gameeventscript.org/specs/Schemas.html#projections">projection</see> the
+    /// handle reads its state through, without the leading <c>:</c>; empty for the full view.
+    /// </summary>
+    public string Projection { get; }
 
     /// <summary>Gets whether the handle carries a version.</summary>
     public bool HasVersion => !Version.IsNothing;
@@ -81,14 +89,29 @@ public sealed class GesHandle : IEquatable<GesHandle>, IComparable<GesHandle>
     /// <param name="version">An integer Number for a revision or 20 or 32 Bytes for a hash; Nothing for none.</param>
     /// <returns>The handle with the version.</returns>
     /// <exception cref="ArgumentException">Thrown when the version is invalid.</exception>
-    public GesHandle WithVersion(GesValue version) => new(TypeName, Id, CheckVersion(version, nameof(version)), default, Part, IsComposite);
+    public GesHandle WithVersion(GesValue version) => new(TypeName, Id, CheckVersion(version, nameof(version)), default, Part, IsComposite, Projection);
+
+    /// <summary>Returns the handle reading its state through a projection, or through the full view for an empty name.</summary>
+    /// <param name="projection">The projection's schema name without the leading <c>:</c>, or empty for the full view.</param>
+    /// <returns>The handle with the projection; its identity, version and ref are unchanged.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="projection"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when the name is no type name.</exception>
+    public GesHandle WithProjection(string projection)
+    {
+        if (projection is null) throw new ArgumentNullException(nameof(projection));
+        if (projection.Length > 0 && !GesText.IsTypeName(projection)) throw new ArgumentException($"'{projection}' is no projection name.", nameof(projection));
+        return string.Equals(projection, Projection, StringComparison.Ordinal) ? this : new GesHandle(TypeName, Id, Version, Ref, Part, IsComposite, projection);
+    }
 
     // A handle from wire parts that its schema already checked.
     internal static GesHandle FromWire(string typeName, GesValue id, GesValue version, GesValue part, bool isComposite) => new(typeName, id, version, default, part, isComposite);
 
-    internal GesHandle WithoutVersion() => Version.IsNothing && Ref.IsNothing ? this : new GesHandle(TypeName, Id, default, default, Part, IsComposite);
+    internal GesHandle WithoutVersion() => Version.IsNothing && Ref.IsNothing ? this : new GesHandle(TypeName, Id, default, default, Part, IsComposite, Projection);
 
-    internal static GesHandle CreateWithRef(GesHandle handle, GesValue reference) => new(handle.TypeName, handle.Id, default, reference, handle.Part, handle.IsComposite);
+    // A checked version and a projection name at once, as narrowing needs them.
+    internal GesHandle WithView(GesValue version, string projection) => new(TypeName, Id, version, default, Part, IsComposite, projection);
+
+    internal static GesHandle CreateWithRef(GesHandle handle, GesValue reference) => new(handle.TypeName, handle.Id, default, reference, handle.Part, handle.IsComposite, handle.Projection);
 
     /// <summary>Reads the text form of a handle, a ref included, such as <c>@Drone:7~120</c> or <c>@Unit:drone.gnabblo~#live</c>.</summary>
     /// <param name="text">The text form.</param>

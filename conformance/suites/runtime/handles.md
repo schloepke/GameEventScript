@@ -1656,3 +1656,357 @@ steps:
           - name: altitude
             value: { type: ":Number.int64", value: "120" }
 ```
+
+---
+
+## Test: a projected handle reads only its view
+
+A parameter of type `@Unit(:UnitDisplay)` reads the fields of `:UnitDisplay`. The resolver may answer the full state
+or a Record of the projection or of a wider one; the host narrows it, so `as :UnitDisplay` gives the view,
+`as :UnitLabel` a narrower one and `is @Unit(:UnitLabel)` holds. The handle's text form carries no projection
+([projections](../../../specs/Language.md#projections)).
+
+### Case description
+
+```yaml
+gesBlock: case
+id: projected-reads
+sources:
+  - name: projected-reads.ges
+    program: main
+handles:
+  schemas: ["schema :Composition as { name: :Text max 32, icon: :Text max 16, mass: :Number integer between 0 and 1000, label: :Text max 8 }\nprojection :UnitDisplay of :Composition as { name, icon, label }\nprojection :UnitLabel of :UnitDisplay as { label }\nhandle @Unit of :Composition as { id: :Number integer between 0 and 255, version: :Nothing }\nhandle @Squad of :Composition as { id: :Number integer between 0 and 255, version: :Nothing }\n"]
+  answers:
+    - { handle: "@Unit:3", record: ":Record(\"Composition\", [name: 'Radar tower', icon: 'radar', mass: 400, label: 'RT'])" }
+    - { handle: "@Unit:4", record: ":Record(\"UnitDisplay\", [name: 'Radar tower', icon: 'radar', label: 'RT'])" }
+```
+
+### Source code under test
+
+```ges
+module main
+on Listed(unit as @Unit(:UnitDisplay)) {
+  emit Out(name: unit.name, label: unit.label, view: unit as :UnitDisplay, narrow: unit as :UnitLabel, isLabel: unit is @Unit(:UnitLabel), text: unit as :Text)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| full | Listed | completion | |
+| projected | Listed | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  full:
+    input:
+      args:
+        - name: unit
+          value: { type: ":Handle", value: "@Unit:3" }
+    local:
+      - name: Out
+        args:
+          - name: name
+            value: { type: ":Text", value: "Radar tower" }
+          - name: label
+            value: { type: ":Text", value: "RT" }
+          - name: view
+            value: { type: ":UnitDisplay", entries: [{ key: name, value: { type: ":Text", value: "Radar tower" } }, { key: icon, value: { type: ":Text", value: "radar" } }, { key: label, value: { type: ":Text", value: "RT" } }] }
+          - name: narrow
+            value: { type: ":UnitLabel", entries: [{ key: label, value: { type: ":Text", value: "RT" } }] }
+          - name: isLabel
+            value: { type: ":Boolean", value: true }
+          - name: text
+            value: { type: ":Text", value: "@Unit:3" }
+  projected:
+    input:
+      args:
+        - name: unit
+          value: { type: ":Handle", value: "@Unit:4" }
+    local:
+      - name: Out
+        args:
+          - name: name
+            value: { type: ":Text", value: "Radar tower" }
+          - name: label
+            value: { type: ":Text", value: "RT" }
+          - name: view
+            value: { type: ":UnitDisplay", entries: [{ key: name, value: { type: ":Text", value: "Radar tower" } }, { key: icon, value: { type: ":Text", value: "radar" } }, { key: label, value: { type: ":Text", value: "RT" } }] }
+          - name: narrow
+            value: { type: ":UnitLabel", entries: [{ key: label, value: { type: ":Text", value: "RT" } }] }
+          - name: isLabel
+            value: { type: ":Boolean", value: true }
+          - name: text
+            value: { type: ":Text", value: "@Unit:4" }
+
+```
+
+---
+
+## Test: a handle the party may not see reads as missing
+
+A resolver that answers `SetNotVisible` makes every state read give `nothing`, as for a missing object, and the host
+reports `runtime.handleNotVisible` to its observer once per read without ending the handler.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: not-visible
+sources:
+  - name: not-visible.ges
+    program: main
+handles:
+  schemas: ["schema :Composition as { name: :Text max 32, icon: :Text max 16, mass: :Number integer between 0 and 1000, label: :Text max 8 }\nprojection :UnitDisplay of :Composition as { name, icon, label }\nprojection :UnitLabel of :UnitDisplay as { label }\nhandle @Unit of :Composition as { id: :Number integer between 0 and 255, version: :Nothing }\nhandle @Squad of :Composition as { id: :Number integer between 0 and 255, version: :Nothing }\n"]
+  answers:
+    - { handle: "@Unit:5", notVisible: true }
+```
+
+### Source code under test
+
+```ges
+module main
+on Listed(unit as @Unit(:UnitDisplay)) {
+  emit Out(name: unit.name, view: unit as :UnitDisplay, id: unit.id)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| hidden | Listed | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  hidden:
+    input:
+      args:
+        - name: unit
+          value: { type: ":Handle", value: "@Unit:5" }
+    local:
+      - name: Out
+        args:
+          - name: name
+            value: { type: ":Nothing" }
+          - name: view
+            value: { type: ":Nothing" }
+          - name: id
+            value: { type: ":Number.int64", value: "5" }
+    diagnostics:
+      - phase: runtime
+        code: runtime.handleNotVisible
+        symbol: "@Unit:5"
+
+```
+
+---
+
+## Test: each alternative of a union keeps its own view
+
+A union of projected handle types binds a handle to the view of the alternative it matches; a member both views have
+reads through that view.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: projected-union
+sources:
+  - name: projected-union.ges
+    program: main
+handles:
+  schemas: ["schema :Composition as { name: :Text max 32, icon: :Text max 16, mass: :Number integer between 0 and 1000, label: :Text max 8 }\nprojection :UnitDisplay of :Composition as { name, icon, label }\nprojection :UnitLabel of :UnitDisplay as { label }\nhandle @Unit of :Composition as { id: :Number integer between 0 and 255, version: :Nothing }\nhandle @Squad of :Composition as { id: :Number integer between 0 and 255, version: :Nothing }\n"]
+  answers:
+    - { handle: "@Unit:3", record: ":Record(\"Composition\", [name: 'Radar tower', icon: 'radar', mass: 400, label: 'RT'])" }
+    - { handle: "@Squad:3", record: ":Record(\"Composition\", [name: 'Radar tower', icon: 'radar', mass: 400, label: 'RT'])" }
+```
+
+### Source code under test
+
+```ges
+module main
+on Listed(item as @Unit(:UnitLabel) | @Squad(:UnitDisplay)) {
+  emit Out(label: item.label, label2: item as :UnitLabel, display: item as :UnitDisplay)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| unit | Listed | completion | |
+| squad | Listed | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  unit:
+    input:
+      args:
+        - name: item
+          value: { type: ":Handle", value: "@Unit:3" }
+    local:
+      - name: Out
+        args:
+          - name: label
+            value: { type: ":Text", value: "RT" }
+          - name: label2
+            value: { type: ":UnitLabel", entries: [{ key: label, value: { type: ":Text", value: "RT" } }] }
+          - name: display
+            value: { type: ":Nothing" }
+  squad:
+    input:
+      args:
+        - name: item
+          value: { type: ":Handle", value: "@Squad:3" }
+    local:
+      - name: Out
+        args:
+          - name: label
+            value: { type: ":Text", value: "RT" }
+          - name: label2
+            value: { type: ":UnitLabel", entries: [{ key: label, value: { type: ":Text", value: "RT" } }] }
+          - name: display
+            value: { type: ":UnitDisplay", entries: [{ key: name, value: { type: ":Text", value: "Radar tower" } }, { key: icon, value: { type: ":Text", value: "radar" } }, { key: label, value: { type: ":Text", value: "RT" } }] }
+
+```
+
+---
+
+## Test: a message cannot widen a view
+
+Sending a projected handle to a handler that reads a wider view binds `nothing` there: the receiving check gives no
+view the handle's projection does not narrow. A handler of the same or a narrower view reads it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: emit-keeps-view
+sources:
+  - name: emit-keeps-view.ges
+    program: main
+handles:
+  schemas: ["schema :Composition as { name: :Text max 32, icon: :Text max 16, mass: :Number integer between 0 and 1000, label: :Text max 8 }\nprojection :UnitDisplay of :Composition as { name, icon, label }\nprojection :UnitLabel of :UnitDisplay as { label }\nhandle @Unit of :Composition as { id: :Number integer between 0 and 255, version: :Nothing }\nhandle @Squad of :Composition as { id: :Number integer between 0 and 255, version: :Nothing }\n"]
+  answers:
+    - { handle: "@Unit:3", record: ":Record(\"Composition\", [name: 'Radar tower', icon: 'radar', mass: 400, label: 'RT'])" }
+```
+
+### Source code under test
+
+```ges
+module main
+on Listed(unit as @Unit(:UnitDisplay)) {
+  emit Wide(unit: unit)
+}
+on Wide(unit as @Unit) {
+  emit Out(unit: unit, mass: unit.mass)
+}
+on Wide(unit as @Unit(:UnitLabel)) {
+  emit Out(unit: unit, label: unit.label)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| sent | Listed | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  sent:
+    input:
+      args:
+        - name: unit
+          value: { type: ":Handle", value: "@Unit:3" }
+    local:
+      - name: Wide
+        args:
+          - name: unit
+            value: { type: ":Handle", value: "@Unit:3" }
+      - name: Out
+        args:
+          - name: unit
+            value: { type: ":Nothing" }
+          - name: mass
+            value: { type: ":Nothing" }
+      - name: Out
+        args:
+          - name: unit
+            value: { type: ":Handle", value: "@Unit:3" }
+          - name: label
+            value: { type: ":Text", value: "RT" }
+```
+
+---
+
+## Test: a Record of the state projects to a view
+
+`c as :UnitDisplay` on a Record of `:Composition` or of a projection between them gives the Record of the view; any
+other value gives `nothing`. The cast reads no object, but like a state read it links to the host's registration of a
+handle type with that projection.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: record-projection
+sources:
+  - name: record-projection.ges
+    program: main
+handles:
+  schemas: ["schema :Composition as { name: :Text max 32, icon: :Text max 16, mass: :Number integer between 0 and 1000, label: :Text max 8 }\nprojection :UnitDisplay of :Composition as { name, icon, label }\nprojection :UnitLabel of :UnitDisplay as { label }\nhandle @Unit of :Composition as { id: :Number integer between 0 and 255, version: :Nothing }\nhandle @Squad of :Composition as { id: :Number integer between 0 and 255, version: :Nothing }\n"]
+```
+
+### Source code under test
+
+```ges
+module main
+on Shown(item, other) {
+  emit Out(view: item as :UnitDisplay, label: item as :UnitLabel, other: other as :UnitDisplay)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| shown | Shown | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  shown:
+    input:
+      args:
+        - name: item
+          value: { type: ":Composition", entries: [{ key: name, value: { type: ":Text", value: "Radar tower" } }, { key: icon, value: { type: ":Text", value: "radar" } }, { key: mass, value: { type: ":Number.int64", value: "400" } }, { key: label, value: { type: ":Text", value: "RT" } }] }
+        - name: other
+          value: { type: ":Number.int64", value: "5" }
+    local:
+      - name: Out
+        args:
+          - name: view
+            value: { type: ":UnitDisplay", entries: [{ key: name, value: { type: ":Text", value: "Radar tower" } }, { key: icon, value: { type: ":Text", value: "radar" } }, { key: label, value: { type: ":Text", value: "RT" } }] }
+          - name: label
+            value: { type: ":UnitLabel", entries: [{ key: label, value: { type: ":Text", value: "RT" } }] }
+          - name: other
+            value: { type: ":Nothing" }
+
+```

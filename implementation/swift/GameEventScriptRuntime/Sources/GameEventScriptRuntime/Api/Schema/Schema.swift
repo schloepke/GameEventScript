@@ -106,6 +106,8 @@ public struct GesSchemaType: Sendable {
     public let handleType: GesHandleType?
     /// Whether a handle is written `@Name~` and carries its version.
     public let isVersioned: Bool
+    /// The projection a handle written `@Name(:P)` reads through; nil for every other type (specs/Schemas.md#projections).
+    public let projection: GesSchema?
 
     init(_ type: GesResolvedType) {
         kind = type.kind
@@ -127,6 +129,7 @@ public struct GesSchemaType: Sendable {
         schema = type.reference?.schema
         handleType = type.handle?.publicType
         isVersioned = type.versioned
+        projection = type.projection?.schema
     }
 }
 
@@ -314,6 +317,9 @@ public final class GesSchema: @unchecked Sendable {
     /// How many bits of its word a packed schema's fields take, those of its record on the wire; 0 for a schema that is not
     /// packed.
     public let packedBits: Int
+    /// The source of a projection, the schema or projection it selects its fields from; nil for any other declaration
+    /// (specs/Schemas.md#projections).
+    public var source: GesSchema? { declaration.source?.schema }
     /// The schemas whose fields this schema takes with `with`, in declared order. Their fields are part of ``fields``, as if
     /// written in place.
     public private(set) var takes: [GesSchemaTakeInfo] = []
@@ -329,6 +335,28 @@ public final class GesSchema: @unchecked Sendable {
     public private(set) var constants: [GesSchemaConstantInfo] = []
     /// The members of a message set, in declared order.
     public private(set) var members: [GesSchema] = []
+
+    /// Whether this projection narrows another schema: it selects its fields from it, directly or through projections
+    /// between (specs/Schemas.md#projections).
+    @_spi(Compiler) public func narrows(_ other: GesSchema) -> Bool { declaration.narrows(other.declaration) }
+
+    /// The schemas a projection selects from, its source and every schema below it, nearest first, each with the field
+    /// names of every taken field's path within it, in the projection's field order; empty for a schema that is no
+    /// projection. A source that is itself a projection replaces a path's first field by that field's path one level down.
+    @_spi(Generator) public var projectionSources: [(source: GesSchema, paths: [[String]])] {
+        guard var source = declaration.source else { return [] }
+        var paths = declaration.paths.map { $0.map(\.name) }
+        var result: [(source: GesSchema, paths: [[String]])] = []
+        while true {
+            result.append((source.schema!, paths))
+            guard let next = source.source else { return result }
+            for index in paths.indices {
+                let below = source.paths[source.fields.firstIndex { $0.name == paths[index][0] }!]
+                paths[index].replaceSubrange(0..<1, with: below.map(\.name))
+            }
+            source = next
+        }
+    }
 
     init(_ declaration: GesResolvedDeclaration) {
         self.declaration = declaration

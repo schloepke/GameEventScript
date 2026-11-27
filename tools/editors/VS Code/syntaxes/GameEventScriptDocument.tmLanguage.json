@@ -13,7 +13,13 @@
       "include": "#strings"
     },
     {
+      "include": "#catalog"
+    },
+    {
       "include": "#handles"
+    },
+    {
+      "include": "#references"
     },
     {
       "include": "#forms"
@@ -71,7 +77,7 @@
     "forms": {
       "patterns": [
         {
-          "match": ":Schema\\b",
+          "match": ":(?:Schema|Catalog)\\b",
           "name": "keyword.other.declaration.schema.gameeventscript.document"
         },
         {
@@ -175,7 +181,7 @@
     "handles": {
       "patterns": [
         {
-          "match": "(@[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*)(?:(:)('(?:[^']|'')*'|-?[A-Za-z0-9._-]+)(?:(~)(#[A-Za-z][A-Za-z0-9]*|'(?:[^']|'')*'|-?[0-9a-f]+))?(?:(/)('(?:[^']|'')*'|[A-Za-z0-9._/-]+))?)?",
+          "match": "(@[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*)(?:(:)('(?:[^']|'')*'|-?[A-Za-z0-9._-]+)(?:(~)(#[A-Za-z][A-Za-z0-9]*|'(?:[^']|'')*'|-?[0-9a-f]+)?)?(?:(/)('(?:[^']|'')*'|[A-Za-z0-9._/-]+))?)?",
           "captures": {
             "1": {
               "name": "entity.name.type.handle.gameeventscript.document"
@@ -197,6 +203,62 @@
             },
             "7": {
               "name": "constant.other.handle-part.gameeventscript.document"
+            }
+          }
+        }
+      ]
+    },
+    "catalog": {
+      "patterns": [
+        {
+          "match": "^[ \\t]*(module)[ \\t]+([A-Za-z0-9_-]+(?:\\.[A-Za-z0-9_-]+)*)",
+          "captures": {
+            "1": {
+              "name": "keyword.other.module.gameeventscript.document"
+            },
+            "2": {
+              "name": "entity.name.namespace.gameeventscript.document"
+            }
+          }
+        },
+        {
+          "match": "\\b(import)\\b(?=[ \\t]*['\"])",
+          "captures": {
+            "1": {
+              "name": "keyword.other.import.gameeventscript.document"
+            }
+          }
+        },
+        {
+          "match": "[{}]",
+          "name": "punctuation.section.block.gameeventscript.document"
+        },
+        {
+          "match": "^[ \\t]*([A-Za-z0-9_-]+)[ \\t]*(?=:(?![A-Za-z]))",
+          "captures": {
+            "1": {
+              "name": "support.type.property-name.gameeventscript.document"
+            }
+          }
+        }
+      ]
+    },
+    "references": {
+      "patterns": [
+        {
+          "match": "(@)([A-Za-z0-9_-]+)((?:\\.[A-Za-z0-9_-]+)*)(~)?",
+          "captures": {
+            "1": {
+              "name": "punctuation.definition.reference.gameeventscript.document"
+            },
+            "2": {
+              "name": "variable.other.reference.gameeventscript.document"
+            },
+            "3": {
+              "name": "variable.other.reference.gameeventscript.document"
+            },
+            "4": {
+              "name": "punctuation.separator.handle.gameeventscript.document"
             }
           }
         }

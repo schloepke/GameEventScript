@@ -433,6 +433,54 @@ enum GameEventScript.Api.GesBytecodeTypeKind
   enum-field Iterator = 48
   enum-field Series = 49
   enum-field Custom = 255
+sealed class GameEventScript.Api.GesCatalog
+  method System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesCatalogEntry> Module(System.String name)
+  method System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesHandle> Index(GameEventScript.Api.GesSchema projection)
+  method System.Void Resolve(GameEventScript.Api.GesHandleResolveCall call)
+  method static GameEventScript.Api.GesCatalog Read(GameEventScript.Api.GesHandleType type, System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesCatalogRoot> roots, GameEventScript.Api.IGesCatalogFiles files, System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesCatalog> dependencies)
+  method static GameEventScript.Api.GesCatalog Read(GameEventScript.Api.GesHandleType type, System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesHandle> roots, GameEventScript.Api.IGesHandleResolver resolver, System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesCatalog> dependencies)
+  property GameEventScript.Api.GesCatalogEntry Item { get }
+  property GameEventScript.Api.GesHandleType Type { get }
+  property System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesCatalogEntry> Entries { get }
+  property System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesHandle> Sources { get }
+sealed class GameEventScript.Api.GesCatalogDiagnostic
+  method System.String ToString()
+  property GameEventScript.Api.GesSourceLocation Location { get }
+  property GameEventScript.Api.GesSourceLocation Other { get }
+  property System.String Code { get }
+  property System.String FieldPath { get }
+  property System.String Message { get }
+  property System.String Suggestion { get }
+sealed class GameEventScript.Api.GesCatalogEntry
+  property GameEventScript.Api.GesHandle Handle { get }
+  property GameEventScript.Api.GesSourceLocation Origin { get }
+  property GameEventScript.Runtime.Values.GesValue Value { get }
+  property System.String Id { get }
+sealed class GameEventScript.Api.GesCatalogException
+  field static System.String AmbiguousReference
+  field static System.String DependencyCycle
+  field static System.String DuplicateId
+  field static System.String ImportCycle
+  field static System.String ImportKind
+  field static System.String ImportMissing
+  field static System.String ImportOutsideRoot
+  field static System.String ImportType
+  field static System.String InvalidId
+  field static System.String InvalidPin
+  field static System.String UnknownReference
+  property System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesCatalogDiagnostic> Diagnostics { get }
+sealed class GameEventScript.Api.GesCatalogRoot
+  ctor GesCatalogRoot(System.String Name, System.String Path)
+  method GameEventScript.Api.GesCatalogRoot <Clone>$()
+  method System.Boolean Equals(GameEventScript.Api.GesCatalogRoot other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.String& Name, System.String& Path)
+  method static System.Boolean op_Equality(GameEventScript.Api.GesCatalogRoot left, GameEventScript.Api.GesCatalogRoot right)
+  method static System.Boolean op_Inequality(GameEventScript.Api.GesCatalogRoot left, GameEventScript.Api.GesCatalogRoot right)
+  property System.String Name { get set }
+  property System.String Path { get set }
 struct GameEventScript.Api.GesCodeSegment
   property GameEventScript.Api.GesBytecodeInstruction Item { get }
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesBytecodeInstruction> Instructions { get }
@@ -531,6 +579,7 @@ static class GameEventScript.Api.GesDiagnosticCodes
   field static System.String RuntimeExtensionCallFailed
   field static System.String RuntimeExternalConstructorFailed
   field static System.String RuntimeExternalFieldAccessFailed
+  field static System.String RuntimeHandleNotVisible
   field static System.String RuntimeHandleResolveFailed
   field static System.String RuntimeHandleVersionMismatch
   field static System.String RuntimeIllegalOpcode
@@ -558,10 +607,12 @@ static class GameEventScript.Api.GesDiagnosticCodes
   field static System.String ValidateDuplicatePublishArgument
   field static System.String ValidateDuplicateType
   field static System.String ValidateDuplicateVariable
+  field static System.String ValidateHandleWidening
   field static System.String ValidateInvalidHandleUse
   field static System.String ValidateInvalidIdentifierCase
   field static System.String ValidateInvalidMessageCase
   field static System.String ValidateInvalidPredicate
+  field static System.String ValidateInvalidProjection
   field static System.String ValidateInvalidTag
   field static System.String ValidateInvalidTagFilter
   field static System.String ValidateInvalidTypeConstructor
@@ -753,6 +804,7 @@ static class GameEventScript.Api.GesGeometryLibrary
   method static GameEventScript.Api.IGesExternalTypeRegistry ExternalTypes(GameEventScript.Api.IGesExternalTypeRegistry next)
   property System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesExternalTypeDefinition> Types { get }
 sealed class GameEventScript.Api.GesHandle
+  method GameEventScript.Api.GesHandle WithProjection(System.String projection)
   method GameEventScript.Api.GesHandle WithVersion(GameEventScript.Runtime.Values.GesValue version)
   method System.Boolean Equals(GameEventScript.Api.GesHandle other)
   method System.Boolean Equals(System.Object obj)
@@ -769,6 +821,7 @@ sealed class GameEventScript.Api.GesHandle
   property GameEventScript.Runtime.Values.GesValue Version { get }
   property System.Boolean HasVersion { get }
   property System.Boolean IsComposite { get }
+  property System.String Projection { get }
   property System.String TypeName { get }
 sealed class GameEventScript.Api.GesHandleException
   ctor GesHandleException(System.String code, System.String symbol, System.String message, System.Exception innerException)
@@ -779,19 +832,27 @@ struct GameEventScript.Api.GesHandleKey
   property System.Int64 MaxLength { get }
   property System.Int64 Maximum { get }
   property System.Int64 Minimum { get }
+sealed class GameEventScript.Api.GesHandleResolveBatch
+  property GameEventScript.Api.GesHandleResolveCall Item { get }
+  property System.Int32 Count { get }
 sealed class GameEventScript.Api.GesHandleResolveCall
   method System.Void SetDocument(System.String text)
   method System.Void SetDocument(System.String text, GameEventScript.Runtime.Values.GesValue version)
   method System.Void SetMissing()
+  method System.Void SetNotVisible()
   method System.Void SetState(GameEventScript.Runtime.Values.GesValue record)
   method System.Void SetState(GameEventScript.Runtime.Values.GesValue record, GameEventScript.Runtime.Values.GesValue version)
   property GameEventScript.Api.GesHandle Handle { get }
   property GameEventScript.Api.GesHandleType HandleType { get }
+  property GameEventScript.Api.GesSchema Projection { get }
+  property System.Int32 Party { get }
 sealed class GameEventScript.Api.GesHandleType
   property GameEventScript.Api.GesHandleKey? Id { get }
   property GameEventScript.Api.GesHandleKey? Part { get }
+  property GameEventScript.Api.GesHandleType CatalogOf { get }
   property GameEventScript.Api.GesHandleType Root { get }
   property GameEventScript.Api.GesHandleVersionKind Version { get }
+  property System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesSchema> Projections { get }
   property System.String CanonicalForm { get }
   property System.String Name { get }
   property System.String StateName { get }
@@ -914,6 +975,8 @@ enum GameEventScript.Api.GesNetworkClass
 sealed class GameEventScript.Api.GesNetworkOwner
   property GameEventScript.Api.GesHandleType Handle { get }
   property GameEventScript.Api.GesNetworkSide Side { get }
+  property GameEventScript.Api.GesSchema Projection { get }
+  property System.Boolean SendsState { get }
 sealed class GameEventScript.Api.GesNetworkRoute
   property GameEventScript.Api.GesNetworkClass DeliveryClass { get }
   property GameEventScript.Api.GesNetworkSide Side { get }
@@ -1154,6 +1217,7 @@ sealed class GameEventScript.Api.GesSchema
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesSchemaParameterInfo> Parameters { get }
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesSchemaTakeInfo> Takes { get }
   property GameEventScript.Api.GesReadOnlyArray<System.String> Tags { get }
+  property GameEventScript.Api.GesSchema Source { get }
   property GameEventScript.Api.GesSchemaKind Kind { get }
   property System.Boolean IsAbstract { get }
   property System.Int32 PackedBits { get }
@@ -1295,6 +1359,7 @@ sealed class GameEventScript.Api.GesSchemaType
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesSchemaAxisInfo> Axes { get }
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesSchemaType> Element { get }
   property GameEventScript.Api.GesReadOnlyArray<System.String> Tags { get }
+  property GameEventScript.Api.GesSchema Projection { get }
   property GameEventScript.Api.GesSchema Schema { get }
   property GameEventScript.Api.GesSchemaBound? Delta { get }
   property GameEventScript.Api.GesSchemaBound? Lower { get }
@@ -1335,9 +1400,11 @@ enum GameEventScript.Api.GesSchemaTypeKind
 static class GameEventScript.Api.GesSchemaValues
   method static GameEventScript.Api.GameEventScriptMessage CompleteMessage(GameEventScript.Api.GesBoundSchema schema, GameEventScript.Api.GameEventScriptMessage message)
   method static GameEventScript.Api.GameEventScriptMessage CompleteMessage(GameEventScript.Api.GesSchema schema, GameEventScript.Api.GameEventScriptMessage message)
+  method static GameEventScript.Api.GesHash32 ContentHash(GameEventScript.Api.GesHandleType handleType, GameEventScript.Api.GesSchema projection, GameEventScript.Runtime.Values.GesValue state)
   method static GameEventScript.Api.GesHash32 ContentHash(GameEventScript.Api.GesHandleType handleType, GameEventScript.Runtime.Values.GesValue state)
   method static GameEventScript.Api.GesSchemaDecoded Decode(GameEventScript.Api.GesBoundSchema schema, System.ReadOnlySpan<System.Byte> data, GameEventScript.Runtime.Values.GesValue baseline, System.Int64 byteLimit)
   method static GameEventScript.Api.GesSchemaDecoded Decode(GameEventScript.Api.GesBoundSchema schema, System.ReadOnlySpan<System.Byte> data, System.Int64 byteLimit)
+  method static GameEventScript.Runtime.Values.GesValue Project(GameEventScript.Api.GesSchema projection, GameEventScript.Runtime.Values.GesValue state)
   method static System.Int32 Encode(GameEventScript.Api.GesBoundSchema schema, GameEventScript.Runtime.Values.GesValue value, GameEventScript.Runtime.Values.GesValue baseline, System.Span<System.Byte> buffer)
   method static System.Int32 Encode(GameEventScript.Api.GesBoundSchema schema, GameEventScript.Runtime.Values.GesValue value, System.Span<System.Byte> buffer)
   method static System.Int64 ReadKey(GameEventScript.Api.GesBoundSchema schema, System.ReadOnlySpan<System.Byte> data)
@@ -1535,6 +1602,8 @@ static class GameEventScript.Api.GesWireRules
   method static System.UInt64 WrappedQuantizedIndex(System.Double value, System.Double tenPower, System.Double numerator, System.Int64 lower, System.UInt64 period, System.String path)
   method static System.Void WriteDeltaRange(GameEventScript.Api.GesBitWriter& writer, System.UInt64 index, System.UInt64 held, System.UInt64 maxIndex, System.Boolean wrapping, System.UInt64 deltaRange, System.Int32 deltaWidth, System.Int32 width)
   method static System.Void WriteText(GameEventScript.Api.GesBitWriter& writer, System.String text, System.Int32 width, System.Int32 maxCount, System.String path)
+interface GameEventScript.Api.IGesCatalogFiles
+  method System.String Read(System.String root, System.String path)
 interface GameEventScript.Api.IGesClock
   property System.Int64 ElapsedMicroseconds { get }
 interface GameEventScript.Api.IGesExtensionFunction
@@ -1555,6 +1624,7 @@ interface GameEventScript.Api.IGesExternalValue
 interface GameEventScript.Api.IGesHandleResolver
   method GameEventScript.Runtime.Values.GesValue ResolveRef(GameEventScript.Api.GesHandle handle)
   method System.Void Resolve(GameEventScript.Api.GesHandleResolveCall call)
+  method System.Void ResolveMany(GameEventScript.Api.GesHandleResolveBatch batch)
 interface GameEventScript.Api.IGesNativeMessageHandler
   method System.Void Handle(GameEventScript.Api.GameEventScriptMessage message, GameEventScript.Api.GesContext context)
 interface GameEventScript.Api.IGesProfiler
@@ -1685,6 +1755,7 @@ sealed class GameEventScript.Generator.GesSchemaGenerateOptions
   property GameEventScript.Generator.GesSchemaLanguage Language { get set }
   property GameEventScript.Generator.GesSchemaSplit Split { get set }
   property System.Boolean Bindings { get set }
+  property System.Boolean Catalogs { get set }
   property System.Boolean CheckedExclusivity { get set }
   property System.Boolean Documents { get set }
   property System.Boolean Values { get set }

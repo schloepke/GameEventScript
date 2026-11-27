@@ -1,6 +1,7 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Globalization;
 using System.Text.Json;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
@@ -10,7 +11,7 @@ internal static class SchemaApiObservations
 {
     internal static void Validate(JsonElement input)
     {
-        RuntimeValues.Fields(input, "sources", "root", "parameters", "bind", "encode", "encodeExternal", "baselineExternal", "externalFields", "failingField", "baselineFailingField", "failingCode", "encodeBuffer", "baseline", "decode", "decodeLimit", "key", "complete", "dump", "dumpBaseline", "deltaEncode", "deltaDecode", "describe", "document", "readDocument", "network", "handle", "contentHash");
+        RuntimeValues.Fields(input, "sources", "root", "parameters", "bind", "encode", "encodeExternal", "baselineExternal", "externalFields", "failingField", "baselineFailingField", "failingCode", "encodeBuffer", "baseline", "decode", "decodeLimit", "key", "complete", "dump", "dumpBaseline", "deltaEncode", "deltaDecode", "describe", "document", "readDocument", "network", "handle", "contentHash", "catalog");
         if (input.GetProperty("encode").ValueKind != JsonValueKind.Null) _ = ValueApiObservations.Construct(input.GetProperty("encode"));
         if (input.GetProperty("baseline").ValueKind != JsonValueKind.Null) _ = ValueApiObservations.Construct(input.GetProperty("baseline"));
         if (input.GetProperty("complete").ValueKind != JsonValueKind.Null) _ = ValueApiObservations.Construct(input.GetProperty("complete"));
@@ -62,6 +63,7 @@ internal static class SchemaApiObservations
 
             if (input.GetProperty("document").GetString() is { } document) result["document"] = Check(set, document, root, parameters);
             if (input.GetProperty("readDocument") is { ValueKind: JsonValueKind.Object } reading) result["readDocument"] = ReadDocument(set, reading);
+            if (input.GetProperty("catalog") is { ValueKind: JsonValueKind.Object } catalog) result["catalog"] = Catalogs(set, catalog);
             if (input.GetProperty("bind").GetBoolean())
             {
                 var bound = set.Schema(root!).Bind(parameters);
@@ -212,6 +214,132 @@ internal static class SchemaApiObservations
         catch (GesDocumentException exception)
         {
             return new { error = new { code = exception.Code, line = exception.Line, column = exception.Column, path = exception.Path } };
+        }
+    }
+
+    // Reads the catalogs in order, each with every earlier one as a dependency, from named roots or from root handles: the
+    // entries of the last with its sources, the errors of the first that fails, or the code of a resolver failure.
+    private static object Catalogs(GesSchemaSet set, JsonElement input)
+    {
+        RuntimeValues.Fields(input, "files", "catalogs", "refs", "latest", "index");
+        var table = input.GetProperty("files").EnumerateArray()
+            .Select(file => new CatalogFile(file.GetProperty("root").GetString()!, file.GetProperty("path").GetString()!, file.GetProperty("text").GetString()!,
+                file.GetProperty("version").ValueKind == JsonValueKind.Null ? null : file.GetProperty("version").GetInt64())).ToArray();
+        var files = new CatalogFiles(table);
+        var resolver = new CatalogResolver(table, input.GetProperty("refs").EnumerateObject().ToDictionary(entry => entry.Name, entry => entry.Value.GetInt64(), StringComparer.Ordinal),
+            input.GetProperty("latest").ValueKind == JsonValueKind.Null ? null : input.GetProperty("latest").GetInt64());
+        var read = new List<GesCatalog>();
+        foreach (var catalog in input.GetProperty("catalogs").EnumerateArray())
+        {
+            var type = set.HandleType(catalog.GetProperty("type").GetString()!);
+            try
+            {
+                if (catalog.GetProperty("handles").ValueKind == JsonValueKind.Array)
+                {
+                    var handles = catalog.GetProperty("handles").EnumerateArray().Select(handle => GesHandle.Parse(handle.GetString()!)).ToArray();
+                    read.Add(GesCatalog.Read(type, handles, resolver, read.ToArray()));
+                }
+                else
+                {
+                    var roots = catalog.GetProperty("roots").EnumerateArray()
+                        .Select(root => new GesCatalogRoot(root.GetProperty("name").GetString()!, root.GetProperty("path").GetString()!)).ToArray();
+                    read.Add(GesCatalog.Read(type, roots, files, read.ToArray()));
+                }
+            }
+            catch (GesCatalogException exception)
+            {
+                return new { errors = exception.Diagnostics.Select(CatalogError).ToArray() };
+            }
+            catch (GesHandleException exception)
+            {
+                return new { failure = exception.Code };
+            }
+        }
+
+        return new
+        {
+            entries = read[^1].Entries.Select(entry => new
+            {
+                id = entry.Id,
+                handle = entry.Handle.ToString(),
+                origin = Location(entry.Origin),
+                value = RuntimeValues.Encode(entry.Value)
+            }).ToArray(),
+            sources = read[^1].Sources.Select(source => source.ToString()).ToArray(),
+            indexes = Indexes(read[^1], input)
+        };
+    }
+
+    // The handles of the last catalog through each requested projection, by projection name.
+    private static Dictionary<string, string[]> Indexes(GesCatalog catalog, JsonElement input)
+    {
+        var result = new Dictionary<string, string[]>(StringComparer.Ordinal);
+        if (!input.TryGetProperty("index", out var names)) return result;
+        foreach (var name in names.EnumerateArray())
+        {
+            var projection = catalog.Type.Projections.FirstOrDefault(candidate => candidate.Name == name.GetString())
+                ?? throw new ArgumentException($"':{name.GetString()}' is no projection of '@{catalog.Type.Name}'.");
+            result[projection.Name] = catalog.Index(projection).Select(handle => handle.ToString()).ToArray();
+        }
+
+        return result;
+    }
+
+    private static Dictionary<string, object?> CatalogError(GesCatalogDiagnostic diagnostic)
+    {
+        var error = new Dictionary<string, object?> { ["code"] = diagnostic.Code, ["location"] = Location(diagnostic.Location) };
+        if (diagnostic.FieldPath.Length > 0) error["fieldPath"] = diagnostic.FieldPath;
+        if (diagnostic.Other is { } other) error["other"] = Location(other);
+        if (diagnostic.Suggestion is { } suggestion) error["suggestion"] = suggestion;
+        return error;
+    }
+
+    private static Dictionary<string, object?> Location(GesSourceLocation location)
+    {
+        var result = new Dictionary<string, object?> { ["root"] = location.ModuleName, ["path"] = location.SourceName };
+        if (location.Line is { } line) result["line"] = line;
+        if (location.Column is { } column) result["column"] = column;
+        return result;
+    }
+
+    private sealed record CatalogFile(string Root, string Path, string Text, long? Version);
+
+    private sealed class CatalogFiles(CatalogFile[] files) : IGesCatalogFiles
+    {
+        public string? Read(string root, string path) => Find(files, root, path)?.Text;
+
+        internal static CatalogFile? Find(CatalogFile[] files, string root, string path)
+        {
+            foreach (var file in files)
+                if (file.Root == root && file.Path == path) return file;
+            return null;
+        }
+    }
+
+    // Answers a file handle from the table: its root is the root handle's Text id, its path the part. A present file
+    // answers with its own version, else the requested one, else the latest; refs name revisions by their text form.
+    private sealed class CatalogResolver(CatalogFile[] files, Dictionary<string, long> refs, long? latest) : IGesHandleResolver
+    {
+        public void Resolve(GesHandleResolveCall call)
+        {
+            var handle = call.Handle;
+            var root = handle.Id.ValueKind == GesBytecodeTypeKind.Text ? handle.Id.AsText() : handle.Id.AsInteger().ToString(CultureInfo.InvariantCulture);
+            if (CatalogFiles.Find(files, root, handle.Part.AsText()) is not { } file)
+            {
+                call.SetMissing();
+                return;
+            }
+
+            if (file.Version is { } own) call.SetDocument(file.Text, GesValue.GesInteger(own));
+            else if (handle.HasVersion) call.SetDocument(file.Text, handle.Version);
+            else if (latest is { } number) call.SetDocument(file.Text, GesValue.GesInteger(number));
+            else call.SetDocument(file.Text);
+        }
+
+        public GesValue ResolveRef(GesHandle handle)
+        {
+            var name = handle.Ref.ValueKind == GesBytecodeTypeKind.Tag ? "#" + handle.Ref.AsText() : handle.Ref.AsText();
+            return refs.TryGetValue(name, out var number) ? GesValue.GesInteger(number) : GesValue.GesNothing();
         }
     }
 

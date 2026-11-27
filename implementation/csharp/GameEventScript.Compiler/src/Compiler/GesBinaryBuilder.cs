@@ -15,7 +15,7 @@ internal sealed partial class GesBinaryBuilder
     private readonly List<LabelSymbol> _labels = [];
     private readonly List<PlanItem> _rootItems = [];
     private readonly List<BindPlan> _binds = [];
-    private readonly Dictionary<string, (ulong Hash, string StateName)> _handleTypes = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, (ulong Hash, string StateName, string[] Projections)> _handleTypes = new(StringComparer.Ordinal);
     private PlanItem[]? _rewrittenItems;
     private ushort _version = 1;
     private string _moduleName = "Unknown";
@@ -146,8 +146,9 @@ internal sealed partial class GesBinaryBuilder
         return new GesBindRef(bind.Index);
     }
 
-    // A handle type the Program names; its binding locates the first instruction that reads the type's state.
-    public void AddHandleType(string name, ulong hash, string stateName) => _handleTypes[name] = (hash, stateName);
+    // A handle type the Program names; its binding locates the first instruction that reads the type's state, also through
+    // one of its projections.
+    public void AddHandleType(string name, ulong hash, string stateName, string[] projections) => _handleTypes[name] = (hash, stateName, projections);
 
     // `h.member` of a statically typed handle reads the state of one of the named types (specs/Bytecode.md#handles).
     public GesBinaryBuilder HandleStateRead(GesRegisterRef destination, string memberName, GesRegisterRef target, string[] typeNames)
@@ -271,7 +272,8 @@ internal sealed partial class GesBinaryBuilder
             else if (instruction.OpCode == GesBytecodeOpCode.CastCustom && instruction.Y.TextValue is { } castName)
             {
                 foreach (var pair in _handleTypes)
-                    if (string.Equals(pair.Value.StateName, castName, StringComparison.Ordinal)) firstReads.TryAdd(pair.Key, checked((ushort)address));
+                    if (string.Equals(pair.Value.StateName, castName, StringComparison.Ordinal) || Array.IndexOf(pair.Value.Projections, castName) >= 0)
+                        firstReads.TryAdd(pair.Key, checked((ushort)address));
             }
 
             address++;

@@ -25,7 +25,9 @@ internal enum GesDocumentNodeKind : byte
     Message,
     Handler,
     // A handle in its text form, built by Runtime.
-    Handle
+    Handle,
+    // A catalog reference such as `@hull.light`, which a catalog replaces by a handle (specs/Documents.md#references).
+    Reference
 }
 
 /// <summary>
@@ -40,7 +42,7 @@ internal sealed class GesDocumentNode
 
     internal GesDocumentNodeKind Kind { get; }
 
-    // The Text value, the tag name, the lowercase form type or the message name.
+    // The Text value, the tag name, the lowercase form type, the message name, the handle text or the reference name.
     internal string Name { get; private init; } = "";
 
     internal bool Boolean { get; private init; }
@@ -75,6 +77,9 @@ internal sealed class GesDocumentNode
     // The UTF-16 offset of a form's `:`, where construction errors point.
     internal int Offset { get; private init; }
 
+    // Whether a reference or complete handle of a catalog ends with `~`, which pins it to the named entry's hash.
+    internal bool Pinned { get; private init; }
+
     internal static GesDocumentNode Text(string value) => new(GesDocumentNodeKind.Text) { Name = value };
 
     internal static GesDocumentNode BooleanValue(bool value) => new(GesDocumentNodeKind.Boolean) { Boolean = value };
@@ -90,9 +95,36 @@ internal sealed class GesDocumentNode
     internal static GesDocumentNode Map(string[] keys, GesDocumentNode[] values, int[]? keyOffsets = null, bool[]? handleKeys = null)
         => new(GesDocumentNodeKind.Map) { KeyOffsets = keyOffsets ?? [], Labels = keys, Children = values, HandleKeys = handleKeys ?? [] };
 
-    internal static GesDocumentNode Handle(string text) => new(GesDocumentNodeKind.Handle) { Name = text };
+    internal static GesDocumentNode Handle(string text, bool pinned = false) => new(GesDocumentNodeKind.Handle) { Name = text, Pinned = pinned };
 
+    internal static GesDocumentNode Reference(string name, bool pinned) => new(GesDocumentNodeKind.Reference) { Name = name, Pinned = pinned };
+
+    // Whether a Map key is a handle or a reference; its label holds the text with the `@`.
     internal bool IsHandleKey(int index) => HandleKeys.Length > 0 && HandleKeys[index];
+
+    // Whether a Map key is a reference: a handle key whose label has no type, as `@scout` has none.
+    internal bool IsReferenceKey(int index) => IsHandleKey(index) && Labels[index].IndexOf(':') < 0;
+
+    // A copy with other labels and children, which a catalog uses to replace references.
+    internal GesDocumentNode With(string[] labels, GesDocumentNode[] children) => new(Kind)
+    {
+        Name = Name,
+        Boolean = Boolean,
+        Number = Number,
+        Labels = labels,
+        Children = children,
+        Rolls = Rolls,
+        Bytes = Bytes,
+        X = X,
+        Y = Y,
+        Z = Z,
+        Unit = Unit,
+        Start = Start,
+        KeyOffsets = KeyOffsets,
+        HandleKeys = HandleKeys,
+        Offset = Offset,
+        Pinned = Pinned
+    };
 
     internal static GesDocumentNode Dice(int[] rolls) => new(GesDocumentNodeKind.Dice) { Rolls = rolls };
 
@@ -139,6 +171,7 @@ internal sealed record GesDocumentDiagnostic(string Code, int Start, int End, st
     internal const string MisplacedSchemaHeader = "document.misplacedSchemaHeader";
     internal const string LimitExceeded = "document.limitExceeded";
     internal const string InvalidHandle = "document.invalidHandle";
+    internal const string UnexpectedModule = "document.unexpectedModule";
 
     // The English explanation of an error code for highlighters and tools; it is not part of the contract.
     internal static string Explain(string code, string? limitName, int limitValue) => code switch
@@ -153,9 +186,10 @@ internal sealed record GesDocumentDiagnostic(string Code, int Start, int End, st
         UnexpectedToken => "An entry, separator or closing bracket is expected here.",
         UnclosedBracket => "This bracket is never closed.",
         UnclosedText => "This Text is never closed.",
-        InvalidSchemaHeader => "A schema header names one record type or a schema file.",
+        InvalidSchemaHeader => "A schema header names one record type or a schema file; a catalog header one handle type.",
         MisplacedSchemaHeader => "The schema header must come before the first entry.",
         InvalidHandle => "This is not a handle, or a handle key has a version.",
+        UnexpectedModule => "Module blocks belong only at the root of a catalog file.",
         LimitExceeded => $"The document exceeds {limitName ?? "a limit"} ({limitValue}).",
         _ => "This is not a valid document."
     };
@@ -203,4 +237,56 @@ internal sealed class GesDocumentSyntax(string text, GesDocumentNode? root, GesD
         }
         return (line, column);
     }
+}
+
+internal enum GesCatalogItemKind : byte
+{
+    // A root `import 'path'` of a further catalog file.
+    Import,
+    // `key: value` at the root or in a module block.
+    Entry,
+    // `key: import 'path'`, whose state comes from a state document.
+    EntryImport
+}
+
+/// <summary>One item of a catalog file: an entry with its module, key and value, or an import with its path.</summary>
+internal sealed class GesCatalogItem(GesCatalogItemKind kind, string module, string key, int keyOffset, GesDocumentNode? value, string path, int pathOffset)
+{
+    internal GesCatalogItemKind Kind { get; } = kind;
+
+    // The module name of the block holding the entry, empty at the root.
+    internal string Module { get; } = module;
+
+    internal string Key { get; } = key;
+
+    internal int KeyOffset { get; } = keyOffset;
+
+    // The entry's Map value, which may contain references.
+    internal GesDocumentNode? Value { get; } = value;
+
+    // The import path as written, and the offset of its opening quote.
+    internal string Path { get; } = path;
+
+    internal int PathOffset { get; } = pathOffset;
+}
+
+/// <summary>
+/// A read catalog file (specs/Documents.md#catalog-files): its handle type and items, or the first error. A text
+/// without a <c>:Catalog</c> header is no catalog file and has no error.
+/// </summary>
+internal sealed class GesCatalogSyntax(string text, bool isCatalog, string typeName, int headerOffset, GesCatalogItem[] items, GesDocumentDiagnostic? diagnostic)
+{
+    internal string Text { get; } = text;
+
+    internal bool IsCatalog { get; } = isCatalog;
+
+    // The handle type name of the header, without `@`.
+    internal string TypeName { get; } = typeName;
+
+    // The offset of the header's `:`.
+    internal int HeaderOffset { get; } = headerOffset;
+
+    internal GesCatalogItem[] Items { get; } = items;
+
+    internal GesDocumentDiagnostic? Diagnostic { get; } = diagnostic;
 }

@@ -9,7 +9,7 @@ enum GesSchemaHighlighting {
         "wire", "model", "let", "default", "true", "false", "abstract", "packed",
         "with", "all", "without", "computed", "by", "when", "otherwise", "or", "not", "of", "min", "clamp", "abs", "has",
         "sqrt", "cbrt", "sin", "cos", "tan", "asin", "acos", "atan", "atan2", "hypot", "exp", "ln", "floor", "ceil", "truncate", "round", "rad", "deg",
-        "network", "client", "server", "sends", "publishes", "reliable", "latest", "bulk", "at", "most", "every", "handle", "composite", "owns", "projection", "sending",
+        "network", "client", "server", "sends", "publishes", "reliable", "latest", "bulk", "at", "most", "every", "handle", "attached", "keyed", "versioned", "owns", "projection", "sending",
     ]
 
     static func highlight(_ text: String, _ spans: inout GesSpanBuilder) -> [GesSpanBuilder.Diagnostic] {
@@ -55,8 +55,11 @@ enum GesSchemaHighlighting {
                 if GesNames.upper(byte) { position = GesNames.upperNameEnd(bytes, position) }
                 let word = String(decoding: bytes[start..<position], as: UTF8.self)
                 // The words of `round half even`, `round half up` and `round half down` are keywords only there, and
-                // `state` is a keyword only in `sending state`.
-                let mode = previous == "round" && word == "half" || previous == "half" && (word == "even" || word == "up" || word == "down") || previous == "sending" && word == "state"
+                // `state` is a keyword only in `sending state`; `to`, `id`, `part`, `revision` and `hash` only in a handle's
+                // `attached to`, `with id`, `with part`, `versioned by revision` and `versioned by hash`.
+                let mode =
+                    previous == "round" && word == "half" || previous == "half" && (word == "even" || word == "up" || word == "down") || previous == "sending" && word == "state"
+                    || previous == "attached" && word == "to" || previous == "with" && (word == "id" || word == "part") || previous == "by" && (word == "revision" || word == "hash")
                 kind = keywords.contains(word) || mode ? .keyword : GesNames.upper(byte) ? .message : .identifier
                 previous = word
                 spans.add(start, position, kind)

@@ -78,7 +78,7 @@ allowed. Each route stays on one line.
   [constant](Schemas.md#network-constants).
 - **`owns`** names a [handle type](Schemas.md#handles) whose objects that side owns: `server owns @Target`. Its
   handles cross the network as identities; the owner is the side that can resolve them. A network names a handle type
-  in at most one `owns` route, and a composite type in none, since its root's owner owns it. An `owns` route carries no
+  in at most one `owns` route, and an attached type in none, since its root's owner owns it; a keyed type has a route of its own. An `owns` route carries no
   payload, has no class, rate, route index or channel and does not count towards the route limit. The owning side is
   the [owner](Documents.md#the-store-model) of the type's store and alone answers index and resolve requests; the
   other side only reads. Resolving a handle across the network is not part of this version. *Since: Unreleased.*
@@ -108,7 +108,7 @@ nowhere in a network.
 | `schema.unknownName` | a route names no declared handle type with `@` or no declared projection after `owns ... as`, no declared message or message set without `:`, no declared schema with it, or a rate names no constant of its file; a set named with `:`, the spelling of 0.6.0, adds a hint to the spelling without it |
 | `schema.invalidRoute` | a route names a declaration of the wrong kind or without a `wire` role, an abstract schema, a class its verb does not take, a rate on `sends`, or a rate that is no time, not positive or above `3600s` |
 | `schema.duplicateRoute` | a side names the same root twice with the same verb, or two `owns` routes name the same handle type |
-| `schema.invalidHandle` | an `owns` route names a composite handle type, or a route from the owner of a projected handle type pins a handle of it with a revision version (`@X(:P)~`); reported at the route's root |
+| `schema.invalidHandle` | an `owns` route names an attached handle type, or a route from the owner of a projected handle type pins a handle of it with a revision version (`@X(:P)~`); reported at the route's root |
 | `schema.invalidProjection` | the projection of an `owns` route does not narrow the handle type's state (reported at the projection), or a route from the owner carries a handle of that type in a view that is not the projection or one that narrows it (reported at the route's root) |
 | `schema.tooLarge` | a network has more than 64 routes |
 

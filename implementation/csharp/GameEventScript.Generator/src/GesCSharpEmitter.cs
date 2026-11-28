@@ -997,13 +997,15 @@ internal static partial class GesCSharpEmitter
     // The path of a handle map's key: the node after its entry's group.
     private static string HandleKeyPath(GesPlanValue map) => $"paths[at + {(map.Element!.Node + 1).ToString(CultureInfo.InvariantCulture)}]";
 
-    // The plan values of a handle's id, its version where the field has one, and a composite's part, in node order.
+    // The plan values of a handle's id, its version where the field has one, and the part of a type with one, in node order.
+    // The id of a type with a part is its root's; the version an attached type's root's, a keyed type's its own.
     internal static (GesPlanValue Id, GesPlanValue? Version, GesPlanValue? Part) HandleParts(GesPlanValue value)
     {
         var handle = value.Handle!;
-        var owner = value.HandleRoot ?? handle;
+        var idOwner = value.HandleRoot ?? handle;
+        var owner = handle.Keyed ? handle : idOwner;
         var node = value.Node + 1;
-        var id = new GesPlanValue { Base = "Id", Node = node++, Encoding = owner.Id! };
+        var id = new GesPlanValue { Base = "Id", Node = node++, Encoding = idOwner.Id! };
         GesPlanValue? version = null;
         if (value.Encoding.Versioned)
             version = new GesPlanValue
@@ -1012,13 +1014,29 @@ internal static partial class GesCSharpEmitter
                 Node = node++,
                 Encoding = owner.Version == GesHandleVersionKind.Revision ? owner.Revision! : new GesLayoutEncoding { Kind = GesLayoutKind.Bytes, MaxCount = owner.Version == GesHandleVersionKind.Sha1 ? 20 : 32 }
             };
-        var part = handle.IsComposite ? new GesPlanValue { Base = "Part", Node = node, Encoding = handle.Part! } : null;
+        var part = handle.HasPart ? new GesPlanValue { Base = "Part", Node = node, Encoding = handle.Part! } : null;
         return (id, version, part);
     }
 
-    // The type of a composite's root, beside the handle's own type.
+    // The type of the root of a type with a part, beside the handle's own type.
     internal static string HandleRootType(GesPlanValue value)
         => value.HandleType.Substring(0, value.HandleType.Length - (value.Handle!.Name + "Handle").Length) + value.HandleRoot!.Name + "Handle";
+
+    // Builds a handle from the locals `id`, `version` (where versioned) and `part`: a type with a part builds its root from the id,
+    // with the version for an attached type, whose version is its root's, while a keyed type takes it as its own.
+    internal static string HandleConstruction(GesPlanValue value, bool versioned, bool swift)
+    {
+        var keyed = value.Handle!.Keyed && versioned;
+        var version = versioned ? swift ? ", version: version" : ", version" : "";
+        var rootVersion = keyed ? "" : version;
+        if (swift)
+            return value.HandleRoot is not null
+                ? $"{value.HandleType}(uncheckedRoot: {HandleRootType(value)}(uncheckedId: id{rootVersion}), part: part{(keyed ? version : "")})"
+                : $"{value.HandleType}(uncheckedId: id{version})";
+        return value.HandleRoot is not null
+            ? $"new {value.HandleType}(new {HandleRootType(value)}(id{rootVersion}), part{(keyed ? version : "")})"
+            : $"new {value.HandleType}(id{version})";
+    }
 
     // The version type of a hash: GesHash20 or GesHash32.
     internal static string HashType(GesPlanValue version) => version.Encoding.MaxCount == 20 ? "GesHash20" : "GesHash32";
@@ -1080,8 +1098,7 @@ internal static partial class GesCSharpEmitter
         }
 
         if (part is not null) ReadHandleKey(code, part, "part", target + ".Part");
-        var arguments = "id" + (version is not null ? ", version" : "");
-        code.Line(value.HandleRoot is not null ? $"{target} = new {value.HandleType}(new {HandleRootType(value)}({arguments}), part);" : $"{target} = new {value.HandleType}({arguments});");
+        code.Line($"{target} = {HandleConstruction(value, version is not null, swift: false)};");
         code.Close();
     }
 

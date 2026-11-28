@@ -67,7 +67,6 @@ public final class GesSchemaSet: @unchecked Sendable {
         }
         for type in handleTypes {
             type.root = type.resolved.root?.publicType
-            type.storeOf = type.resolved.store?.publicType
         }
         self.handleTypes = handleTypes
         for file in files { try file.resolve(declarations, messages, tagSets) }
@@ -596,15 +595,15 @@ final class GesFileScope {
         }
     }
 
-    // A handle type's state is a declared, non-abstract schema, a composite's root a handle type that is not composite
-    // itself; its id, part and revision are resolved like field types, without lets.
+    // A handle type's state, when it has one, is a declared, non-abstract schema; the root of a type attached to or keyed by one
+    // is a handle type without a root itself; its id, part and revision are resolved like field types, without lets.
     func resolveHandles(_ all: [String: GesResolvedDeclaration], _ handles: [String: GesResolvedHandle]) throws {
         self.handles = handles
         lets.removeAll()
         for handle in ownHandles {
             let syntax = handle.syntax
-            if !syntax.store.isEmpty {
-                handle.store = try storeOf(handle)
+            if syntax.state.isEmpty {
+                handle.state = nil
             } else {
                 guard let state = all[syntax.state], state.kind == .schema else {
                     throw error(Code.invalidHandle, syntax.stateOffset, "The state of '@\(handle.name)', ':\(syntax.state)', is no declared schema.")
@@ -612,13 +611,17 @@ final class GesFileScope {
                 if state.isAbstract { throw error(Code.invalidHandle, syntax.stateOffset, "The state of '@\(handle.name)', ':\(syntax.state)', is abstract.") }
                 handle.state = state
             }
+            if syntax.version == .gesHash && handle.state == nil {
+                throw error(Code.invalidHandle, syntax.versionOffset, "'@\(handle.name)' has no state, whose content hash 'hash(#ges)' would be its version.")
+            }
             if !syntax.root.isEmpty {
                 let root = try self.handle(syntax.root, syntax.rootOffset)
                 if !root.syntax.root.isEmpty {
-                    throw error(Code.invalidHandle, syntax.rootOffset, "'@\(syntax.root)' is composite itself; composites have one level.")
+                    throw error(Code.invalidHandle, syntax.rootOffset, "'@\(syntax.root)' has a root itself; a root has none.")
                 }
                 handle.root = root
             }
+            if let revision = syntax.revision { handle.revision = try resolveRevision(revision, all) }
             guard let idSyntax = syntax.id else { continue }
             let id = try resolveType(idSyntax, all)
             handle.id = id
@@ -630,51 +633,35 @@ final class GesFileScope {
                     }
                 }
             }
-            if let revision = syntax.revision { handle.revision = try resolveType(revision, all) }
         }
     }
 
-    // A store file type `:Store(@Unit)` is composite with a Text part, and its store's type is a declared handle type
-    // with a Text id that is neither composite nor a store file type itself.
-    private func storeOf(_ handle: GesResolvedHandle) throws -> GesResolvedHandle {
-        let syntax = handle.syntax
-        if syntax.root.isEmpty {
-            throw error(Code.invalidHandle, syntax.storeOffset, "The store file type '@\(handle.name)' is no composite; it names the files of a root.")
+    // `revision` is an integer Number without a range, `revision max n` one between 0 and n, whose maximum lies within 18 digits.
+    private func resolveRevision(_ revision: GesSchemaTypeSyntax, _ all: [String: GesResolvedDeclaration]) throws -> GesResolvedType {
+        let type = try resolveType(revision, all)
+        if let upper = type.constraints.upper {
+            if upper.isParameter { throw error(Code.invalidHandle, upper.offset, "A revision's maximum is a literal or a constant, never a parameter.") }
+            if upper.value.significand <= 0 || upper.value.exponent < 0 || upper.value.exponent + String(upper.value.significand.magnitude).count > 18 {
+                throw error(Code.invalidHandle, upper.offset, "A revision's maximum is a positive integer within 18 digits.")
+            }
         }
-        guard let part = syntax.id else {
-            throw error(Code.invalidHandle, syntax.rootOffset, "The store file type '@\(handle.name)' has no part; it names a file of a root by its path.")
-        }
-        if part.kind != .text {
-            throw error(Code.invalidHandle, part.offset, "The part of the store file type '@\(handle.name)' is a path, a :Text with max.")
-        }
-        let target = try self.handle(syntax.store, syntax.storeOffset)
-        if !target.syntax.store.isEmpty || !target.syntax.root.isEmpty || target.syntax.id!.kind != .text {
-            throw error(Code.invalidHandle, syntax.storeOffset, "A store holds a handle type with a Text id that is not composite, unlike '@\(syntax.store)'.")
-        }
-        target.files.append(handle)
-        return target
+        return type
     }
 
-    // A state field named `id`, `version` or `root` would collide with the handle's members; a store file type has no state.
+    // A state field named `id`, `version` or `root` would collide with the handle's members; a type without state has none.
     func checkHandleState(_ handle: GesResolvedHandle) throws {
-        if handle.store != nil { return }
-        for name in ["id", "version", "root"] where handle.state.fields.contains(where: { $0.name == name }) || handle.state.computed.contains(where: { $0.name == name }) {
+        guard let state = handle.state else { return }
+        for name in ["id", "version", "root"] where state.fields.contains(where: { $0.name == name }) || state.computed.contains(where: { $0.name == name }) {
             throw error(
                 Code.invalidHandle,
                 handle.syntax.stateOffset,
-                "The state ':\(handle.state.name)' of '@\(handle.name)' has a field '\(name)', which collides with the handle's members."
+                "The state ':\(state.name)' of '@\(handle.name)' has a field '\(name)', which collides with the handle's members."
             )
         }
     }
 
     func handle(_ name: String, _ offset: Int) throws -> GesResolvedHandle {
         guard let handle = handles[name] else { throw error(Code.unknownName, offset, "Handle type '@\(name)' is not declared.") }
-        return handle
-    }
-
-    private func keyHandle(_ name: String, _ offset: Int) throws -> GesResolvedHandle {
-        let handle = try handle(name, offset)
-        if !handle.syntax.store.isEmpty { throw error(Code.invalidHandle, offset, "'@\(name)' is a store file type, which only reading a store uses.") }
         return handle
     }
 
@@ -1107,11 +1094,14 @@ final class GesFileScope {
         return result
     }
 
-    // `@Name(:P)` names a projection that narrows the state of a handle type that is neither composite nor a store file
-    // type. Narrowing follows the declared sources by name, since projections are composed only later.
+    // `@Name(:P)` names a projection that narrows the state of a handle type without a root. Narrowing follows the declared
+    // sources by name, since projections are composed only later.
     private func handleProjection(_ handle: GesResolvedHandle, _ type: GesSchemaTypeSyntax, _ all: [String: GesResolvedDeclaration]) throws -> GesResolvedDeclaration {
         if handle.root != nil {
-            throw error(Code.invalidProjection, type.projectionOffset, "'@\(type.name)' is composite; a projection reads a handle type that is not.")
+            throw error(Code.invalidProjection, type.projectionOffset, "'@\(type.name)' has a root; a projection reads a handle type without one.")
+        }
+        guard let state = handle.state else {
+            throw error(Code.invalidProjection, type.projectionOffset, "'@\(type.name)' has no state, which a projection could read.")
         }
         guard let projection = all[type.projection], projection.isProjection else {
             throw error(Code.invalidProjection, type.projectionOffset, "':\(type.projection)' is no declared projection.")
@@ -1121,18 +1111,15 @@ final class GesFileScope {
         while source.isProjection && steps <= all.count {
             guard let next = all[source.syntax.state] else { break }
             source = next
-            if source === handle.state { return projection }
+            if source === state { return projection }
             steps += 1
         }
-        throw error(Code.invalidProjection, type.projectionOffset, "':\(type.projection)' is no projection of '@\(type.name)', whose state is ':\(handle.state.name)'.")
+        throw error(Code.invalidProjection, type.projectionOffset, "':\(type.projection)' is no projection of '@\(type.name)', whose state is ':\(state.name)'.")
     }
 
     private func resolveType(_ type: GesSchemaTypeSyntax, _ all: [String: GesResolvedDeclaration]) throws -> GesResolvedType {
         if type.kind == .handle {
             let handle = try self.handle(type.name, type.offset)
-            if !handle.syntax.store.isEmpty {
-                throw error(Code.invalidHandle, type.offset, "'@\(type.name)' is a store file type, which only reading a store uses.")
-            }
             if type.versioned && !handle.versioned {
                 throw error(Code.invalidHandle, type.offset, "'@\(type.name)' has no version, so '@\(type.name)~' does not exist.")
             }
@@ -1214,7 +1201,7 @@ final class GesFileScope {
         )
         resolved.depth = type.depth
         resolved.exact = type.exact
-        if !type.key.isEmpty { resolved.handle = try keyHandle(type.key, type.keyOffset) }
+        if !type.key.isEmpty { resolved.handle = try handle(type.key, type.keyOffset) }
         return resolved
     }
 
@@ -1333,7 +1320,7 @@ enum GesSchemaCanonical {
         return output
     }
 
-    // The form a handle hash runs over: the handle type's declaration and, for a composite, its root's. A handle type has
+    // The form a handle hash runs over: the handle type's declaration and, for a type with a root, its root's. A handle type has
     // no parameters and never reaches its state.
     static func handleForm(_ handle: GesResolvedHandle) -> String {
         var output = "gess1\n"

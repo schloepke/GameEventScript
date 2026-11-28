@@ -3,7 +3,7 @@
 
 @_spi(Syntax) import GameEventScriptSyntax
 
-/// The form of a handle type's id or a composite's part: an integer with a closed range or a Text with a maximum.
+/// The form of a handle type's id or part: an integer with a closed range or a Text with a maximum.
 public struct GesHandleKey: Sendable, Equatable {
     /// Whether the key is a Text; otherwise it is an integer Number.
     public let isText: Bool
@@ -23,26 +23,28 @@ public final class GesHandleType: @unchecked Sendable {
     let declarations: [String: GesResolvedDeclaration]
     /// The name, without the leading `@`.
     public let name: String
-    /// The name of the state schema, without the leading `:`; empty for a store file type.
+    /// The name of the state schema, without the leading `:`; empty for a type without state.
     public let stateName: String
-    /// The form of the id; for a part-less composite its root's, since its identity is the root's id; nil for a composite
-    /// with a part, whose identity is its root's id and its part.
+    /// Whether the type has a state schema; a type without one only names objects and their versions.
+    public var hasState: Bool { !stateName.isEmpty }
+    /// The form of the id; for a type with a root and without a part its root's, since its identity is the root's id; nil
+    /// for a type with a part, whose identity is its root's id and its part.
     public let id: GesHandleKey?
-    /// The form of a composite's part; nil for a part-less composite and any other type.
+    /// The form of the part of a type attached to or keyed by a root; nil when it has none.
     public let part: GesHandleKey?
-    /// The kind of version; a composite has its root's.
+    /// The kind of version: a type attached to a root has its root's, a keyed type its own.
     public let version: GesHandleVersionKind
-    /// The root type of a composite, with or without a part; nil for any other type.
+    /// The root a type is attached to or keyed by; nil for a type without a root.
     public internal(set) var root: GesHandleType?
-    /// The handle type of the store whose files this store file type names, `:Store(@Type)`; nil for any other type
-    /// (specs/Schemas.md#handles).
-    public internal(set) var storeOf: GesHandleType?
+    /// Whether the type is keyed by its root (`keyed by @Root`): its objects have their own version, lifetime and source;
+    /// otherwise a type with a root is attached to it (specs/Schemas.md#handles).
+    public let isKeyed: Bool
     /// The projections of the state schema in the schema set, the projections a handle of this type can read through, in
-    /// ascending name order; empty for a store file type (specs/Schemas.md#projections).
+    /// ascending name order; empty for a type without state (specs/Schemas.md#projections).
     public internal(set) var projections: [GesSchema] = []
     /// The handle hash: FNV-1a 64 over the canonical form.
     public let hash: UInt64
-    /// The canonical form, which the hash runs over: the declaration and, for a composite, its root's.
+    /// The canonical form, which the hash runs over: the declaration and, for a type with a root, its root's.
     public let canonicalForm: String
     /// The link hash a Program records for the type: FNV-1a 64 over the canonical form followed by the line `state` and
     /// the state schema's hash, so a changed state schema fails to link as well (specs/Schemas.md#canonical-form).
@@ -53,6 +55,7 @@ public final class GesHandleType: @unchecked Sendable {
         self.declarations = declarations
         name = handle.name
         stateName = handle.state?.name ?? ""
+        isKeyed = handle.isKeyed
         let key = Self.key(handle.id)
         id = handle.hasPart ? nil : key
         part = handle.hasPart ? key : nil
@@ -61,31 +64,8 @@ public final class GesHandleType: @unchecked Sendable {
         hash = GesSchemaCanonical.hash(canonicalForm)
     }
 
-    // The store file type of this type's store with a name, or nil when none of that name names it. A file type holds
-    // its store's type, so this side does not hold the file types: once the schema set and the file type are released,
-    // an equal description is built again.
-    func fileType(_ name: String) -> GesHandleType? {
-        for file in resolved.files where file.name == name {
-            if let type = file.publicType { return type }
-            let type = Self.rebuilt(file, declarations)
-            type.storeOf = self
-            return type
-        }
-        return nil
-    }
-
-    // The public description of a resolved handle, built again with the same link hash when the schema set released it.
-    private static func rebuilt(_ handle: GesResolvedHandle, _ declarations: [String: GesResolvedDeclaration]) -> GesHandleType {
-        if let type = handle.publicType { return type }
-        let type = GesHandleType(handle, declarations)
-        type.root = handle.root.map { rebuilt($0, declarations) }
-        type.linkHash = handle.linkHash
-        if let state = handle.state { type.projections = projections(of: state, declarations) }
-        return type
-    }
-
-    // Called once the state schema has its hash, after every schema of the set is complete. A store file type has no
-    // state, so its link hash is its handle hash.
+    // Called once the state schema has its hash, after every schema of the set is complete. A type without state has its
+    // handle hash as its link hash.
     // Each projection of the state adds its name and schema hash, so a Program and a host agree on what it reads.
     func completeLinkHash() {
         if let state = resolved.state {
@@ -96,7 +76,6 @@ public final class GesHandleType: @unchecked Sendable {
         } else {
             linkHash = hash
         }
-        resolved.linkHash = linkHash
     }
 
     // The projections that narrow a state, in ascending name order; type names are ASCII, so bytes order them like C#.
@@ -128,15 +107,11 @@ final class GesResolvedHandle {
     let offset: Int
     let scope: GesFileScope
     let syntax: GesSchemaDeclarationSyntax
-    /// The state schema; nil for a store file type, which has none.
-    var state: GesResolvedDeclaration!
-    /// The handle type of the store whose files a store file type names; nil for any other type.
-    var store: GesResolvedHandle?
-    /// The store file types that name this type's store, in declaration order.
-    var files: [GesResolvedHandle] = []
-    /// The root of a composite, which is not composite itself.
+    /// The state schema; nil for a type without state.
+    var state: GesResolvedDeclaration?
+    /// The root a type is attached to or keyed by, which has no root itself.
     var root: GesResolvedHandle?
-    /// The id, or a composite's part; a part-less composite has its root's id.
+    /// The id, or the part of a type with a root; a type with a root and without a part has its root's id.
     var id: GesResolvedType! {
         get { ownId ?? root!.id }
         set { ownId = newValue }
@@ -144,8 +119,6 @@ final class GesResolvedHandle {
     private var ownId: GesResolvedType?
     /// The type of a revision, an integer Number with an optional range.
     var revision: GesResolvedType?
-    /// The link hash of the public description, kept to build it again.
-    var linkHash: UInt64 = 0
     /// The public description, which the schema set holds. It holds this handle, so this side is weak.
     weak var publicType: GesHandleType?
 
@@ -156,34 +129,47 @@ final class GesResolvedHandle {
         self.syntax = syntax
     }
 
-    /// Whether a composite names a part of its root; a part-less composite is one per root and keyed by the root's id.
+    /// Whether a type with a root names a part of it; one without a part is one per root and keyed by the root's id.
     var hasPart: Bool { root != nil && syntax.id != nil }
 
-    /// The declared version, or for a composite its root's.
-    var versionKind: GesHandleVersionKind { root?.versionKind ?? syntax.version }
+    var isKeyed: Bool { syntax.form == .keyed }
+
+    var attached: Bool { syntax.form == .attached }
+
+    /// The declared version, or for a type attached to a root its root's.
+    var versionKind: GesHandleVersionKind { syntax.form == .attached ? root!.versionKind : syntax.version }
+
+    /// The type whose version a handle carries: an attached type's root, otherwise the type itself.
+    var versionOwner: GesResolvedHandle { syntax.form == .attached ? root! : self }
 
     var versioned: Bool { versionKind != .none }
 
+    /// `handle X` with its form and root, the id or part, the version of a type that is not attached and `stateless` for a
+    /// type without state; the state's own hash joins only the link hash.
     func writeCanonical(_ output: inout String) {
         output += "handle " + name
-        if let root {
-            output += " composite " + root.name + "\n"
-            if !hasPart { return }
-            if let store { output += "store " + store.name + "\n" }
-            output += "part "
+        switch syntax.form {
+        case .attached: output += " attached " + root!.name
+        case .keyed: output += " keyed " + root!.name
+        case .plain: break
+        }
+        output += "\n"
+        if state == nil { output += "stateless\n" }
+        if root == nil || hasPart {
+            output += root == nil ? "id " : "part "
             GesSchemaCanonical.writeHandleType(id, &output)
             output += "\n"
-            return
         }
-        output += "\nid "
-        GesSchemaCanonical.writeHandleType(id, &output)
-        output += "\nversion "
+        if syntax.form == .attached { return }
+        output += "version "
         switch syntax.version {
-        case .none: output += "Nothing"
-        case .contentHash: output += "ContentHash"
-        case .sha1: output += "Hash(#sha1)"
-        case .sha256: output += "Hash(#sha256)"
-        case .revision: GesSchemaCanonical.writeHandleType(revision!, &output)
+        case .none: output += "none"
+        case .gesHash: output += "hash(#ges)"
+        case .sha1: output += "hash(#sha1)"
+        case .sha256: output += "hash(#sha256)"
+        case .revision:
+            output += "revision "
+            GesSchemaCanonical.writeHandleType(revision!, &output)
         }
         output += "\n"
     }

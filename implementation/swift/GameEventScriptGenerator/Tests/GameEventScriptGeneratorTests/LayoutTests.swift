@@ -38,8 +38,8 @@ final class LayoutTests: XCTestCase {
             parsing: """
                 schema :Composition as { name: :Text max 8, mass: :Number integer between 0 and 9 }
                 projection :UnitPublic of :Composition as { name }
-                handle @Unit of :Composition as { id: :Text max 8, version: :ContentHash }
-                handle @Drone of :Composition as { id: :Number integer between 0 and 9, version: :ContentHash }
+                handle @Unit of :Composition with id :Text max 8 versioned by hash(#ges)
+                handle @Drone of :Composition with id :Number integer between 0 and 9 versioned by hash(#ges)
                 wire schema :World as { unit: @Unit(:UnitPublic), drone: @Drone }
                 network :Game as {
                   server publishes :World latest

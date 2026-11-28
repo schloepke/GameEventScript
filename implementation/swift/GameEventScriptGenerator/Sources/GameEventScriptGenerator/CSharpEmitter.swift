@@ -980,12 +980,14 @@ enum GesCSharpEmitter {
     // The path of a handle map's key: the node after its entry's group.
     private static func handleKeyPath(_ map: GesPlanValue) -> String { "paths[at + \(map.element!.node + 1)]" }
 
-    // The plan values of a handle's id, its version where the field has one, and a composite's part, in node order.
+    // The plan values of a handle's id, its version where the field has one, and the part of a type with one, in node order.
+    // The id of a type with a part is its root's; the version an attached type's root's, a keyed type's its own.
     static func handleParts(_ value: GesPlanValue) -> (id: GesPlanValue, version: GesPlanValue?, part: GesPlanValue?) {
         let handle = value.handle!
-        let owner = value.handleRoot ?? handle
+        let idOwner = value.handleRoot ?? handle
+        let owner = handle.keyed ? handle : idOwner
         var node = value.node + 1
-        let id = GesPlanValue(base: "Id", node: node, encoding: owner.id!)
+        let id = GesPlanValue(base: "Id", node: node, encoding: idOwner.id!)
         node += 1
         var version: GesPlanValue?
         if value.encoding.versioned {
@@ -999,13 +1001,29 @@ enum GesCSharpEmitter {
             version = GesPlanValue(base: "Version", node: node, encoding: encoding!)
             node += 1
         }
-        let part = handle.isComposite ? GesPlanValue(base: "Part", node: node, encoding: handle.part!) : nil
+        let part = handle.hasPart ? GesPlanValue(base: "Part", node: node, encoding: handle.part!) : nil
         return (id, version, part)
     }
 
-    // The type of a composite's root, beside the handle's own type.
+    // The type of the root of a type with a part, beside the handle's own type.
     static func handleRootType(_ value: GesPlanValue) -> String {
         String(value.handleType.dropLast((value.handle!.name + "Handle").count)) + value.handleRoot!.name + "Handle"
+    }
+
+    // Builds a handle from the locals `id`, `version` (where versioned) and `part`: a type with a part builds its root from the id,
+    // with the version for an attached type, whose version is its root's, while a keyed type takes it as its own.
+    static func handleConstruction(_ value: GesPlanValue, versioned: Bool, swift: Bool) -> String {
+        let keyed = value.handle!.keyed && versioned
+        let version = versioned ? swift ? ", version: version" : ", version" : ""
+        let rootVersion = keyed ? "" : version
+        if swift {
+            return value.handleRoot != nil
+                ? "\(value.handleType)(uncheckedRoot: \(handleRootType(value))(uncheckedId: id\(rootVersion)), part: part\(keyed ? version : ""))"
+                : "\(value.handleType)(uncheckedId: id\(version))"
+        }
+        return value.handleRoot != nil
+            ? "new \(value.handleType)(new \(handleRootType(value))(id\(rootVersion)), part\(keyed ? version : ""))"
+            : "new \(value.handleType)(id\(version))"
     }
 
     // The version type of a hash: GesHash20 or GesHash32.
@@ -1056,8 +1074,7 @@ enum GesCSharpEmitter {
             }
         }
         if let part { readHandleKey(&code, part, "part", target + ".Part") }
-        let arguments = "id" + (version != nil ? ", version" : "")
-        code.line(value.handleRoot != nil ? "\(target) = new \(value.handleType)(new \(handleRootType(value))(\(arguments)), part);" : "\(target) = new \(value.handleType)(\(arguments));")
+        code.line("\(target) = \(handleConstruction(value, versioned: version != nil, swift: false));")
         code.close()
     }
 

@@ -13,6 +13,14 @@ internal enum GesSchemaFieldMarker : byte
     Key
 }
 
+// How a handle type names its objects: by its own id, as part of a root it is attached to, or keyed by a root with its own source.
+internal enum GesSchemaHandleForm : byte
+{
+    Plain,
+    Attached,
+    Keyed
+}
+
 internal enum GesSchemaDeclarationKind : byte
 {
     Constant,
@@ -393,16 +401,14 @@ internal sealed class GesSchemaDeclarationSyntax
     // The fields a projection takes from its source, which State names, in written order.
     internal GesSchemaTakenSyntax[] Taken { get; init; } = [];
 
-    // A handle declaration: its state schema, the composite root without `@`, the id or part type, the version form and the
-    // revision's type, each with where it starts. A part-less composite has a root and no id or part type.
+    // A handle declaration: its state schema (empty for a type without state), its form, the root without `@` of a type attached to
+    // or keyed by one, the id of a plain type or the optional part of the others, the version kind and the revision's type, each
+    // with where it starts.
     internal string State { get; init; } = "";
 
     internal int StateOffset { get; init; }
 
-    // The handle type of a store file type, `:Store(@Type)`, without `@`; empty otherwise, when State names the state.
-    internal string Store { get; init; } = "";
-
-    internal int StoreOffset { get; init; }
+    internal GesSchemaHandleForm Form { get; init; }
 
     internal string Root { get; init; } = "";
 

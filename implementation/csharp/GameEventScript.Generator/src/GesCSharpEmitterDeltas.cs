@@ -198,7 +198,7 @@ internal static partial class GesCSharpEmitter
 
     private static string Prefix(string target) => target.Contains('.') ? target.Substring(0, target.LastIndexOf('.') + 1) : "";
 
-    // The wire parts of a handle in node order, with their members in a and b: a composite's id is its root's, and a field
+    // The wire parts of a handle in node order, with their members in a and b: the id of a type with a part is its root's, and a field
     // without a version transmits none. A text id compares as a string, the same as its UTF-8 bytes apart from lone surrogates.
     private static List<(GesPlanValue Part, string A, string B)> HandleMembers(GesPlanValue value, string a, string b)
     {
@@ -287,8 +287,7 @@ internal static partial class GesCSharpEmitter
             code.Close();
         }
 
-        var arguments = "id" + (members.Exists(member => member.Part.Base == "Version") ? ", version" : "");
-        code.Line(value.HandleRoot is not null ? $"{a} = new {value.HandleType}(new {HandleRootType(value)}({arguments}), part);" : $"{a} = new {value.HandleType}({arguments});");
+        code.Line($"{a} = {HandleConstruction(value, members.Exists(member => member.Part.Base == "Version"), swift: false)};");
         code.Close();
     }
 

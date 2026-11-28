@@ -704,7 +704,7 @@ A `handles` mapping declares the [handle types](../Language.md#handles) of a `sc
 
 ```yaml
 handles:
-  schemas: ["schema :DroneState as { altitude: :Number integer between 0 and 1000 }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Nothing }\n"]
+  schemas: ["schema :DroneState as { altitude: :Number integer between 0 and 1000 }\nhandle @Drone of :DroneState with id :Number integer between 0 and 255\n"]
   resolvers: [Drone]
   answers:
     - handle: "@Drone:7"
@@ -737,7 +737,7 @@ answers of one object are used in authored order, one per resolve call, and the 
 object without an answer fails like `fail`.
 
 An answer with `ref` instead of `handle` scripts a [ref](../HostRuntime.md#handles) resolution: `ref` is the text
-form of a handle that carries a ref, such as `"@Unit:7~#live"` or, for a composite, `"@RepoFile:repo~'main'/a.txt"`,
+form of a handle that carries a ref, such as `"@Unit:7~#live"` or, for an attached type, `"@RepoFile:repo~'main'/a.txt"`,
 and the answer has exactly one of `version` (the version the resolver returns, a `:Number.int64` or `:Bytes` in the
 portable value shape), `missing: true` (the resolver knows no such ref and returns Nothing) and `fail: true` (the
 resolver throws). A ref answer is used for every resolution of that text form; a ref without an answer fails like

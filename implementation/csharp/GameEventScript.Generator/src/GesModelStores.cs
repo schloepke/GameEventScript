@@ -7,7 +7,7 @@ using GameEventScript.Api;
 
 namespace GameEventScript.Generator;
 
-// A typed store of a handle type whose state is a model root, whose id is Text and that is not composite
+// A typed store of a handle type whose state is a model root, whose id is Text and that has no root
 // (specs/Schemas.md#model-stores): the type `<Name>Store` and the handle types of the other stores its state reaches,
 // which it takes as optional dependencies, ordered by name.
 internal sealed class GesModelStore
@@ -27,7 +27,7 @@ internal static partial class GesModelPlanner
     {
         var typed = new HashSet<string>(StringComparer.Ordinal);
         foreach (var handle in layout.Handles)
-            if (!handle.IsComposite && handle.Id.IsText && layout.Roots.Contains(handle.State)
+            if (handle.Root is null && handle.PartlessRoot is null && handle.State.Length > 0 && handle.Id.IsText && layout.Roots.Contains(handle.State)
                 && layout.Types.Exists(type => type.Name == handle.State && type.Kind == GesSchemaKind.Schema))
                 typed.Add(handle.Name);
         var stores = new List<GesModelStore>();

@@ -341,10 +341,13 @@ struct GesSchemaDocumentCheck {
     // A handle of the field's type whose id, part and version have the declared forms. An `@Name~` field requires a version
     // or a ref; an `@Name` field takes neither.
     private func handle(_ type: GesResolvedHandle, versioned: Bool, _ text: String, _ start: Int) throws {
-        guard let handle = try? GesHandle(parsing: text), handle.typeName == type.name, handle.isComposite == type.hasPart else { throw fail(Self.fieldType, start) }
-        let identity = type.root ?? type
-        try handleKey(identity.id, handle, part: false, start)
-        if handle.isComposite { try handleKey(type.id, handle, part: true, start) }
+        guard let handle = try? GesHandle(parsing: text), handle.typeName == type.name, handle.hasPart == type.hasPart else { throw fail(Self.fieldType, start) }
+
+        // A keyed handle writes its version after the part, an attached handle its root's before it.
+        if handle.hasPart && (handle.hasVersion || !handle.ref.isNothing) && handle.isKeyed != type.isKeyed { throw fail(Self.fieldType, start) }
+        try handleKey((type.root ?? type).id, handle, part: false, start)
+        if handle.hasPart { try handleKey(type.id, handle, part: true, start) }
+        let identity = type.versionOwner
         if handle.hasVersion || !handle.ref.isNothing {
             // Only an `@Name~` field holds a version or a ref; a type without versions takes neither.
             if identity.versionKind == .none { throw fail(Self.fieldType, start) }

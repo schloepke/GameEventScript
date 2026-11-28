@@ -42,7 +42,6 @@ symbol {"access":"public","declaration":"case builtin","kind":"swift.enum.case",
 symbol {"access":"public","declaration":"case bytes","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSchemaTypeKind.bytes"}
 symbol {"access":"public","declaration":"case comment","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.comment"}
 symbol {"access":"public","declaration":"case constant","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.constant"}
-symbol {"access":"public","declaration":"case contentHash","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesHandleVersionKind.contentHash"}
 symbol {"access":"public","declaration":"case coulomb","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesQuantityUnit.coulomb"}
 symbol {"access":"public","declaration":"case cubicMeter","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesQuantityUnit.cubicMeter"}
 symbol {"access":"public","declaration":"case decibel","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesQuantityUnit.decibel"}
@@ -54,6 +53,7 @@ symbol {"access":"public","declaration":"case disc","kind":"swift.enum.case","pa
 symbol {"access":"public","declaration":"case flags","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSchemaTypeKind.flags"}
 symbol {"access":"public","declaration":"case function","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.function"}
 symbol {"access":"public","declaration":"case ges","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxLanguage.ges"}
+symbol {"access":"public","declaration":"case gesHash","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesHandleVersionKind.gesHash"}
 symbol {"access":"public","declaration":"case gesa","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxLanguage.gesa"}
 symbol {"access":"public","declaration":"case gesd","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxLanguage.gesd"}
 symbol {"access":"public","declaration":"case gess","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxLanguage.gess"}

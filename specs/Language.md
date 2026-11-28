@@ -2054,13 +2054,13 @@ store does not declare is `validate.unknownHandleType`.
 
 **Members.** `h.id` is the identity: an integer Number or a Text. `h.version` is the version a handle carries, a Number
 for a revision or Bytes for a hash, and `nothing` without one; on a type without versions it is
-`validate.invalidHandleUse`. For a composite, `h.root` is the root's handle with the root's version, `h.id.root` the
-root's id, `h.id.part` the part, and `h.version` the root's version. For a
-[part-less composite](Schemas.md#handles) `h.root` is the root's handle without a version, `h.id.root` the root's
-id and `h.id.part` `nothing`, so `h.id` reads like a composite's (*Since: Unreleased*). These members need no state and never
-resolve.
+`validate.invalidHandleUse`. For a type [attached to or keyed by](Schemas.md#handles) a root, `h.root` is the root's
+handle without a version, `h.id.root` the root's id and `h.id.part` the part, `nothing` without one. An attached handle's
+`h.version` is the root's version; a keyed handle carries its own. These members need no state and never resolve.
 Every other member reads a field of the object's state, and `h as :State`, with the handle type's state schema, gives
-the whole state as a plain Record of that name. A missing object reads as `nothing`. `h as :Text` gives the
+the whole state as a plain Record of that name. A missing object reads as `nothing`. On a
+[stateless type](Schemas.md#stateless-types), declared without `of`, a state read or a cast to a state is
+`validate.invalidHandleUse`, whose message names the missing `of`. `h as :Text` gives the
 [text form](#handle-text-form). Any other cast gives `nothing`. Resolution, caching and failures are owned by
 [Host runtime](HostRuntime.md#handles).
 
@@ -2069,11 +2069,11 @@ be missing when a member reads it, which then gives `nothing`. A script lists th
 [store read](#stores), which asks the host.
 
 **Equality and order.** Two handles are equal when they have the same type and identity; the version does not take
-part, so a handle with and one without a version of the same object are equal. A handle equals no other kind of value.
+part, so a handle with and one without a version of the same object are equal. Handles of different types are never
+equal, also not an attached or keyed handle and its root. A handle equals no other kind of value.
 Handles have no numeric view, so `<` and its relatives give `nothing`. Sorting, Map keys and grouping use the key order:
 Text keys first, then handles by type name in scalar order, then by identity, integer ids numerically and Text ids in
-scalar order, a composite by its root and then its part. A part-less composite orders by its root's identity alone
-and equals no handle of its root.
+scalar order; a type with a root orders by its root's identity and then by its part, a handle without a part first.
 
 **Map keys.** A Map key is a Text or a handle. `[:map x by key]` and `[:group by item => key]` keep a handle key as a
 handle instead of its text; `m[h]`, `h in m` and `m[:contains key h]` look one up. A Map literal and member syntax
@@ -2098,7 +2098,7 @@ on Listed(units as @Unit(:UnitDisplay)) {
 ```
 
 - **Types.** A projected handle type stands wherever `@Name` stands in a parameter or field type, also in a union
-  `@Unit(:UnitDisplay) | @Drone`. A name that is no projection of the type's state, a projection of a composite, and
+  `@Unit(:UnitDisplay) | @Drone`. A name that is no projection of the type's state, a projection of an attached type, and
   `@Name` beside `@Name(:P)` in one union are `validate.invalidProjection`.
 - **Members.** `id`, `version` and `root` read the identity as for `@Unit`, and `version` is the projection's version.
   Any other member must be a field of the projection: `units.mass` is `validate.invalidProjection` although `:Composition`
@@ -2107,7 +2107,7 @@ on Listed(units as @Unit(:UnitDisplay)) {
 - **Narrowing.** A handle converts to a narrower view where a parameter or field declares one: `@Unit` and
   `@Unit(:UnitDisplay)` both pass to `@Unit(:UnitLabel)`, since `:UnitLabel` narrows `:UnitDisplay`. An unpinned target
   drops the carried version, since it named the wider state. A pinned target `@Unit(:UnitLabel)~` computes the
-  projection's version: the host reads the wider state and hashes the projection for a `:ContentHash` type; a revision
+  projection's version: the host reads the wider state and hashes the projection for a type `versioned by hash(#ges)`; a revision
   or owner's hash stays, as it versions the whole object. A value whose state cannot be read passes as `nothing`.
 - **No widening.** A script never reads more than its view, also not with `as`: passing `@Unit(:UnitDisplay)` to
   `@Unit` or to a projection that does not narrow `:UnitDisplay`, and `h as :Composition` on it, are
@@ -2135,7 +2135,7 @@ with `link.missingHandleResolver`.
 
 `@Name` followed by a selector reads the host's *store* of a handle type: every object of the type the host knows,
 such as the entries of a [store](Documents.md#stores) read from files. `@Name(root)` reads the parts of one root of a
-composite type with a part, such as the slots of one unit.
+type attached to or keyed by a root with a part, such as the slots of one unit.
 
 ```ges
 on Inspect(fleet as @Fleet) {
@@ -2167,7 +2167,9 @@ on Inspect(fleet as @Fleet) {
 
 #### Handle text form
 
-A handle's text is `@Type:id`, followed by `~version` when it carries one and `/part` for a composite with a part:
+A handle's text is `@Type:id`, followed by `~version` when it carries one. A type with a root writes its root's id in
+place of `id` and appends `/part` when it has a part; an attached handle writes the root's version before the part, a
+keyed handle its own version after it:
 
 | Text | Handle |
 | --- | --- |
@@ -2175,8 +2177,9 @@ A handle's text is `@Type:id`, followed by `~version` when it carries one and `/
 | `@Unit:'One Two'`, `@Unit:drone.gnabblo` | `@Unit` with a quoted or bare Text id |
 | `@Drone:7~120` | `@Drone` 7 at revision 120 |
 | `@UnitFile:content~3f2a…/Units/Tier1/radar.basic.gesd` | the file of a repository at a commit |
-| `@UnitSlot:drone.gnabblo/1` | slot 1 of a unit, without a version |
-| `@Enemy:3`, `@Enemy:3~120` | a part-less composite of `@Drone` 3, with the root's revision |
+| `@UnitSlot:drone.gnabblo/1`, `@UnitSlot:drone.gnabblo~3f2a…/1` | slot 1 attached to a unit, with the root's version |
+| `@Enemy:3`, `@Enemy:3~12` | keyed by `@Drone` 3 without a part, with its own revision |
+| `@Stats:3/7`, `@Stats:3/7~12` | part 7 keyed by `@Drone` 3, with its own revision |
 
 An integer id is a decimal with an optional `-` and no leading zero. A Text id is bare when it is not empty, consists
 of the ASCII letters, digits, `.`, `_` and `-` and does not read as an integer, and otherwise quoted with `'`, a quote
@@ -2184,7 +2187,7 @@ inside doubled. A revision
 is decimal; a hash version is its bytes as lowercase hexadecimal, 40 digits for SHA-1 and 64 for SHA-256 and content
 hashes. A part follows the first `/` after the root and its version, which no id, version or ref contains; a bare Text
 part also contains `/`, but neither starts with `/` nor contains `//`, which begins a comment in a document, so such a
-part is quoted. Writers use the bare form whenever it applies. `parse` does not recognize handles;
+part is quoted. A keyed handle's version follows the part after `~`, so a Text part containing `~` is quoted as well. Writers use the bare form whenever it applies. `parse` does not recognize handles;
 [documents](Documents.md#handles) and the host's `GesHandle.Parse` do. A *ref* names a version through the owner instead
 of stating it: `~#name` with the characters of a [tag](#text-and-tags), as in `@Unit:drone.gnabblo~#live`, and any other ref as
 quoted Text, as in `~'1.0'` or `~'feature/x'`. Refs exist only in documents and the host API, which

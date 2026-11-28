@@ -638,9 +638,9 @@ final class ToolTests: XCTestCase {
         XCTAssertThrowsError(try Tool.loadPath("\"\""))
     }
 
-    static let schemaText = "schema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\n"
-    static let narrowerSchemaText = "schema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 255, version: :Nothing }\n"
-    static let otherHandleText = "handle @Other of :Contact as { id: :Number integer between 0 and 9, version: :Nothing }\n"
+    static let schemaText = "schema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact with id :Number integer between 0 and 65535\n"
+    static let narrowerSchemaText = "schema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact with id :Number integer between 0 and 255\n"
+    static let otherHandleText = "handle @Other of :Contact with id :Number integer between 0 and 9\n"
     static let passingText = "module pass\non Main(args) { emit Seen(target: nothing) }\non Seen(target as @Target) { emit ConsoleOut(target is @Target) }\n"
 
     func testSchemaOptionDeclaresHandleTypesWithoutResolver() throws {

@@ -20,7 +20,7 @@ internal sealed class GesModelLayout
         Types = types;
     }
 
-    // The handle types the types reach, ordered by name, each with its composite root.
+    // The handle types the types reach, ordered by name, each with the root of a type with a part.
     internal List<GesModelHandle> Handles { get; } = [];
 
     internal List<string> Roots { get; }
@@ -82,23 +82,28 @@ internal sealed class GesModelHandle
     internal string State = "";
     internal GesHandleVersionKind Version;
 
-    // The id of a plain handle type, or the part and the root's name of a composite. A part-less composite has its root's
-    // id and version as its own and builds like a plain handle; PartlessRoot names its root.
+    // The id of a type without a part, or the part and the root's name of a type with one. A type with a root and without a
+    // part has its root's id as its own and builds like a type without a root; PartlessRoot names its root. A keyed type with a
+    // part holds its root without a version and its own version; an attached one carries its root's.
     internal GesHandleKey Id;
     internal string? Root;
     internal GesHandleKey Part;
     internal string? PartlessRoot;
+    internal bool Keyed;
 
     // The projections of the state that the layout holds, by name.
     internal List<string> Projections = [];
 
-    internal bool IsComposite => Root is not null;
+    internal bool HasPart => Root is not null;
 
-    // The key that a composite's equality compares after its root's id: its part; the id for any other.
-    internal GesHandleKey Key => IsComposite ? Part : Id;
+    // Whether the type is keyed by its root and has a part, so that it holds its own version beside its root.
+    internal bool IsKeyed => Keyed && HasPart;
+
+    // The key that equality compares after the root's id of a type with a part: its part; the id for any other.
+    internal GesHandleKey Key => HasPart ? Part : Id;
 
     internal static GesModelHandle Of(GesHandleType handle)
-        => new() { Name = handle.Name, Hash = handle.Hash, State = handle.StateName, Version = handle.Version, Id = handle.Id ?? default, Root = handle.Part is null ? null : handle.Root?.Name, Part = handle.Part ?? default, PartlessRoot = handle.Part is null ? handle.Root?.Name : null };
+        => new() { Name = handle.Name, Hash = handle.Hash, State = handle.StateName, Version = handle.Version, Id = handle.Id ?? default, Root = handle.Part is null ? null : handle.Root?.Name, Part = handle.Part ?? default, PartlessRoot = handle.Part is null ? handle.Root?.Name : null, Keyed = handle.IsKeyed };
 }
 
 internal sealed class GesModelProtocol
@@ -212,7 +217,7 @@ internal static class GesModelLayoutBuilder
 
         // A model root that is the state of a handle type with a Text id of its own reaches that type, whose store holds it.
         foreach (var handle in set.HandleTypes)
-            if (handle.Root is null && handle.StoreOf is null && handle.Id is { IsText: true } && rootNames.Contains(handle.StateName)
+            if (handle.Root is null && handle.HasState && handle.Id is { IsText: true } && rootNames.Contains(handle.StateName)
                 && reached.TryGetValue(handle.StateName, out var state) && state.Declaration == handle.Resolved.State)
                 Reach(handle, handles);
 
@@ -455,7 +460,7 @@ internal static class GesModelLayoutBuilder
         foreach (var element in type.Element) Reach(element, reached, handles);
     }
 
-    // A handle type brings its `<Name>Handle` and a composite's root handle type, whose `<Name>Handle` it holds. It never brings
+    // A handle type brings its `<Name>Handle` and the root handle type of a type with a part, whose `<Name>Handle` it holds. It never brings
     // its state schema: the generated handle names the state in documentation only, so the state is a model type only where
     // a root reaches it otherwise, as in the wire layout.
     private static void Reach(GesHandleType handle, SortedDictionary<string, GesHandleType> handles)
@@ -672,8 +677,9 @@ internal static class GesModelLayoutJson
                 json.BeginObject();
                 json.String("name", handle.Name);
                 json.String("hash", GesSchemaLayoutJson.Hex(handle.Hash));
-                json.String("state", handle.State);
+                if (handle.State.Length > 0) json.String("state", handle.State);
                 json.String("version", GesLayoutHandle.VersionName(handle.Version));
+                if ((handle.Root ?? handle.PartlessRoot) is not null) json.String("form", handle.Keyed ? "keyed" : "attached");
                 if (handle.Root is { } root)
                 {
                     json.String("root", root);

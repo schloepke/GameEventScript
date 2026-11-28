@@ -662,7 +662,7 @@ public static class GesSchemaValues
         EncodeFields(ref writer, schema, index + 1, node.Next, fields, strict);
     }
 
-    // A handle sends its identity: the id, the version of an `@Name~` field and a composite's part; a version in an `@Name`
+    // A handle sends its identity: the id, the version of an `@Name~` field and the part of a type with a part; a version in an `@Name`
     // field is dropped.
     private static void EncodeHandle(ref GesSchemaWriter writer, GesBoundSchema schema, int index, GesValue value)
     {
@@ -714,9 +714,8 @@ public static class GesSchemaValues
             child = schema.Nodes[child].Next;
         }
 
-        var composite = child < node.Next;
-        var part = composite ? DecodeNode(ref reader, schema, child) : default;
-        return GesValue.GesHandle(GesHandle.FromWire(node.SchemaName, id, version, part, composite));
+        var part = child < node.Next ? DecodeNode(ref reader, schema, child) : default;
+        return GesValue.GesHandle(GesHandle.FromWire(node.SchemaName, id, version, part, node.KeyedHandle));
     }
 
     private static GesValue DecodeHandleMap(ref GesSchemaReader reader, GesBoundSchema schema, int index)
@@ -1055,22 +1054,22 @@ public static class GesSchemaValues
     /// <summary>
     /// Computes the content hash of a handle's state (specs/Schemas.md#content-hash): SHA-256 over its compact product JSON,
     /// normalized against the state schema with defaults applied and absent or <c>nothing</c> optional fields, computed
-    /// fields and undeclared keys left out. It is the version of a <see cref="GesHandleVersionKind.ContentHash"/> type and is
+    /// fields and undeclared keys left out. It is the version of a <see cref="GesHandleVersionKind.GesHash"/> type and is
     /// available for every handle type.
     /// </summary>
     /// <param name="handleType">The handle type whose state schema normalizes the state.</param>
     /// <param name="state">A Record or Map of the state schema; the kinds and ranges of other values are not checked.</param>
     /// <returns>The content hash.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="handleType"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="handleType"/> is a store file type, which has no state.</exception>
+    /// <exception cref="ArgumentException"><paramref name="handleType"/> has no state.</exception>
     /// <exception cref="GesWireException"><c>wire.typeMismatch</c> with the path when the state, or a value of a field that
     /// only takes Records, is no Record or Map; <c>wire.missingField</c> with the path when a field without default is missing and not optional.</exception>
     public static GesHash32 ContentHash(GesHandleType handleType, GesValue state)
     {
         if (handleType is null) throw new ArgumentNullException(nameof(handleType));
-        if (handleType.StoreOf is not null) throw new ArgumentException($"The store file type '@{handleType.Name}' has no state.", nameof(handleType));
+        if (handleType.Resolved.State is not { } stateSchema) throw new ArgumentException($"'@{handleType.Name}' has no state.", nameof(handleType));
         var declarations = handleType.Declarations;
-        var normalized = NormalizeState(handleType.Resolved.State, state, "", declarations);
+        var normalized = NormalizeState(stateSchema, state, "", declarations);
         var json = GameEventScript.Runtime.GesJson.Write(new GameEventScript.Runtime.GesMessageJsonCodec().Encode(normalized, 0));
         var bytes = Encoding.UTF8.GetBytes(json);
         using var sha256 = SHA256.Create();
@@ -1080,7 +1079,7 @@ public static class GesSchemaValues
     /// <summary>
     /// Computes the content hash of a handle's state read through a projection (specs/Schemas.md#projections): the content
     /// hash of the projection's Record, normalized against the projection. It is the version of <c>@Name(:P)~</c> for a
-    /// <see cref="GesHandleVersionKind.ContentHash"/> type.
+    /// <see cref="GesHandleVersionKind.GesHash"/> type.
     /// </summary>
     /// <param name="handleType">The handle type whose state the projection narrows.</param>
     /// <param name="projection">A projection of the handle type, one of <see cref="GesHandleType.Projections"/>.</param>
@@ -1094,7 +1093,7 @@ public static class GesSchemaValues
     {
         if (handleType is null) throw new ArgumentNullException(nameof(handleType));
         if (projection is null) throw new ArgumentNullException(nameof(projection));
-        if (handleType.StoreOf is not null || !projection.Declaration.Narrows(handleType.Resolved.State))
+        if (handleType.Resolved.State is not { } stateSchema || !projection.Declaration.Narrows(stateSchema))
             throw new ArgumentException($"':{projection.Name}' is no projection of '@{handleType.Name}'.", nameof(projection));
         return ProjectedHash(handleType, projection.Declaration, Project(projection.Declaration, state));
     }

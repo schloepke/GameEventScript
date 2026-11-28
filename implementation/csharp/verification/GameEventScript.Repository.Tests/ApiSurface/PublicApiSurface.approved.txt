@@ -774,14 +774,16 @@ sealed class GameEventScript.Api.GesHandle
   method System.String ToString()
   method static GameEventScript.Api.GesHandle Create(System.String typeName, GameEventScript.Runtime.Values.GesValue id)
   method static GameEventScript.Api.GesHandle Create(System.String typeName, GameEventScript.Runtime.Values.GesValue id, GameEventScript.Runtime.Values.GesValue version)
-  method static GameEventScript.Api.GesHandle CreateComposite(System.String typeName, GameEventScript.Api.GesHandle root, GameEventScript.Runtime.Values.GesValue part)
+  method static GameEventScript.Api.GesHandle CreateAttached(System.String typeName, GameEventScript.Api.GesHandle root, GameEventScript.Runtime.Values.GesValue part)
+  method static GameEventScript.Api.GesHandle CreateKeyed(System.String typeName, GameEventScript.Api.GesHandle root, GameEventScript.Runtime.Values.GesValue part, GameEventScript.Runtime.Values.GesValue version)
   method static GameEventScript.Api.GesHandle Parse(System.String text)
   property GameEventScript.Runtime.Values.GesValue Id { get }
   property GameEventScript.Runtime.Values.GesValue Part { get }
   property GameEventScript.Runtime.Values.GesValue Ref { get }
   property GameEventScript.Runtime.Values.GesValue Version { get }
+  property System.Boolean HasPart { get }
   property System.Boolean HasVersion { get }
-  property System.Boolean IsComposite { get }
+  property System.Boolean IsKeyed { get }
   property System.String Projection { get }
   property System.String TypeName { get }
 sealed class GameEventScript.Api.GesHandleException
@@ -811,8 +813,9 @@ sealed class GameEventScript.Api.GesHandleType
   property GameEventScript.Api.GesHandleKey? Id { get }
   property GameEventScript.Api.GesHandleKey? Part { get }
   property GameEventScript.Api.GesHandleType Root { get }
-  property GameEventScript.Api.GesHandleType StoreOf { get }
   property GameEventScript.Api.GesHandleVersionKind Version { get }
+  property System.Boolean HasState { get }
+  property System.Boolean IsKeyed { get }
   property System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesSchema> Projections { get }
   property System.String CanonicalForm { get }
   property System.String Name { get }
@@ -824,7 +827,7 @@ enum GameEventScript.Api.GesHandleVersionKind
   enum-field Revision = 1
   enum-field Sha1 = 2
   enum-field Sha256 = 3
-  enum-field ContentHash = 4
+  enum-field GesHash = 4
 struct GameEventScript.Api.GesHash20
   field static System.Int32 Length
   method System.Boolean Equals(GameEventScript.Api.GesHash20 other)
@@ -1468,8 +1471,8 @@ sealed class GameEventScript.Api.GesStore
   method System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesHandle> Index(GameEventScript.Api.GesSchema projection)
   method System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesStoreEntry> Module(System.String name)
   method System.Void Resolve(GameEventScript.Api.GesHandleResolveCall call)
-  method static GameEventScript.Api.GesStore Read(GameEventScript.Api.GesHandleType type, System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesHandle> roots, GameEventScript.Api.IGesHandleResolver resolver, System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesStore> dependencies)
   method static GameEventScript.Api.GesStore Read(GameEventScript.Api.GesHandleType type, System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesStoreRoot> roots, GameEventScript.Api.IGesStoreFiles files, System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesStore> dependencies)
+  method static GameEventScript.Api.GesStore Read(GameEventScript.Api.GesHandleType type, System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesStoreSourceRoot> roots, GameEventScript.Api.IGesStoreSource source, System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesStore> dependencies)
   property GameEventScript.Api.GesHandleType Type { get }
   property GameEventScript.Api.GesStoreEntry Item { get }
   property System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesHandle> Sources { get }
@@ -1500,6 +1503,11 @@ sealed class GameEventScript.Api.GesStoreException
   field static System.String InvalidPin
   field static System.String UnknownReference
   property System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesStoreDiagnostic> Diagnostics { get }
+struct GameEventScript.Api.GesStoreFile
+  ctor GesStoreFile(System.String text, GameEventScript.Runtime.Values.GesValue version)
+  property GameEventScript.Api.GesStoreFile Missing { get }
+  property GameEventScript.Runtime.Values.GesValue Version { get }
+  property System.String Text { get }
 sealed class GameEventScript.Api.GesStoreRoot
   ctor GesStoreRoot(System.String Name, System.String Path)
   method GameEventScript.Api.GesStoreRoot <Clone>$()
@@ -1511,6 +1519,18 @@ sealed class GameEventScript.Api.GesStoreRoot
   method static System.Boolean op_Equality(GameEventScript.Api.GesStoreRoot left, GameEventScript.Api.GesStoreRoot right)
   method static System.Boolean op_Inequality(GameEventScript.Api.GesStoreRoot left, GameEventScript.Api.GesStoreRoot right)
   property System.String Name { get set }
+  property System.String Path { get set }
+sealed class GameEventScript.Api.GesStoreSourceRoot
+  ctor GesStoreSourceRoot(GameEventScript.Api.GesHandle Handle, System.String Path)
+  method GameEventScript.Api.GesStoreSourceRoot <Clone>$()
+  method System.Boolean Equals(GameEventScript.Api.GesStoreSourceRoot other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(GameEventScript.Api.GesHandle& Handle, System.String& Path)
+  method static System.Boolean op_Equality(GameEventScript.Api.GesStoreSourceRoot left, GameEventScript.Api.GesStoreSourceRoot right)
+  method static System.Boolean op_Inequality(GameEventScript.Api.GesStoreSourceRoot left, GameEventScript.Api.GesStoreSourceRoot right)
+  property GameEventScript.Api.GesHandle Handle { get set }
   property System.String Path { get set }
 struct GameEventScript.Api.GesStringConstantSegment
   method System.Int32 ResolveSize(System.UInt16 index)
@@ -1660,6 +1680,8 @@ interface GameEventScript.Api.IGesRuntimeObserver
   method System.Void RuntimeLimitReached(System.String limitName, System.String detail, System.Int32 limit)
 interface GameEventScript.Api.IGesStoreFiles
   method System.String Read(System.String root, System.String path)
+interface GameEventScript.Api.IGesStoreSource
+  method GameEventScript.Api.GesStoreFile Read(GameEventScript.Api.GesHandle root, System.String path)
 static class GameEventScript.CSharpBridge.GesBridgeContextExtensions
   method static GameEventScript.Api.GesPublishResult Publish(GameEventScript.Api.GesContext context, GameEventScript.Api.GesMessageSignature signature, System.Collections.Generic.IReadOnlyDictionary<System.String, GameEventScript.Runtime.Values.GesValue> arguments)
   method static GameEventScript.Api.GesPublishResult Publish(GameEventScript.Api.GesContext context, System.String message, System.ValueTuple<System.String, GameEventScript.Runtime.Values.GesValue>[] arguments)

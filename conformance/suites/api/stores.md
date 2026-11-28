@@ -20,9 +20,9 @@ tags: [portable-api, documents, handles]
 This suite verifies reading [stores](../../../specs/Documents.md#stores): store files with modules and imports,
 references and pins, the entries with their handles, states and origins, and every error with its position. Each case
 reads its stores in order from one file table; a later store depends on every earlier one. A store reads named
-roots or, [through handles](../../../specs/Documents.md#reading-from-handles), root handles of a store file type: the
-table's root is then the root handle's id and the path its part, `refs` give the revisions of refs, a file answers with
-its own `version`, else the requested one, else `latest`. The expectation holds the entries of the last store with its
+roots or, [from sources](../../../specs/Documents.md#reading-from-handles), root handles with the paths of their root
+files: the table's root is then the root handle's id, and a file answers with its own `version`, else the root handle's,
+else `latest`. The expectation holds the entries of the last store with its
 `sources`, the errors of the first store that fails, or the `failure` code of a handle read.
 
 ---
@@ -37,7 +37,7 @@ A store reads its root entries, module blocks, a root import whose modules join 
 gesBlock: case
 id: store-entries
 schemaApi:
-  sources: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 }\nhandle @Hull of :Hull as { id: :Text max 32, version: :ContentHash }\nschema :Composition as { name: :Text max 64, hull: @Hull~ optional, escort: @Unit optional, leader: @Unit~ optional, cost: :Number integer between 0 and 1000 default 10, tag: @Tag optional, rivals: :Map(@Unit → :Number integer between 0 and 9) max 4 optional }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Tag of :Contact as { id: :Text max 16, version: :Nothing }\nhandle @Slot of :Contact composite @Tag as { part: :Number integer between 0 and 15 }\n"]
+  sources: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 }\nhandle @Hull of :Hull with id :Text max 32 versioned by hash(#ges)\nschema :Composition as { name: :Text max 64, hull: @Hull~ optional, escort: @Unit optional, leader: @Unit~ optional, cost: :Number integer between 0 and 1000 default 10, tag: @Tag optional, rivals: :Map(@Unit → :Number integer between 0 and 9) max 4 optional }\nhandle @Unit of :Composition with id :Text max 16 versioned by hash(#ges)\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Tag of :Contact with id :Text max 16\nhandle @Slot of :Contact attached to @Tag with part :Number integer between 0 and 15\n"]
   store:
     files:
       - root: "content"
@@ -184,7 +184,7 @@ Inside a module `@b` names the entry of that module and `@s` a root entry the mo
 gesBlock: case
 id: store-references-in-module
 schemaApi:
-  sources: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 }\nhandle @Hull of :Hull as { id: :Text max 32, version: :ContentHash }\nschema :Composition as { name: :Text max 64, hull: @Hull~ optional, escort: @Unit optional, leader: @Unit~ optional, cost: :Number integer between 0 and 1000 default 10, tag: @Tag optional, rivals: :Map(@Unit → :Number integer between 0 and 9) max 4 optional }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Tag of :Contact as { id: :Text max 16, version: :Nothing }\nhandle @Slot of :Contact composite @Tag as { part: :Number integer between 0 and 15 }\n"]
+  sources: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 }\nhandle @Hull of :Hull with id :Text max 32 versioned by hash(#ges)\nschema :Composition as { name: :Text max 64, hull: @Hull~ optional, escort: @Unit optional, leader: @Unit~ optional, cost: :Number integer between 0 and 1000 default 10, tag: @Tag optional, rivals: :Map(@Unit → :Number integer between 0 and 9) max 4 optional }\nhandle @Unit of :Composition with id :Text max 16 versioned by hash(#ges)\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Tag of :Contact with id :Text max 16\nhandle @Slot of :Contact attached to @Tag with part :Number integer between 0 and 15\n"]
   store:
     files:
       - root: "content"
@@ -318,7 +318,7 @@ Two entries that refer to each other without `~` read, because the game resolves
 gesBlock: case
 id: store-unpinned-cycle
 schemaApi:
-  sources: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 }\nhandle @Hull of :Hull as { id: :Text max 32, version: :ContentHash }\nschema :Composition as { name: :Text max 64, hull: @Hull~ optional, escort: @Unit optional, leader: @Unit~ optional, cost: :Number integer between 0 and 1000 default 10, tag: @Tag optional, rivals: :Map(@Unit → :Number integer between 0 and 9) max 4 optional }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Tag of :Contact as { id: :Text max 16, version: :Nothing }\nhandle @Slot of :Contact composite @Tag as { part: :Number integer between 0 and 15 }\n"]
+  sources: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 }\nhandle @Hull of :Hull with id :Text max 32 versioned by hash(#ges)\nschema :Composition as { name: :Text max 64, hull: @Hull~ optional, escort: @Unit optional, leader: @Unit~ optional, cost: :Number integer between 0 and 1000 default 10, tag: @Tag optional, rivals: :Map(@Unit → :Number integer between 0 and 9) max 4 optional }\nhandle @Unit of :Composition with id :Text max 16 versioned by hash(#ges)\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Tag of :Contact with id :Text max 16\nhandle @Slot of :Contact attached to @Tag with part :Number integer between 0 and 15\n"]
   store:
     files:
       - root: "content"
@@ -396,7 +396,7 @@ Roots read in the given order; a file imported again on another path adds no ent
 gesBlock: case
 id: store-roots-and-shared-file
 schemaApi:
-  sources: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 }\nhandle @Hull of :Hull as { id: :Text max 32, version: :ContentHash }\nschema :Composition as { name: :Text max 64, hull: @Hull~ optional, escort: @Unit optional, leader: @Unit~ optional, cost: :Number integer between 0 and 1000 default 10, tag: @Tag optional, rivals: :Map(@Unit → :Number integer between 0 and 9) max 4 optional }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Tag of :Contact as { id: :Text max 16, version: :Nothing }\nhandle @Slot of :Contact composite @Tag as { part: :Number integer between 0 and 15 }\n"]
+  sources: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 }\nhandle @Hull of :Hull with id :Text max 32 versioned by hash(#ges)\nschema :Composition as { name: :Text max 64, hull: @Hull~ optional, escort: @Unit optional, leader: @Unit~ optional, cost: :Number integer between 0 and 1000 default 10, tag: @Tag optional, rivals: :Map(@Unit → :Number integer between 0 and 9) max 4 optional }\nhandle @Unit of :Composition with id :Text max 16 versioned by hash(#ges)\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Tag of :Contact with id :Text max 16\nhandle @Slot of :Contact attached to @Tag with part :Number integer between 0 and 15\n"]
   store:
     files:
       - root: "base"
@@ -517,7 +517,7 @@ A store file with only its header reads to a store without entries.
 gesBlock: case
 id: store-empty
 schemaApi:
-  sources: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 }\nhandle @Hull of :Hull as { id: :Text max 32, version: :ContentHash }\nschema :Composition as { name: :Text max 64, hull: @Hull~ optional, escort: @Unit optional, leader: @Unit~ optional, cost: :Number integer between 0 and 1000 default 10, tag: @Tag optional, rivals: :Map(@Unit → :Number integer between 0 and 9) max 4 optional }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Tag of :Contact as { id: :Text max 16, version: :Nothing }\nhandle @Slot of :Contact composite @Tag as { part: :Number integer between 0 and 15 }\n"]
+  sources: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 }\nhandle @Hull of :Hull with id :Text max 32 versioned by hash(#ges)\nschema :Composition as { name: :Text max 64, hull: @Hull~ optional, escort: @Unit optional, leader: @Unit~ optional, cost: :Number integer between 0 and 1000 default 10, tag: @Tag optional, rivals: :Map(@Unit → :Number integer between 0 and 9) max 4 optional }\nhandle @Unit of :Composition with id :Text max 16 versioned by hash(#ges)\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Tag of :Contact with id :Text max 16\nhandle @Slot of :Contact attached to @Tag with part :Number integer between 0 and 15\n"]
   store:
     files:
       - root: "content"
@@ -551,7 +551,7 @@ A missing root has no line, a missing import, an import above the root, an impor
 gesBlock: case
 id: store-import-errors
 schemaApi:
-  sources: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 }\nhandle @Hull of :Hull as { id: :Text max 32, version: :ContentHash }\nschema :Composition as { name: :Text max 64, hull: @Hull~ optional, escort: @Unit optional, leader: @Unit~ optional, cost: :Number integer between 0 and 1000 default 10, tag: @Tag optional, rivals: :Map(@Unit → :Number integer between 0 and 9) max 4 optional }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Tag of :Contact as { id: :Text max 16, version: :Nothing }\nhandle @Slot of :Contact composite @Tag as { part: :Number integer between 0 and 15 }\n"]
+  sources: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 }\nhandle @Hull of :Hull with id :Text max 32 versioned by hash(#ges)\nschema :Composition as { name: :Text max 64, hull: @Hull~ optional, escort: @Unit optional, leader: @Unit~ optional, cost: :Number integer between 0 and 1000 default 10, tag: @Tag optional, rivals: :Map(@Unit → :Number integer between 0 and 9) max 4 optional }\nhandle @Unit of :Composition with id :Text max 16 versioned by hash(#ges)\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Tag of :Contact with id :Text max 16\nhandle @Slot of :Contact attached to @Tag with part :Number integer between 0 and 15\n"]
   store:
     files:
       - root: "content"
@@ -649,7 +649,7 @@ A root file that is a state document is `store.importKind` at its start, a store
 gesBlock: case
 id: store-root-kind-and-type
 schemaApi:
-  sources: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 }\nhandle @Hull of :Hull as { id: :Text max 32, version: :ContentHash }\nschema :Composition as { name: :Text max 64, hull: @Hull~ optional, escort: @Unit optional, leader: @Unit~ optional, cost: :Number integer between 0 and 1000 default 10, tag: @Tag optional, rivals: :Map(@Unit → :Number integer between 0 and 9) max 4 optional }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Tag of :Contact as { id: :Text max 16, version: :Nothing }\nhandle @Slot of :Contact composite @Tag as { part: :Number integer between 0 and 15 }\n"]
+  sources: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 }\nhandle @Hull of :Hull with id :Text max 32 versioned by hash(#ges)\nschema :Composition as { name: :Text max 64, hull: @Hull~ optional, escort: @Unit optional, leader: @Unit~ optional, cost: :Number integer between 0 and 1000 default 10, tag: @Tag optional, rivals: :Map(@Unit → :Number integer between 0 and 9) max 4 optional }\nhandle @Unit of :Composition with id :Text max 16 versioned by hash(#ges)\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Tag of :Contact with id :Text max 16\nhandle @Slot of :Contact attached to @Tag with part :Number integer between 0 and 15\n"]
   store:
     files:
       - root: "a"
@@ -700,7 +700,7 @@ Each file reports at most its first document error with document codes; while an
 gesBlock: case
 id: store-reading-errors
 schemaApi:
-  sources: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 }\nhandle @Hull of :Hull as { id: :Text max 32, version: :ContentHash }\nschema :Composition as { name: :Text max 64, hull: @Hull~ optional, escort: @Unit optional, leader: @Unit~ optional, cost: :Number integer between 0 and 1000 default 10, tag: @Tag optional, rivals: :Map(@Unit → :Number integer between 0 and 9) max 4 optional }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Tag of :Contact as { id: :Text max 16, version: :Nothing }\nhandle @Slot of :Contact composite @Tag as { part: :Number integer between 0 and 15 }\n"]
+  sources: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 }\nhandle @Hull of :Hull with id :Text max 32 versioned by hash(#ges)\nschema :Composition as { name: :Text max 64, hull: @Hull~ optional, escort: @Unit optional, leader: @Unit~ optional, cost: :Number integer between 0 and 1000 default 10, tag: @Tag optional, rivals: :Map(@Unit → :Number integer between 0 and 9) max 4 optional }\nhandle @Unit of :Composition with id :Text max 16 versioned by hash(#ges)\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Tag of :Contact with id :Text max 16\nhandle @Slot of :Contact attached to @Tag with part :Number integer between 0 and 15\n"]
   store:
     files:
       - root: "content"
@@ -752,7 +752,7 @@ An id longer than the id max is `store.invalidId` at its key; a repeated id is `
 gesBlock: case
 id: store-id-errors
 schemaApi:
-  sources: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 }\nhandle @Hull of :Hull as { id: :Text max 32, version: :ContentHash }\nschema :Composition as { name: :Text max 64, hull: @Hull~ optional, escort: @Unit optional, leader: @Unit~ optional, cost: :Number integer between 0 and 1000 default 10, tag: @Tag optional, rivals: :Map(@Unit → :Number integer between 0 and 9) max 4 optional }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Tag of :Contact as { id: :Text max 16, version: :Nothing }\nhandle @Slot of :Contact composite @Tag as { part: :Number integer between 0 and 15 }\n"]
+  sources: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 }\nhandle @Hull of :Hull with id :Text max 32 versioned by hash(#ges)\nschema :Composition as { name: :Text max 64, hull: @Hull~ optional, escort: @Unit optional, leader: @Unit~ optional, cost: :Number integer between 0 and 1000 default 10, tag: @Tag optional, rivals: :Map(@Unit → :Number integer between 0 and 9) max 4 optional }\nhandle @Unit of :Composition with id :Text max 16 versioned by hash(#ges)\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Tag of :Contact with id :Text max 16\nhandle @Slot of :Contact attached to @Tag with part :Number integer between 0 and 15\n"]
   store:
     files:
       - root: "content"
@@ -819,7 +819,7 @@ An unknown reference suggests the first id whose last segment equals the written
 gesBlock: case
 id: store-unknown-references
 schemaApi:
-  sources: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 }\nhandle @Hull of :Hull as { id: :Text max 32, version: :ContentHash }\nschema :Composition as { name: :Text max 64, hull: @Hull~ optional, escort: @Unit optional, leader: @Unit~ optional, cost: :Number integer between 0 and 1000 default 10, tag: @Tag optional, rivals: :Map(@Unit → :Number integer between 0 and 9) max 4 optional }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Tag of :Contact as { id: :Text max 16, version: :Nothing }\nhandle @Slot of :Contact composite @Tag as { part: :Number integer between 0 and 15 }\n"]
+  sources: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 }\nhandle @Hull of :Hull with id :Text max 32 versioned by hash(#ges)\nschema :Composition as { name: :Text max 64, hull: @Hull~ optional, escort: @Unit optional, leader: @Unit~ optional, cost: :Number integer between 0 and 1000 default 10, tag: @Tag optional, rivals: :Map(@Unit → :Number integer between 0 and 9) max 4 optional }\nhandle @Unit of :Composition with id :Text max 16 versioned by hash(#ges)\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Tag of :Contact with id :Text max 16\nhandle @Slot of :Contact attached to @Tag with part :Number integer between 0 and 15\n"]
   store:
     files:
       - root: "content"
@@ -901,7 +901,7 @@ When the own module and the root both have the key, the reference is `store.ambi
 gesBlock: case
 id: store-ambiguous-reference
 schemaApi:
-  sources: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 }\nhandle @Hull of :Hull as { id: :Text max 32, version: :ContentHash }\nschema :Composition as { name: :Text max 64, hull: @Hull~ optional, escort: @Unit optional, leader: @Unit~ optional, cost: :Number integer between 0 and 1000 default 10, tag: @Tag optional, rivals: :Map(@Unit → :Number integer between 0 and 9) max 4 optional }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Tag of :Contact as { id: :Text max 16, version: :Nothing }\nhandle @Slot of :Contact composite @Tag as { part: :Number integer between 0 and 15 }\n"]
+  sources: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 }\nhandle @Hull of :Hull with id :Text max 32 versioned by hash(#ges)\nschema :Composition as { name: :Text max 64, hull: @Hull~ optional, escort: @Unit optional, leader: @Unit~ optional, cost: :Number integer between 0 and 1000 default 10, tag: @Tag optional, rivals: :Map(@Unit → :Number integer between 0 and 9) max 4 optional }\nhandle @Unit of :Composition with id :Text max 16 versioned by hash(#ges)\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Tag of :Contact with id :Text max 16\nhandle @Slot of :Contact attached to @Tag with part :Number integer between 0 and 15\n"]
   store:
     files:
       - root: "content"
@@ -941,7 +941,7 @@ Pinning a handle of a type whose version is not a content hash, or of a type wit
 gesBlock: case
 id: store-invalid-pins
 schemaApi:
-  sources: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 }\nhandle @Hull of :Hull as { id: :Text max 32, version: :ContentHash }\nschema :Composition as { name: :Text max 64, hull: @Hull~ optional, escort: @Unit optional, leader: @Unit~ optional, cost: :Number integer between 0 and 1000 default 10, tag: @Tag optional, rivals: :Map(@Unit → :Number integer between 0 and 9) max 4 optional }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Tag of :Contact as { id: :Text max 16, version: :Nothing }\nhandle @Slot of :Contact composite @Tag as { part: :Number integer between 0 and 15 }\n"]
+  sources: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 }\nhandle @Hull of :Hull with id :Text max 32 versioned by hash(#ges)\nschema :Composition as { name: :Text max 64, hull: @Hull~ optional, escort: @Unit optional, leader: @Unit~ optional, cost: :Number integer between 0 and 1000 default 10, tag: @Tag optional, rivals: :Map(@Unit → :Number integer between 0 and 9) max 4 optional }\nhandle @Unit of :Composition with id :Text max 16 versioned by hash(#ges)\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Tag of :Contact with id :Text max 16\nhandle @Slot of :Contact attached to @Tag with part :Number integer between 0 and 15\n"]
   store:
     files:
       - root: "content"
@@ -987,7 +987,7 @@ Pinned references from a to b and back are `store.dependencyCycle` at the refere
 gesBlock: case
 id: store-dependency-cycle
 schemaApi:
-  sources: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 }\nhandle @Hull of :Hull as { id: :Text max 32, version: :ContentHash }\nschema :Composition as { name: :Text max 64, hull: @Hull~ optional, escort: @Unit optional, leader: @Unit~ optional, cost: :Number integer between 0 and 1000 default 10, tag: @Tag optional, rivals: :Map(@Unit → :Number integer between 0 and 9) max 4 optional }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Tag of :Contact as { id: :Text max 16, version: :Nothing }\nhandle @Slot of :Contact composite @Tag as { part: :Number integer between 0 and 15 }\n"]
+  sources: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 }\nhandle @Hull of :Hull with id :Text max 32 versioned by hash(#ges)\nschema :Composition as { name: :Text max 64, hull: @Hull~ optional, escort: @Unit optional, leader: @Unit~ optional, cost: :Number integer between 0 and 1000 default 10, tag: @Tag optional, rivals: :Map(@Unit → :Number integer between 0 and 9) max 4 optional }\nhandle @Unit of :Composition with id :Text max 16 versioned by hash(#ges)\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Tag of :Contact with id :Text max 16\nhandle @Slot of :Contact attached to @Tag with part :Number integer between 0 and 15\n"]
   store:
     files:
       - root: "content"
@@ -1033,7 +1033,7 @@ Each entry reports at most one schema error with its field path; an unpinned han
 gesBlock: case
 id: store-schema-errors
 schemaApi:
-  sources: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 }\nhandle @Hull of :Hull as { id: :Text max 32, version: :ContentHash }\nschema :Composition as { name: :Text max 64, hull: @Hull~ optional, escort: @Unit optional, leader: @Unit~ optional, cost: :Number integer between 0 and 1000 default 10, tag: @Tag optional, rivals: :Map(@Unit → :Number integer between 0 and 9) max 4 optional }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Tag of :Contact as { id: :Text max 16, version: :Nothing }\nhandle @Slot of :Contact composite @Tag as { part: :Number integer between 0 and 15 }\n"]
+  sources: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 }\nhandle @Hull of :Hull with id :Text max 32 versioned by hash(#ges)\nschema :Composition as { name: :Text max 64, hull: @Hull~ optional, escort: @Unit optional, leader: @Unit~ optional, cost: :Number integer between 0 and 1000 default 10, tag: @Tag optional, rivals: :Map(@Unit → :Number integer between 0 and 9) max 4 optional }\nhandle @Unit of :Composition with id :Text max 16 versioned by hash(#ges)\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Tag of :Contact with id :Text max 16\nhandle @Slot of :Contact attached to @Tag with part :Number integer between 0 and 15\n"]
   store:
     files:
       - root: "content"
@@ -1095,7 +1095,7 @@ An entry whose value is no Map literal is `document.unexpectedToken` at its star
 gesBlock: case
 id: store-not-a-map
 schemaApi:
-  sources: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 }\nhandle @Hull of :Hull as { id: :Text max 32, version: :ContentHash }\nschema :Composition as { name: :Text max 64, hull: @Hull~ optional, escort: @Unit optional, leader: @Unit~ optional, cost: :Number integer between 0 and 1000 default 10, tag: @Tag optional, rivals: :Map(@Unit → :Number integer between 0 and 9) max 4 optional }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Tag of :Contact as { id: :Text max 16, version: :Nothing }\nhandle @Slot of :Contact composite @Tag as { part: :Number integer between 0 and 15 }\n"]
+  sources: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 }\nhandle @Hull of :Hull with id :Text max 32 versioned by hash(#ges)\nschema :Composition as { name: :Text max 64, hull: @Hull~ optional, escort: @Unit optional, leader: @Unit~ optional, cost: :Number integer between 0 and 1000 default 10, tag: @Tag optional, rivals: :Map(@Unit → :Number integer between 0 and 9) max 4 optional }\nhandle @Unit of :Composition with id :Text max 16 versioned by hash(#ges)\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Tag of :Contact with id :Text max 16\nhandle @Slot of :Contact attached to @Tag with part :Number integer between 0 and 15\n"]
   store:
     files:
       - root: "content"
@@ -1123,9 +1123,9 @@ schema:
           column: 4
 ```
 
-## Test: roots read through handles
+## Test: a store read from sources
 
-Each root is a handle of the store file type: a ref resolves to its revision first, a root without a version is pinned by the version of its first answer, imports request the composite handle with the root-relative path, origins name the root handle as given, and the sources are the roots with their versions.
+Each source is a root handle of a type without state with the path of its root file: a root without a version is pinned by the version of its first answer, a root with one is asked at it, imports ask the root at the root-relative path, origins name the root handle as given, and the sources are the root handles with their versions.
 
 ### Case description
 
@@ -1133,9 +1133,8 @@ Each root is a handle of the store file type: a ref resolves to its revision fir
 gesBlock: case
 id: store-handle-roots
 schemaApi:
-  sources: ["schema :Composition as { name: :Text max 16, escort: @Unit optional }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Source as { text: :Text }\nhandle @Repository of :Source as { id: :Text max 16, version: :Number integer between 0 and 1000 }\nhandle @UnitFiles of :Store(@Unit) composite @Repository as { part: :Text max 12 }\n"]
+  sources: ["schema :Composition as { name: :Text max 16, escort: @Unit optional }\nhandle @Unit of :Composition with id :Text max 16 versioned by hash(#ges)\nhandle @Repository with id :Text max 16 versioned by revision max 1000\n"]
   store:
-    refs: { "#main": 7 }
     latest: 3
     files:
       - root: "content"
@@ -1149,7 +1148,11 @@ schemaApi:
         text: ":Store(@Unit)\nmodule mod { two: [name: 'Two'] }\n"
     stores:
       - type: "Unit"
-        handles: ["@UnitFiles:content~#main/units.gesd", "@UnitFiles:mod/mod.gesd"]
+        sources:
+          - handle: "@Repository:content~7"
+            path: "units.gesd"
+          - handle: "@Repository:mod"
+            path: "mod.gesd"
 ```
 
 ### Expectation
@@ -1162,7 +1165,7 @@ schema:
       - id: "extra.one"
         handle: "@Unit:extra.one~15f58b6f29c8314325163aa044b637271a45efc8d04e367764b82f7677d74698"
         origin:
-          root: "@UnitFiles:content~#main/units.gesd"
+          root: "@Repository:content~7"
           path: "more.gesd"
           line: 2
           column: 16
@@ -1180,7 +1183,7 @@ schema:
       - id: "mod.two"
         handle: "@Unit:mod.two~40f5efd57837aed432a64836d7c09be3103ae42b5f5e3eb1a0412d2969460088"
         origin:
-          root: "@UnitFiles:mod/mod.gesd"
+          root: "@Repository:mod"
           path: "mod.gesd"
           line: 2
           column: 14
@@ -1194,7 +1197,7 @@ schema:
       - id: "scout"
         handle: "@Unit:scout~dc20cbd6764a0396a056b91678b026841cc3629021959ba35a0d3ddd376873bc"
         origin:
-          root: "@UnitFiles:content~#main/units.gesd"
+          root: "@Repository:content~7"
           path: "units.gesd"
           line: 3
           column: 1
@@ -1206,8 +1209,8 @@ schema:
                 type: ":Text"
                 value: "Scout"
     sources:
-      - "@UnitFiles:content~7/units.gesd"
-      - "@UnitFiles:mod~3/mod.gesd"
+      - "@Repository:content~7"
+      - "@Repository:mod~3"
 ```
 
 ## Test: a root answers with one version
@@ -1220,7 +1223,7 @@ A root without a version is pinned by its first answer; a later file of that roo
 gesBlock: case
 id: store-handle-version-mismatch
 schemaApi:
-  sources: ["schema :Composition as { name: :Text max 16, escort: @Unit optional }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Source as { text: :Text }\nhandle @Repository of :Source as { id: :Text max 16, version: :Number integer between 0 and 1000 }\nhandle @UnitFiles of :Store(@Unit) composite @Repository as { part: :Text max 12 }\n"]
+  sources: ["schema :Composition as { name: :Text max 16, escort: @Unit optional }\nhandle @Unit of :Composition with id :Text max 16 versioned by hash(#ges)\nhandle @Repository with id :Text max 16 versioned by revision max 1000\n"]
   store:
     files:
       - root: "content"
@@ -1233,7 +1236,9 @@ schemaApi:
         version: 5
     stores:
       - type: "Unit"
-        handles: ["@UnitFiles:content/units.gesd"]
+        sources:
+          - handle: "@Repository:content"
+            path: "units.gesd"
 ```
 
 ### Expectation
@@ -1245,9 +1250,9 @@ schema:
     failure: "runtime.handleVersionMismatch"
 ```
 
-## Test: an unknown ref and a path beyond the part's max
+## Test: a missing root file and a path beyond 256 bytes
 
-A root whose ref the resolver does not know is `store.importMissing` for its root file; an import whose path is longer than the part's `max` is `store.importMissing` at its path without a request.
+A root file the source does not have is `store.importMissing` for its root file; an import whose path is longer than 256 UTF-8 bytes is `store.importMissing` at its path without a request.
 
 ### Case description
 
@@ -1255,19 +1260,22 @@ A root whose ref the resolver does not know is `store.importMissing` for its roo
 gesBlock: case
 id: store-handle-missing
 schemaApi:
-  sources: ["schema :Composition as { name: :Text max 16, escort: @Unit optional }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\nschema :Source as { text: :Text }\nhandle @Repository of :Source as { id: :Text max 16, version: :Number integer between 0 and 1000 }\nhandle @UnitFiles of :Store(@Unit) composite @Repository as { part: :Text max 12 }\n"]
+  sources: ["schema :Composition as { name: :Text max 16, escort: @Unit optional }\nhandle @Unit of :Composition with id :Text max 16 versioned by hash(#ges)\nhandle @Repository with id :Text max 16 versioned by revision max 1000\n"]
   store:
-    refs: { "#main": 7 }
     files:
       - root: "content"
         path: "units.gesd"
-        text: ":Store(@Unit)\nimport 'drones/all.gesd'\nscout: [name: 'Scout']\n"
+        text: ":Store(@Unit)\nimport 'd/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/all.gesd'\nscout: [name: 'Scout']\n"
       - root: "content"
-        path: "drones/all.gesd"
+        path: "d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/d/all.gesd"
         text: ":Store(@Unit)\none: [name: 'One']\n"
     stores:
       - type: "Unit"
-        handles: ["@UnitFiles:content~#main/units.gesd", "@UnitFiles:content~#gone/units.gesd"]
+        sources:
+          - handle: "@Repository:content"
+            path: "units.gesd"
+          - handle: "@Repository:gone"
+            path: "units.gesd"
 ```
 
 ### Expectation
@@ -1279,13 +1287,13 @@ schema:
     errors:
       - code: "store.importMissing"
         location:
-          root: "@UnitFiles:content~#main/units.gesd"
+          root: "@Repository:content"
           path: "units.gesd"
           line: 2
           column: 8
       - code: "store.importMissing"
         location:
-          root: "@UnitFiles:content~#gone/units.gesd"
+          root: "@Repository:gone"
           path: "units.gesd"
 ```
 
@@ -1301,7 +1309,7 @@ The index of a projection holds every entry's handle in id order with the projec
 gesBlock: case
 id: store-projection-index
 schemaApi:
-  sources: ["schema :Composition as { name: :Text max 32, icon: :Text max 16, mass: :Number integer between 0 and 1000 }\nprojection :UnitDisplay of :Composition as { name, icon }\nprojection :UnitLabel of :UnitDisplay as { name }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\n"]
+  sources: ["schema :Composition as { name: :Text max 32, icon: :Text max 16, mass: :Number integer between 0 and 1000 }\nprojection :UnitDisplay of :Composition as { name, icon }\nprojection :UnitLabel of :UnitDisplay as { name }\nhandle @Unit of :Composition with id :Text max 16 versioned by hash(#ges)\n"]
   store:
     files:
       - root: "content"
@@ -1413,7 +1421,7 @@ optional field as absent, a nested path as the Record it builds, and a reference
 gesBlock: case
 id: store-index-versions
 schemaApi:
-  sources: ["schema :Look as { icon: :Text max 16, scale: :Number between 0 and 4 step 0.25 default 1 }\nschema :Composition as { name: :Text max 32, look: :Look, tags: :List(:Text max 8) max 4 default [], escort: @Unit optional, mass: :Number integer between 0 and 1000 }\nprojection :UnitCard of :Composition as { name, icon: look.icon, scale: look.scale, tags, escort }\nhandle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\n"]
+  sources: ["schema :Look as { icon: :Text max 16, scale: :Number between 0 and 4 step 0.25 default 1 }\nschema :Composition as { name: :Text max 32, look: :Look, tags: :List(:Text max 8) max 4 default [], escort: @Unit optional, mass: :Number integer between 0 and 1000 }\nprojection :UnitCard of :Composition as { name, icon: look.icon, scale: look.scale, tags, escort }\nhandle @Unit of :Composition with id :Text max 16 versioned by hash(#ges)\n"]
   store:
     files:
       - root: "content"

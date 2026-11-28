@@ -69,7 +69,7 @@ public struct GesSchemaGenerateOptions: Sendable {
     /// The code reads text and does no file I/O. Only model generation takes it.
     public var documents: Bool
     /// Whether model generation also writes a typed store `<Name>Store` for every handle type whose state is a model root,
-    /// whose id is Text and that is not composite (specs/Schemas.md#model-stores). It reads, holds and resolves the states
+    /// whose id is Text and that has no root (specs/Schemas.md#model-stores). It reads, holds and resolves the states
     /// of that type and includes `documents`. Only model generation takes it.
     public var stores: Bool
     /// How the code is divided into files. `.none`, the default, is the single text of `generate` and `generateModels`; the

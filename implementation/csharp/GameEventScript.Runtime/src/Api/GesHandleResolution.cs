@@ -40,7 +40,7 @@ public interface IGesHandleResolver
     /// <see langword="null"/>, a handle of another type or root, or a repeated handle, ends the read with
     /// <c>runtime.handleResolveFailed</c>.
     /// </summary>
-    /// <param name="root">The root handle of a composite type with a part, whose parts to list; <see langword="null"/> for every object of the type.</param>
+    /// <param name="root">The root handle of a type with a part, whose parts to list; <see langword="null"/> for every object of the type.</param>
     /// <returns>The handles, or <see langword="null"/> when the type does not enumerate.</returns>
     IReadOnlyList<GesHandle>? Handles(GesHandle? root) => null;
 

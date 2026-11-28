@@ -13,11 +13,12 @@ namespace GameEventScript.Api;
 /// <summary>
 /// An immutable handle: the identity of an object that lives outside the host, of one handle type, and optionally its
 /// version or a ref that names one, and the projection it reads through. Equality, hashing, order and the text form use the
-/// type and the identity and ignore version, ref and projection.
+/// type and the identity and ignore version, ref and projection. A handle of a type with a root carries the root's id
+/// and its part, if the type has one; an attached handle carries its root's version, a keyed handle its own.
 /// </summary>
 public sealed class GesHandle : IEquatable<GesHandle>, IComparable<GesHandle>
 {
-    private GesHandle(string typeName, GesValue id, GesValue version, GesValue reference, GesValue part, bool isComposite, string projection = "")
+    private GesHandle(string typeName, GesValue id, GesValue version, GesValue reference, GesValue part, bool isKeyed, string projection = "")
     {
         Projection = projection;
         TypeName = typeName;
@@ -25,26 +26,35 @@ public sealed class GesHandle : IEquatable<GesHandle>, IComparable<GesHandle>
         Version = version;
         Ref = reference;
         Part = part;
-        IsComposite = isComposite;
+        IsKeyed = isKeyed && !part.IsNothing;
     }
 
     /// <summary>Gets the handle type name, without the leading <c>@</c>.</summary>
     public string TypeName { get; }
 
-    /// <summary>Gets the id, an integer Number or a Text; a composite's is its root's.</summary>
+    /// <summary>Gets the id, an integer Number or a Text; that of a handle of a type with a root is its root's.</summary>
     public GesValue Id { get; }
 
-    /// <summary>Gets the version: an integer Number for a revision, Bytes for a hash, otherwise Nothing; a composite's is its root's.</summary>
+    /// <summary>
+    /// Gets the version: an integer Number for a revision, Bytes for a hash, otherwise Nothing; an attached handle's is its
+    /// root's, a keyed handle's its own.
+    /// </summary>
     public GesValue Version { get; }
 
     /// <summary>Gets the ref that names a version through the owner, a Tag or a Text, otherwise Nothing.</summary>
     public GesValue Ref { get; }
 
-    /// <summary>Gets the part of a composite, an integer Number or a Text; Nothing for any other handle.</summary>
+    /// <summary>Gets the part of a handle of a type with a root and a part, an integer Number or a Text; Nothing for any other handle.</summary>
     public GesValue Part { get; }
 
-    /// <summary>Gets whether the handle is a composite: a part of a root object.</summary>
-    public bool IsComposite { get; }
+    /// <summary>Gets whether the handle carries a part.</summary>
+    public bool HasPart => !Part.IsNothing;
+
+    /// <summary>
+    /// Gets whether the handle is a keyed handle with a part, whose text form writes its own version after the part; equality and
+    /// order ignore it.
+    /// </summary>
+    public bool IsKeyed { get; }
 
     /// <summary>
     /// Gets the name of the <see href="https://gameeventscript.org/specs/Schemas.html#projections">projection</see> the
@@ -71,25 +81,46 @@ public sealed class GesHandle : IEquatable<GesHandle>, IComparable<GesHandle>
     public static GesHandle Create(string typeName, GesValue id, GesValue version)
         => new(CheckTypeName(typeName), CheckKey(id, nameof(id)), CheckVersion(version, nameof(version)), default, default, false);
 
-    /// <summary>Creates a composite: a part of the object of a root handle, with the root's id, version and ref.</summary>
-    /// <param name="typeName">The composite handle type name, without the leading <c>@</c>.</param>
-    /// <param name="root">The root handle, which is no composite.</param>
-    /// <param name="part">The part, an integer Number or a Text.</param>
+    /// <summary>
+    /// Creates an attached handle (specs/Schemas.md#handles): an object that belongs to the object of a root handle, with the
+    /// root's id, version and ref and optionally a part.
+    /// </summary>
+    /// <param name="typeName">The attached handle type name, without the leading <c>@</c>.</param>
+    /// <param name="root">The root handle, which carries no part.</param>
+    /// <param name="part">The part, an integer Number or a Text; Nothing for a type without a part.</param>
     /// <returns>The handle.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="root"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when the type name or the part is invalid or the root is a composite.</exception>
-    public static GesHandle CreateComposite(string typeName, GesHandle root, GesValue part)
+    /// <exception cref="ArgumentException">Thrown when the type name or the part is invalid or the root carries a part.</exception>
+    public static GesHandle CreateAttached(string typeName, GesHandle root, GesValue part = default)
     {
         if (root is null) throw new ArgumentNullException(nameof(root));
-        if (root.IsComposite) throw new ArgumentException("A composite's root is no composite.", nameof(root));
-        return new GesHandle(CheckTypeName(typeName), root.Id, root.Version, root.Ref, CheckKey(part, nameof(part)), true);
+        if (root.HasPart) throw new ArgumentException("A root carries no part.", nameof(root));
+        return new GesHandle(CheckTypeName(typeName), root.Id, root.Version, root.Ref, part.IsNothing ? default : CheckKey(part, nameof(part)), false);
     }
 
-    /// <summary>Returns the handle with a version instead of its version or ref; a composite takes it as its root's.</summary>
+    /// <summary>
+    /// Creates a keyed handle (specs/Schemas.md#handles): an object of its own, identified by a root handle's id and optionally a
+    /// part, with its own version; the root's version and ref are not carried.
+    /// </summary>
+    /// <param name="typeName">The keyed handle type name, without the leading <c>@</c>.</param>
+    /// <param name="root">The root handle, which carries no part.</param>
+    /// <param name="part">The part, an integer Number or a Text; Nothing for a type without a part.</param>
+    /// <param name="version">An integer Number for a revision or 20 or 32 Bytes for a hash; Nothing for none.</param>
+    /// <returns>The handle.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="root"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when the type name, the part or the version is invalid or the root carries a part.</exception>
+    public static GesHandle CreateKeyed(string typeName, GesHandle root, GesValue part = default, GesValue version = default)
+    {
+        if (root is null) throw new ArgumentNullException(nameof(root));
+        if (root.HasPart) throw new ArgumentException("A root carries no part.", nameof(root));
+        return new GesHandle(CheckTypeName(typeName), root.Id, CheckVersion(version, nameof(version)), default, part.IsNothing ? default : CheckKey(part, nameof(part)), true);
+    }
+
+    /// <summary>Returns the handle with a version instead of its version or ref; an attached handle takes it as its root's.</summary>
     /// <param name="version">An integer Number for a revision or 20 or 32 Bytes for a hash; Nothing for none.</param>
     /// <returns>The handle with the version.</returns>
     /// <exception cref="ArgumentException">Thrown when the version is invalid.</exception>
-    public GesHandle WithVersion(GesValue version) => new(TypeName, Id, CheckVersion(version, nameof(version)), default, Part, IsComposite, Projection);
+    public GesHandle WithVersion(GesValue version) => new(TypeName, Id, CheckVersion(version, nameof(version)), default, Part, IsKeyed, Projection);
 
     /// <summary>Returns the handle reading its state through a projection, or through the full view for an empty name.</summary>
     /// <param name="projection">The projection's schema name without the leading <c>:</c>, or empty for the full view.</param>
@@ -100,20 +131,23 @@ public sealed class GesHandle : IEquatable<GesHandle>, IComparable<GesHandle>
     {
         if (projection is null) throw new ArgumentNullException(nameof(projection));
         if (projection.Length > 0 && !GesText.IsTypeName(projection)) throw new ArgumentException($"'{projection}' is no projection name.", nameof(projection));
-        return string.Equals(projection, Projection, StringComparison.Ordinal) ? this : new GesHandle(TypeName, Id, Version, Ref, Part, IsComposite, projection);
+        return string.Equals(projection, Projection, StringComparison.Ordinal) ? this : new GesHandle(TypeName, Id, Version, Ref, Part, IsKeyed, projection);
     }
 
     // A handle from wire parts that its schema already checked.
-    internal static GesHandle FromWire(string typeName, GesValue id, GesValue version, GesValue part, bool isComposite) => new(typeName, id, version, default, part, isComposite);
+    internal static GesHandle FromWire(string typeName, GesValue id, GesValue version, GesValue part, bool isKeyed) => new(typeName, id, version, default, part, isKeyed);
 
-    internal GesHandle WithoutVersion() => Version.IsNothing && Ref.IsNothing ? this : new GesHandle(TypeName, Id, default, default, Part, IsComposite, Projection);
+    internal GesHandle WithoutVersion() => Version.IsNothing && Ref.IsNothing ? this : new GesHandle(TypeName, Id, default, default, Part, IsKeyed, Projection);
 
     // A checked version and a projection name at once, as narrowing needs them.
-    internal GesHandle WithView(GesValue version, string projection) => new(TypeName, Id, version, default, Part, IsComposite, projection);
+    internal GesHandle WithView(GesValue version, string projection) => new(TypeName, Id, version, default, Part, IsKeyed, projection);
 
-    internal static GesHandle CreateWithRef(GesHandle handle, GesValue reference) => new(handle.TypeName, handle.Id, default, reference, handle.Part, handle.IsComposite, handle.Projection);
+    internal static GesHandle CreateWithRef(GesHandle handle, GesValue reference) => new(handle.TypeName, handle.Id, default, reference, handle.Part, handle.IsKeyed, handle.Projection);
 
-    /// <summary>Reads the text form of a handle, a ref included, such as <c>@Drone:7~120</c> or <c>@Unit:drone.gnabblo~#live</c>.</summary>
+    /// <summary>
+    /// Reads the text form of a handle, a ref included, such as <c>@Drone:7~120</c>, <c>@Unit:drone.gnabblo~#live</c>, the attached
+    /// <c>@UnitSlot:drone.gnabblo~3f2a…/1</c> or the keyed <c>@Stats:3/7~12</c>, whose version after the part marks it as keyed.
+    /// </summary>
     /// <param name="text">The text form.</param>
     /// <returns>The handle.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/>.</exception>
@@ -143,7 +177,7 @@ public sealed class GesHandle : IEquatable<GesHandle>, IComparable<GesHandle>
             case GesHandleLiteral.VersionForm.Text: reference = GesValue.GesText(parts.VersionText); break;
         }
 
-        handle = new GesHandle(parts.TypeName, Key(parts.Id), version, reference, parts.HasPart ? Key(parts.Part) : default, parts.HasPart);
+        handle = new GesHandle(parts.TypeName, Key(parts.Id), version, reference, parts.HasPart ? Key(parts.Part) : default, parts.VersionAfterPart);
         return true;
 
         static GesValue Key(GesHandleLiteral.Key key) => key.IsInteger ? GesValue.GesInteger(key.Integer) : GesValue.GesText(key.Text);
@@ -162,6 +196,12 @@ public sealed class GesHandle : IEquatable<GesHandle>, IComparable<GesHandle>
     {
         builder.Append('@').Append(TypeName).Append(':');
         WriteKey(Id, false, builder);
+        if (IsKeyed)
+        {
+            builder.Append('/');
+            WriteKey(Part, true, builder);
+        }
+
         if (!Version.IsNothing)
         {
             builder.Append('~');
@@ -175,7 +215,7 @@ public sealed class GesHandle : IEquatable<GesHandle>, IComparable<GesHandle>
             else AppendQuoted(Ref.AsText(), builder);
         }
 
-        if (!IsComposite) return;
+        if (!HasPart || IsKeyed) return;
         builder.Append('/');
         WriteKey(Part, true, builder);
     }
@@ -184,8 +224,7 @@ public sealed class GesHandle : IEquatable<GesHandle>, IComparable<GesHandle>
     /// <param name="other">The other handle.</param>
     /// <returns><see langword="true"/> when type and identity are equal.</returns>
     public bool Equals(GesHandle? other)
-        => other is not null && (ReferenceEquals(this, other) || (string.Equals(TypeName, other.TypeName, StringComparison.Ordinal) && IsComposite == other.IsComposite
-            && KeyEquals(Id, other.Id) && KeyEquals(Part, other.Part)));
+        => other is not null && (ReferenceEquals(this, other) || (string.Equals(TypeName, other.TypeName, StringComparison.Ordinal) && KeyEquals(Id, other.Id) && KeyEquals(Part, other.Part)));
 
     /// <inheritdoc/>
     public override bool Equals(object? obj) => obj is GesHandle other && Equals(other);
@@ -200,7 +239,7 @@ public sealed class GesHandle : IEquatable<GesHandle>, IComparable<GesHandle>
         return hash.ToHashCode();
     }
 
-    /// <summary>Compares in key order: by type name in Unicode scalar order, then the id, integers numerically before Texts in scalar order, then a composite's part.</summary>
+    /// <summary>Compares in key order: by type name in Unicode scalar order, then the id, integers numerically before Texts in scalar order, then the part, none first.</summary>
     /// <param name="other">The other handle; <see langword="null"/> sorts first.</param>
     /// <returns>A negative number, zero or a positive number.</returns>
     public int CompareTo(GesHandle? other)
@@ -211,7 +250,6 @@ public sealed class GesHandle : IEquatable<GesHandle>, IComparable<GesHandle>
         if (comparison != 0) return comparison;
         comparison = CompareKey(Id, other.Id);
         if (comparison != 0) return comparison;
-        if (IsComposite != other.IsComposite) return IsComposite ? 1 : -1;
         return CompareKey(Part, other.Part);
     }
 

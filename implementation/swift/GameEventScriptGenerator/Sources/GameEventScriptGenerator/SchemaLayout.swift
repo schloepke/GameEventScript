@@ -16,7 +16,7 @@ struct GesSchemaLayout {
     var rootNames: [String]
     var parameters: [GesLayoutParameter]
     var types: [GesLayoutType]
-    // The handle types the roots reach, composite roots and network owners included, ordered by name.
+    // The handle types the roots reach, the roots of types with a root and network owners included, ordered by name.
     var handles: [GesLayoutHandle] = []
     // The networks among the roots, in root order.
     var networks: [GesLayoutNetwork] = []
@@ -47,8 +47,9 @@ struct GesLayoutOwner {
     var sendingState: Bool
 }
 
-// A handle type: its name without `@`, its handle hash, its state schema's type name and the encodings of its identity, an
-// `integer` or `text` id and its version, or for a composite the root's name and the part. A revision has its integer encoding.
+// A handle type: its name without `@`, its handle hash, its state schema's type name (empty without state) and the encodings of
+// its identity, an `integer` or `text` id and its version, or for a type with a part the root's name, the part and, keyed, its own
+// version. A revision has its integer encoding.
 // A class, as the plan values of handles share it.
 final class GesLayoutHandle {
     var name = ""
@@ -60,15 +61,17 @@ final class GesLayoutHandle {
     var root = ""
     var part: GesLayoutEncoding?
 
-    // The root of a part-less composite, which encodes like a plain handle with its root's id and version.
+    // The root of a type without a part, which encodes like a type without a root with its root's id.
     var partlessRoot = ""
+
+    // Whether the type is keyed by its root rather than attached to it.
+    var keyed = false
 
     // The form that the handle type `<Name>Handle` checks, shared with models.
     var model = GesModelHandle()
 
-    var isComposite: Bool { !root.isEmpty }
+    var hasPart: Bool { !root.isEmpty }
 
-    // A composite's id is its root's.
     var versioned: Bool { version != .none }
 
     static func versionName(_ kind: GesHandleVersionKind) -> String {
@@ -76,7 +79,7 @@ final class GesLayoutHandle {
         case .revision: "revision"
         case .sha1: "sha1"
         case .sha256: "sha256"
-        case .contentHash: "contentHash"
+        case .gesHash: "ges"
         default: "none"
         }
     }
@@ -432,7 +435,7 @@ enum GesSchemaLayoutBuilder {
         for element in type.element { reach(element, &reached, &handles) }
     }
 
-    // A handle type brings a composite's root. Its state stays outside the layout: the wire carries only the identity, and a
+    // A handle type brings its root. Its state stays outside the layout: the wire carries only the identity, and a
     // state, often a document, need not be encodable.
     private static func reach(_ handle: GesHandleType, _ reached: inout [String: GesSchema], _ handles: inout [String: GesHandleType]) {
         if handles[handle.name] != nil { return }
@@ -441,7 +444,7 @@ enum GesSchemaLayoutBuilder {
     }
 
     // The encodings of a handle type's identity, from the nodes of the type on its own: the group, then the id, the version
-    // and a composite's part.
+    // and the part of a type with one. An attached type with a part carries its root's version, whose encoding its root has.
     private static func handle(_ type: GesHandleType) throws -> GesLayoutHandle {
         let nodes = try type.bindNodes().nodes
         let handle = GesLayoutHandle()
@@ -449,24 +452,21 @@ enum GesSchemaLayoutBuilder {
         handle.hash = type.hash
         handle.state = type.stateName
         handle.version = type.version
+        handle.keyed = type.isKeyed
         handle.model = GesModelHandle.of(type)
-        var index = 1
-        if let partless = type.root, type.part == nil {
-            handle.partlessRoot = partless.name
-        } else if let root = type.root {
-            handle.root = root.name
-            index = nodes[index].next
-            if type.version != .none { index += 1 }
-            handle.part = key(nodes[index])
-            return handle
+        if let root = type.root {
+            if type.part == nil { handle.partlessRoot = root.name } else { handle.root = root.name }
         }
-        handle.id = key(nodes[index])
+        var index = 1
+        if !handle.hasPart { handle.id = key(nodes[index]) }
         index = nodes[index].next
-        if type.version == .revision {
+        if type.version == .revision && (!handle.hasPart || type.isKeyed) {
             let revision = GesLayoutEncoding()
             number(nodes[index], .number, .none, nil, nil, revision)
             handle.revision = revision
         }
+        if type.version != .none { index = nodes[index].next }
+        if handle.hasPart { handle.part = key(nodes[index]) }
         return handle
     }
 

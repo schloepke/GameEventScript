@@ -28,6 +28,52 @@ public interface IGesStoreFiles
     string? Read(string root, string path);
 }
 
+/// <summary>
+/// A root of a store read from versioned sources (specs/Documents.md#reading-from-handles): a root handle, whose id names the
+/// source logically, and the path of the root file within it.
+/// </summary>
+/// <param name="Handle">The root handle, which carries no part, optionally with a version or a ref.</param>
+/// <param name="Path">The path of the root file, relative to the root.</param>
+public sealed record GesStoreSourceRoot(GesHandle Handle, string Path);
+
+/// <summary>A file a <see cref="IGesStoreSource"/> answers: its text, or missing, and optionally the version of its root it comes from.</summary>
+public readonly struct GesStoreFile
+{
+    /// <summary>Creates an answer.</summary>
+    /// <param name="text">The file's text, or <see langword="null"/> when the root has no such file.</param>
+    /// <param name="version">The version of the root the file comes from, an integer Number or 20 or 32 Bytes; Nothing for none.</param>
+    public GesStoreFile(string? text, GesValue version = default)
+    {
+        Text = text;
+        Version = version;
+    }
+
+    /// <summary>Gets the answer of a file the root does not have, without a version.</summary>
+    public static GesStoreFile Missing => default;
+
+    /// <summary>Gets the file's text, or <see langword="null"/> when the root has no such file (<c>store.importMissing</c>).</summary>
+    public string? Text { get; }
+
+    /// <summary>Gets the version of the root the file comes from, or Nothing.</summary>
+    public GesValue Version { get; }
+}
+
+/// <summary>
+/// The versioned sources of a store's roots, such as repositories at a commit. GES reads no files itself: it asks for the file of
+/// each root handle and root-relative path a store reaches.
+/// </summary>
+public interface IGesStoreSource
+{
+    /// <summary>Returns a file of a root.</summary>
+    /// <param name="root">
+    /// The root handle: as given while the root has no known version, a ref included, afterwards with the version of the root's first
+    /// answer.
+    /// </param>
+    /// <param name="path">The root-relative path, segments joined by <c>/</c>, without <c>.</c> or <c>..</c> segments, at most 256 UTF-8 bytes.</param>
+    /// <returns>The file, or <see cref="GesStoreFile.Missing"/>; an unknown ref answers missing.</returns>
+    GesStoreFile Read(GesHandle root, string path);
+}
+
 /// <summary>One object of a store: its id, its handle, its checked state and where it is declared.</summary>
 public sealed class GesStoreEntry
 {
@@ -42,7 +88,7 @@ public sealed class GesStoreEntry
     /// <summary>Gets the entry's id: its module name, a <c>.</c> and its key, or only its key at the root.</summary>
     public string Id { get; }
 
-    /// <summary>Gets the entry's handle, which carries the content hash of <see cref="Value"/> for a <c>:ContentHash</c> type.</summary>
+    /// <summary>Gets the entry's handle, which carries the content hash of <see cref="Value"/> for a type <c>versioned by hash(#ges)</c>.</summary>
     public GesHandle Handle { get; }
 
     /// <summary>Gets the state: a Record of the state type with the schema's defaults applied, as a resolver's state.</summary>
@@ -199,7 +245,7 @@ public sealed class GesStore : IGesHandleResolver
 
     /// <summary>
     /// Returns the handles of every entry through a projection (specs/Schemas.md#projections), sorted by id, each carrying the
-    /// projection and its version: the content hash of the projected state for a <c>:ContentHash</c> type, the entry's version
+    /// projection and its version: the content hash of the projected state for a type <c>versioned by hash(#ges)</c>, the entry's version
     /// otherwise. The list is computed on each call.
     /// </summary>
     /// <param name="projection">A projection of the store's state, one of <see cref="GesHandleType.Projections"/>.</param>
@@ -209,10 +255,10 @@ public sealed class GesStore : IGesHandleResolver
     public IReadOnlyList<GesHandle> Index(GesSchema projection)
     {
         if (projection is null) throw new ArgumentNullException(nameof(projection));
-        if (!projection.Declaration.Narrows(Type.Resolved.State))
+        if (!projection.Declaration.Narrows(Type.Resolved.State!))
             throw new ArgumentException($"':{projection.Name}' is no projection of '@{Type.Name}'.", nameof(projection));
         var result = new GesHandle[_entries.Length];
-        var hashed = Type.Version == GesHandleVersionKind.ContentHash;
+        var hashed = Type.Version == GesHandleVersionKind.GesHash;
         Span<byte> bytes = stackalloc byte[GesHash32.Length];
         for (var index = 0; index < result.Length; index++)
         {
@@ -231,13 +277,13 @@ public sealed class GesStore : IGesHandleResolver
     }
 
     /// <summary>Reads a store of a handle type from its roots.</summary>
-    /// <param name="type">The handle type, whose id is Text and which is not composite.</param>
+    /// <param name="type">The handle type, which has a state and a Text id and no root.</param>
     /// <param name="roots">The roots, read in this order.</param>
     /// <param name="files">The source of every file's text.</param>
     /// <param name="dependencies">The stores of other types whose handles entries may name or pin; none when <see langword="null"/>.</param>
     /// <returns>The store.</returns>
     /// <exception cref="ArgumentNullException">An argument other than <paramref name="dependencies"/>, a root or a dependency is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">The type is composite or has no Text id, two roots share a name, or two stores share a type.</exception>
+    /// <exception cref="ArgumentException">The type has no state, has a root or has no Text id, two roots share a name, or two stores share a type.</exception>
     /// <exception cref="GesStoreException">The store has errors; the exception lists every one.</exception>
     public static GesStore Read(GesHandleType type, IReadOnlyList<GesStoreRoot> roots, IGesStoreFiles files, IReadOnlyList<GesStore>? dependencies = null)
     {
@@ -252,74 +298,65 @@ public sealed class GesStore : IGesHandleResolver
             if (!names.Add(root.Name)) throw new ArgumentException($"Two roots are named '{root.Name}'.", nameof(roots));
         }
 
-        return new Reading(type, (root, path) => (files.Read(root, path), false), others).Run(roots, null);
+        return new Reading(type, files.Read, others).Run(roots, null);
     }
 
     /// <summary>
-    /// Reads a store of a handle type from versioned sources (specs/Documents.md#reading-from-handles): each root is a handle of a
-    /// store file type of <paramref name="type"/> whose part is the path of the root file, and every file is requested from the
-    /// resolver as the composite handle of the same root with the file's root-relative path.
+    /// Reads a store of a handle type from versioned sources (specs/Documents.md#reading-from-handles): each root is a root handle and
+    /// the path of its root file, and every file is requested from the source by the root handle and the file's root-relative path.
     /// </summary>
-    /// <param name="type">The handle type, whose id is Text and which is not composite.</param>
-    /// <param name="roots">The root handles, read in this order; a root without a version is pinned by the version of its first answer.</param>
-    /// <param name="resolver">The resolver of the store file type, which answers each file with its document text.</param>
+    /// <param name="type">The handle type, which has a state and a Text id and no root.</param>
+    /// <param name="roots">The roots, read in this order; a root without a version is pinned by the version of its first answer.</param>
+    /// <param name="source">The source of every file.</param>
     /// <param name="dependencies">The stores of other types whose handles entries may name or pin; none when <see langword="null"/>.</param>
-    /// <returns>The store, whose <see cref="Sources"/> are the roots with the versions they were read at.</returns>
+    /// <returns>The store, whose <see cref="Sources"/> are the root handles with the versions they were read at.</returns>
     /// <exception cref="ArgumentNullException">An argument other than <paramref name="dependencies"/>, a root or a dependency is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">
-    /// The type is composite or has no Text id, a root is no handle of a store file type of <paramref name="type"/> with a Text part, two
-    /// roots are equal, or two stores share a type.
+    /// The type has no state, has a root or has no Text id, a root handle carries a part, two roots have equal handles, or two stores
+    /// share a type.
     /// </exception>
     /// <exception cref="GesHandleException">
-    /// The resolver gave no answer or several, passed an invalid version, or failed to turn a ref into a version
-    /// (<c>runtime.handleResolveFailed</c>), or passed another version than the root's (<c>runtime.handleVersionMismatch</c>).
+    /// The source passed an invalid version (<c>runtime.handleResolveFailed</c>) or another version than the root's
+    /// (<c>runtime.handleVersionMismatch</c>).
     /// </exception>
     /// <exception cref="GesStoreException">The store has errors; the exception lists every one.</exception>
-    public static GesStore Read(GesHandleType type, IReadOnlyList<GesHandle> roots, IGesHandleResolver resolver, IReadOnlyList<GesStore>? dependencies = null)
+    public static GesStore Read(GesHandleType type, IReadOnlyList<GesStoreSourceRoot> roots, IGesStoreSource source, IReadOnlyList<GesStore>? dependencies = null)
     {
         if (roots is null) throw new ArgumentNullException(nameof(roots));
-        if (resolver is null) throw new ArgumentNullException(nameof(resolver));
+        if (source is null) throw new ArgumentNullException(nameof(source));
         var others = Dependencies(type, dependencies);
-        GesHandleType? fileType = null;
-        var sources = new HandleSources(resolver, roots.Count);
-        foreach (var root in roots)
+        var sources = new HandleSources(source, roots.Count);
+        var names = new GesStoreRoot[roots.Count];
+        for (var index = 0; index < names.Length; index++)
         {
-            if (root is null) throw new ArgumentNullException(nameof(roots));
-            if (!root.IsComposite || root.Part.ValueKind != GesBytecodeTypeKind.Text)
-                throw new ArgumentException($"{root} is no handle of a store file of @{type.Name} with a Text part.", nameof(roots));
-            if (fileType is null || fileType.Name != root.TypeName)
-            {
-                fileType = type.FileType(root.TypeName);
-                if (fileType is null)
-                    throw new ArgumentException($"@{root.TypeName} is no store file type of @{type.Name}.", nameof(roots));
-            }
-
-            if (!sources.Add(root, fileType)) throw new ArgumentException($"The root {root} is given twice.", nameof(roots));
+            var root = roots[index];
+            if (root?.Handle is null || root.Path is null) throw new ArgumentNullException(nameof(roots));
+            if (root.Handle.HasPart) throw new ArgumentException($"The root {root.Handle} carries a part.", nameof(roots));
+            if (!sources.Add(root.Handle)) throw new ArgumentException($"The root {root.Handle} is given twice.", nameof(roots));
+            names[index] = new GesStoreRoot(root.Handle.ToString(), root.Path);
         }
 
-        var names = new GesStoreRoot[roots.Count];
-        for (var index = 0; index < names.Length; index++) names[index] = new GesStoreRoot(roots[index].ToString(), roots[index].Part.AsText());
         return new Reading(type, sources.Read, others).Run(names, sources);
     }
 
-    /// <summary>Answers a handle of a known id with its entry's state and, for a <c>:ContentHash</c> type, its content hash; any other as missing.</summary>
+    /// <summary>Answers a handle of a known id with its entry's state and, for a type <c>versioned by hash(#ges)</c>, its content hash; any other as missing.</summary>
     /// <param name="call">The call holding the handle.</param>
     public void Resolve(GesHandleResolveCall call)
     {
         if (call is null) throw new ArgumentNullException(nameof(call));
         var handle = call.Handle;
-        if (handle.IsComposite || handle.Id.ValueKind != GesBytecodeTypeKind.Text || this[handle.Id.AsText()] is not { } entry)
+        if (handle.HasPart || handle.Id.ValueKind != GesBytecodeTypeKind.Text || this[handle.Id.AsText()] is not { } entry)
         {
             call.SetMissing();
             return;
         }
 
-        if (Type.Version == GesHandleVersionKind.ContentHash) call.SetState(entry.Value, entry.Handle.Version);
+        if (Type.Version == GesHandleVersionKind.GesHash) call.SetState(entry.Value, entry.Handle.Version);
         else call.SetState(entry.Value);
     }
 
-    /// <summary>Lists the handle of every entry, sorted by id, without versions; a store's type has no parts, so a root lists none.</summary>
-    /// <param name="root">Ignored unless set: a store's type is not composite, so its parts are empty.</param>
+    /// <summary>Lists the handle of every entry, sorted by id, without versions; a store's type has no root, so a root lists none.</summary>
+    /// <param name="root">Ignored unless set: a store's type has no root, so nothing is attached to or keyed by one.</param>
     /// <returns>The entry handles, or an empty list for a root.</returns>
     public IReadOnlyList<GesHandle>? Handles(GesHandle? root)
     {
@@ -332,7 +369,8 @@ public sealed class GesStore : IGesHandleResolver
     private static Dictionary<string, GesStore> Dependencies(GesHandleType type, IReadOnlyList<GesStore>? dependencies)
     {
         if (type is null) throw new ArgumentNullException(nameof(type));
-        if (type.Root is not null) throw new ArgumentException($"@{type.Name} is composite; a store needs a type of its own.", nameof(type));
+        if (!type.HasState) throw new ArgumentException($"@{type.Name} has no state; a store needs a type with one.", nameof(type));
+        if (type.Root is not null) throw new ArgumentException($"@{type.Name} has a root; a store needs a type of its own.", nameof(type));
         if (type.Id is not { IsText: true }) throw new ArgumentException($"@{type.Name} has no Text id.", nameof(type));
         var others = new Dictionary<string, GesStore>(StringComparer.Ordinal);
         foreach (var dependency in dependencies ?? [])
@@ -418,21 +456,21 @@ public sealed class GesStore : IGesHandleResolver
         internal GesStoreEntry? Other { get; } = other;
     }
 
-    // The text of a root's file, or null when the root has none; State is true for a state answer instead of a document.
-    private delegate (string? Text, bool State) Fetch(string root, string path);
+    // The text of a root's file, or null when the root has none.
+    private delegate string? Fetch(string root, string path);
 
     // The roots of a store read from handles, by the text form of each root handle, with the version each is read at.
-    private sealed class HandleSources(IGesHandleResolver resolver, int capacity)
+    private sealed class HandleSources(IGesStoreSource source, int capacity)
     {
+        private const int MaxPathLength = 256;
         private readonly List<Source> _ordered = new(capacity);
         private readonly Dictionary<string, Source> _byName = new(StringComparer.Ordinal);
-        private readonly GesHandleResolveCall _call = new();
 
-        internal bool Add(GesHandle root, GesHandleType fileType)
+        internal bool Add(GesHandle root)
         {
-            var source = new Source(root, fileType);
-            if (!_byName.TryAdd(root.ToString(), source)) return false;
-            _ordered.Add(source);
+            var entry = new Source(root);
+            if (!_byName.TryAdd(root.ToString(), entry)) return false;
+            _ordered.Add(entry);
             return true;
         }
 
@@ -442,80 +480,42 @@ public sealed class GesStore : IGesHandleResolver
             var result = new GesHandle[_ordered.Count];
             for (var index = 0; index < result.Length; index++)
             {
-                var source = _ordered[index];
-                result[index] = source.Version.IsNothing ? source.Handle : source.Handle.WithVersion(source.Version);
+                var entry = _ordered[index];
+                result[index] = entry.Version.IsNothing ? entry.Handle : entry.Handle.WithVersion(entry.Version);
             }
 
             return result;
         }
 
-        internal (string? Text, bool State) Read(string root, string path)
+        internal string? Read(string root, string path)
         {
-            var source = _byName[root];
-            var fileType = source.FileType;
-            if (!source.Prepared)
-            {
-                source.Prepared = true;
-                source.Version = source.Handle.Version;
-                if (!source.Handle.Ref.IsNothing)
-                {
-                    var version = resolver.ResolveRef(source.Handle);
-                    if (version.IsNothing) source.UnknownRef = true;
-                    else if (!GesHandleStates.IsVersionOf(fileType.Version, version))
-                        throw new GesHandleException(GesDiagnosticCodes.RuntimeHandleResolveFailed, root, $"The resolver of @{fileType.Name} returned no valid version.");
-                    else source.Version = version;
-                }
-            }
-
-            if (source.UnknownRef || Encoding.UTF8.GetByteCount(path) > fileType.Part!.Value.MaxLength) return (null, false);
-            var handle = GesHandle.CreateComposite(fileType.Name, GesHandle.Create(fileType.Root!.Name, source.Handle.Id, source.Version), GesValue.GesText(path));
-            GesHandleResolveCall.AnswerKind answer;
-            string? text;
-            GesValue passed;
-            _call.Begin(handle, fileType, null, 0);
-            try
-            {
-                resolver.Resolve(_call);
-                answer = _call.Answer;
-                text = _call.Text;
-                passed = _call.Version;
-            }
-            finally
-            {
-                _call.End();
-            }
-
-            var symbol = handle.ToString();
-            if (answer is GesHandleResolveCall.AnswerKind.None or GesHandleResolveCall.AnswerKind.Several)
-                throw new GesHandleException(GesDiagnosticCodes.RuntimeHandleResolveFailed, symbol, $"The resolver of @{fileType.Name} must give exactly one answer.");
+            var entry = _byName[root];
+            if (Encoding.UTF8.GetByteCount(path) > MaxPathLength) return null;
+            var handle = entry.Version.IsNothing ? entry.Handle : entry.Handle.WithVersion(entry.Version);
+            var file = source.Read(handle, path);
+            var passed = file.Version;
             if (!passed.IsNothing)
             {
-                if (!GesHandleStates.IsVersionOf(fileType.Version, passed))
-                    throw new GesHandleException(GesDiagnosticCodes.RuntimeHandleResolveFailed, symbol, $"The resolver of @{fileType.Name} passed no valid version of its type.");
-                if (source.Version.IsNothing) source.Version = passed;
-                else if (!GesHandleStates.VersionEquals(source.Version, passed))
-                    throw new GesHandleException(GesDiagnosticCodes.RuntimeHandleVersionMismatch, symbol, $"The resolver of @{fileType.Name} delivered another version of {root}.");
+                var symbol = root + "/" + path;
+                if (!IsVersion(passed))
+                    throw new GesHandleException(GesDiagnosticCodes.RuntimeHandleResolveFailed, symbol, $"The source of {root} passed no valid version.");
+                if (entry.Version.IsNothing) entry.Version = passed;
+                else if (!GesHandleStates.VersionEquals(entry.Version, passed))
+                    throw new GesHandleException(GesDiagnosticCodes.RuntimeHandleVersionMismatch, symbol, $"The source of {root} delivered another version.");
             }
 
-            return answer switch
-            {
-                GesHandleResolveCall.AnswerKind.Document => (text, false),
-                GesHandleResolveCall.AnswerKind.State => (null, true),
-                _ => (null, false),
-            };
+            return file.Text;
         }
 
-        private sealed class Source(GesHandle handle, GesHandleType fileType)
+        private static bool IsVersion(GesValue version)
+            => version.ValueKind == GesBytecodeTypeKind.Integer && version.Unit == GesQuantityUnit.UnitNone
+                || version.ValueKind == GesBytecodeTypeKind.Bytes && version.AsBytes().Length is GesHash20.Length or GesHash32.Length;
+
+        private sealed class Source(GesHandle handle)
         {
             internal GesHandle Handle { get; } = handle;
 
-            internal GesHandleType FileType { get; } = fileType;
-
-            internal bool Prepared { get; set; }
-
-            internal bool UnknownRef { get; set; }
-
-            internal GesValue Version { get; set; }
+            internal GesValue Version { get; set; } = handle.Version;
         }
     }
 
@@ -564,13 +564,7 @@ public sealed class GesStore : IGesHandleResolver
             }
 
             if (!_visited.Add(key)) return;
-            var (text, state) = files(root, path);
-            if (state)
-            {
-                if (importer is null) Report(AddFile(root, path, null), -1, GesStoreException.ImportKind, $"'{path}' is an object's state, not a store file.");
-                else Report(importer, importOffset, GesStoreException.ImportKind, $"'{path}' is an object's state, not a store file.");
-                return;
-            }
+            var text = files(root, path);
 
             if (text is null)
             {
@@ -626,12 +620,7 @@ public sealed class GesStore : IGesHandleResolver
         private void ReadStateDocument(SourceFile file, GesStoreItem item)
         {
             if (Imported(file, item) is not { } path) return;
-            var (text, state) = files(file.Root, path);
-            if (state)
-            {
-                Report(file, item.PathOffset, GesStoreException.ImportKind, $"'{path}' is an object's state, not a state document.");
-                return;
-            }
+            var text = files(file.Root, path);
 
             if (text is null)
             {
@@ -754,7 +743,7 @@ public sealed class GesStore : IGesHandleResolver
                 return;
             }
 
-            if (pinned && type.Version != GesHandleVersionKind.ContentHash)
+            if (pinned && type.Version != GesHandleVersionKind.GesHash)
             {
                 Fail(pending, offset, GesStoreException.InvalidPin, $"@{type.Name} has no content hash to pin @{name} to.");
                 return;
@@ -766,7 +755,7 @@ public sealed class GesStore : IGesHandleResolver
         // A complete handle names an entry of its type's store when the store is known.
         private void ResolveHandle(Pending pending, GesDocumentNode node, int keyIndex, string text, int offset, bool pinned)
         {
-            if (!GesHandle.TryRead(text, out var handle) || handle!.IsComposite)
+            if (!GesHandle.TryRead(text, out var handle) || handle!.HasPart)
             {
                 if (pinned) Fail(pending, offset, GesStoreException.InvalidPin, $"{text} names no store entry to pin to.");
                 return;
@@ -781,7 +770,7 @@ public sealed class GesStore : IGesHandleResolver
                     return;
                 }
 
-                if (pinned && type.Version != GesHandleVersionKind.ContentHash)
+                if (pinned && type.Version != GesHandleVersionKind.GesHash)
                 {
                     Fail(pending, offset, GesStoreException.InvalidPin, $"@{type.Name} has no content hash to pin {text} to.");
                     return;
@@ -805,7 +794,7 @@ public sealed class GesStore : IGesHandleResolver
                 return;
             }
 
-            if (pinned && store.Type.Version != GesHandleVersionKind.ContentHash)
+            if (pinned && store.Type.Version != GesHandleVersionKind.GesHash)
             {
                 Fail(pending, offset, GesStoreException.InvalidPin, $"@{handle.TypeName} has no content hash to pin {text} to.");
                 return;
@@ -855,7 +844,7 @@ public sealed class GesStore : IGesHandleResolver
 
             var root = Replace(pending.Value, replacements, keys);
             var text = pending.ValueFile.Text!;
-            var declaration = type.Resolved.State;
+            var declaration = type.Resolved.State!;
             try
             {
                 var value = GesDocumentReading.Entries(text, root, type.StateName);
@@ -868,7 +857,7 @@ public sealed class GesStore : IGesHandleResolver
                 var state = GesSchemaValues.NormalizeState(declaration, GesSchemaValues.DocumentShapes(declaration, value, chosen), "", type.Declarations);
                 var id = GesValue.GesText(pending.Id);
                 GesHandle handle;
-                if (type.Version == GesHandleVersionKind.ContentHash)
+                if (type.Version == GesHandleVersionKind.GesHash)
                 {
                     var bytes = new byte[GesHash32.Length];
                     GesSchemaValues.ContentHash(type, state).CopyTo(bytes);

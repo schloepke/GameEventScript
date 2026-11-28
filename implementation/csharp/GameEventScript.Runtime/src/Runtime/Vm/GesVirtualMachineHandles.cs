@@ -24,7 +24,7 @@ internal partial class GesVirtualMachine
         public int GetHashCode(GesHandle handle) => handle.GetHashCode();
     }
 
-    private static readonly string[] CompositeIdKeys = ["part", "root"];
+    private static readonly string[] PartIdKeys = ["part", "root"];
     private static readonly string[] RootIdKeys = ["root"];
 
     // The states the running handler invocation has read; it survives pauses and ends with the invocation.
@@ -120,7 +120,7 @@ internal partial class GesVirtualMachine
         GesHandle narrowed;
         if (!text.Versioned) narrowed = handle.WithView(default, projection);
         else if (HandleBinding(handle) is not { } binding || binding.Type.FindProjection(projection) is not { } target) narrowed = null!;
-        else if (binding.Type.Version != GesHandleVersionKind.ContentHash) narrowed = handle.WithView(handle.Version, projection);
+        else if (binding.Type.Version != GesHandleVersionKind.GesHash) narrowed = handle.WithView(handle.Version, projection);
         else
         {
             var wider = ResolveHandleState(handle);
@@ -150,12 +150,12 @@ internal partial class GesVirtualMachine
         switch (key)
         {
             case "id":
-                if (handle.IsComposite)
+                if (handle.HasPart)
                 {
                     var values = new GesValue[2];
                     values[0] = handle.Part;
                     values[1] = handle.Id;
-                    SetMap(destinationRegister, new GesValueMap(CompositeIdKeys, values));
+                    SetMap(destinationRegister, new GesValueMap(PartIdKeys, values));
                 }
                 else
                 {
@@ -172,27 +172,26 @@ internal partial class GesVirtualMachine
             case "root":
                 SetNothing(destinationRegister);
                 return;
-            // `@id` is `id` of a statically composite type of which one may be part-less: such a handle holds only its
-            // root's id, so its identity is the root alone, without a part.
+            // `@id` is `id` of a type with a root, statically known: `root` and, for a type with a part, `part`; a handle
+            // without a part holds only its root's id.
             case "@id":
-                if (handle.IsComposite)
+                if (handle.HasPart)
                 {
                     var values = new GesValue[2];
                     values[0] = handle.Part;
                     values[1] = handle.Id;
-                    SetMap(destinationRegister, new GesValueMap(CompositeIdKeys, values));
+                    SetMap(destinationRegister, new GesValueMap(PartIdKeys, values));
                 }
                 else SetMap(destinationRegister, new GesValueMap(RootIdKeys, [handle.Id]));
 
                 return;
         }
 
-        // `@Root` names the root type of a composite: a composite with a part keeps its root's identity and version, a
-        // part-less one, which holds its root's id as its own, gives the root without a version.
+        // `@Root` names the root type of an attached or keyed type: the root's handle, from the root's id, without a version.
         if (key.Length > 1 && key[0] == '@')
         {
             var root = new GesValue();
-            root.SetHandle(GesHandle.FromWire(key.Substring(1), handle.Id, handle.IsComposite ? handle.Version : default, default, false));
+            root.SetHandle(GesHandle.FromWire(key.Substring(1), handle.Id, default, default, false));
             SetValue(destinationRegister, in root);
             return;
         }
@@ -274,6 +273,8 @@ internal partial class GesVirtualMachine
         if (states.TryGetValue(handle, out var cached)) return cached;
         // Without a resolver, which only a read without a static type reaches, the object reads as missing.
         if (HandleBinding(handle) is not { } binding) return default;
+        // A type without state has nothing to read; its resolver only lists objects and answers refs.
+        if (!binding.Type.HasState) return default;
         GesSchema? projection = null;
         if (handle.Projection.Length > 0)
         {
@@ -335,7 +336,7 @@ internal partial class GesVirtualMachine
                 for (var index = 0; index < list.Length; index++)
                 {
                     if (list[index].ObjectValue is not GesHandle element || !string.Equals(element.TypeName, handle.TypeName, StringComparison.Ordinal) ||
-                        element.IsComposite != handle.IsComposite)
+                        element.HasPart != handle.HasPart)
                     {
                         continue;
                     }

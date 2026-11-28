@@ -122,12 +122,12 @@ network     = "network" ":" TypeName "as" "{" route { route } "}"
 route       = ( "client" | "server" ) ( ( "sends" | "publishes" ) ( ":" TypeName | MessageName )
               ( "reliable" | "latest" | "bulk" ) [ "at" "most" "every" value ]
               | "owns" "@" TypeName [ "as" ":" TypeName ] [ "sending" "state" ] )
-handle      = "handle" "@" TypeName "of" ( ":" TypeName | ":Store" "(" "@" TypeName ")" )
-              ( "as" "{" "id" ":" handleid sep "version" ":" version [ sep ] "}"
-              | "composite" "@" TypeName [ "as" "{" "part" ":" handleid [ sep ] "}" ] )
+handle      = "handle" "@" TypeName [ "of" ":" TypeName ]
+              ( "with" "id" handleid [ versioned ]
+              | "attached" "to" "@" TypeName [ "with" "part" handleid ]
+              | "keyed" "by" "@" TypeName [ "with" "part" handleid ] [ versioned ] )
 handleid    = ":Number" "integer" "between" bound "and" bound | ":Text" "max" integer
-version     = ":ContentHash" | ":Hash" "(" ( "#sha256" | "#sha1" ) ")"
-            | ":Number" "integer" [ "between" bound "and" bound ] | ":Nothing"
+versioned   = "versioned" "by" ( "revision" [ "max" bound ] | "hash" "(" ( "#ges" | "#sha256" | "#sha1" ) ")" )
 bound       = literal | "$" ConstantName
 sep         = "," | line break
 
@@ -258,8 +258,8 @@ A source is a sequence of declarations in any order; a reference may come before
 - **`network :Name as { ... }`** declares the routes between a client and a server: which side sends or publishes
   which wire root in which delivery class. [GES network](Network.md#declaration) owns its rules, errors, binding and
   hash. A network is no type; only code generation takes it as a root. *Since: 0.6.0.*
-- **`handle @Name of :State as { ... }`** declares a [handle type](#handles): a reference to an object that lives
-  outside the host, with the schema of its state. *Since: Unreleased.*
+- **`handle @Name of :State with id ...`** declares a [handle type](#handles): a reference to an object that lives
+  outside the host, optionally with the schema of its state. *Since: Unreleased.*
 - **`projection :Name of :Source as { ... }`** declares a [projection](#projections): a schema of fields selected from
   another schema, through which a handle can be read. *Since: Unreleased.*
 
@@ -794,56 +794,68 @@ schema :Composition as { name: :Text max 64, slots: :Number integer between 0 an
 schema :Source as { text: :Text }
 schema :UnitSlot as { weapon: :Text max 32 }
 
-handle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer }
-handle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }
-handle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }
-handle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }
-handle @UnitFile of :Composition composite @Repository as { part: :Text max 256 }
-handle @UnitSlot of :UnitSlot composite @Unit as { part: :Number integer between 0 and 15 }
+handle @Drone of :DroneState with id :Number integer between 0 and 255 versioned by revision
+handle @Target of :Contact with id :Number integer between 0 and 65535
+handle @Unit of :Composition with id :Text max 64 versioned by hash(#ges)
+handle @Repository of :Source with id :Text max 64 versioned by hash(#sha1)
+handle @UnitFile of :Composition attached to @Repository with part :Text max 256
+handle @UnitSlot of :UnitSlot attached to @Unit with part :Number integer between 0 and 15
 
 wire schema :Sighting as { target: @Target, seen: :List(@Target) max 16, unit: @Unit~ optional }
 model schema :Memory as { lastSeen: :Map(@Target → :Contact) max 64 }
 ```
 
-**Identity.** A handle type has exactly the fields `id` and `version`, in this order, and a composite exactly `part`.
-An id is an `integer` Number with a closed range or a Text with `max`; its bounds are literals or file constants,
-never lets or parameters, since a handle type is no schema. Ids are unique per handle type, not across types: `@Drone`
-3 and `@Target` 3 are different handles.
+A line break or a comment may precede each clause. The forms the clauses replace, the `as { id: ..., version: ... }`
+block, `composite @Root`, `:Store(@Type)` as state and the version types `:Nothing`, `:Number integer`, `:Hash(...)`
+and `:ContentHash`, are `schema.syntax`, with a message that names the new form.
 
-**Versions.** The version says which state of the object a handle means:
+**Identity.** A handle type names its objects in one of three forms:
 
-| Version | Meaning | Value |
+- `with id <type>`: by an id of its own;
+- `attached to @Root [with part <type>]`: as a part of a root object;
+- `keyed by @Root [with part <type>]`: by a root object's id and a part, as an object of its own.
+
+An id or part is an `integer` Number with a closed range or a Text with `max`; its bounds are literals or file
+constants, never lets or parameters, since a handle type is no schema. Ids are unique per handle type, not across
+types: `@Drone` 3 and `@Target` 3 are different handles. A type with a root has no id of its own, and a type with
+`with id` has no root.
+
+**Versions.** `versioned by` says which state of the object a handle means:
+
+| Clause | Meaning | Value |
 | --- | --- | --- |
-| `:Nothing` | the type has no versions; every handle means the current state | none |
-| `:Number integer` with an optional range | a revision the owner counts, ascending with each change | a Number |
-| `:Hash(#sha256)`, `:Hash(#sha1)` | a hash the owner computes over its own representation, such as a Git commit | Bytes of 32 or 20 |
-| `:ContentHash` | the [content hash](#content-hash) that GES computes over the state | Bytes of 32 |
+| none | the type has no versions; every handle means the current state | none |
+| `versioned by revision`, `versioned by revision max n` | a revision the owner counts, ascending with each change, from 0 to `n` or unbounded | a Number |
+| `versioned by hash(#sha256)`, `versioned by hash(#sha1)` | a hash the owner computes over its own representation, such as a Git commit | Bytes of 32 or 20 |
+| `versioned by hash(#ges)` | the [content hash](#content-hash) that GES computes over the state | Bytes of 32 |
 
 A handle value carries a concrete version or none. A field, argument or element of type `@Name` carries the identity
 only; `@Name~` carries the identity and a version and exists only for a type with a version, otherwise it is
 `schema.invalidHandle`. `@Name~` is what a recording or a launch pins down; `@Name` follows the object.
 
-**Composites.** `handle @UnitFile of :Composition composite @Repository as { part: :Text max 256 }` declares a
-handle that addresses one part of a root object: a file in a repository, a slot of a unit. Its identity is the root's
-identity and the part; it has the root's version and no version of its own, so `@UnitFile~` exists exactly when
-`@Repository` has a version, and carries the root's version. A composite's root is a handle type that is not composite
-itself: composites have one level, and a composite of a composite is `schema.invalidHandle`.
+**Attached.** `handle @UnitFile of :Composition attached to @Repository with part :Text max 256` declares a handle that
+addresses one part of a root object: a file in a repository, a slot of a unit. Its identity is the root's identity and
+the part; it has the root's version and no version of its own, so `versioned by` is `schema.syntax`, and `@UnitFile~`
+exists exactly when `@Repository` has a version and carries the root's version. Without `with part` it is one object
+per root, such as the enemy view of a bot: its identity is the root's id alone and its version the root's. Its handles
+are those of its own type, never equal to its root's handles; a part-less attached type is written on the wire and in
+its text form like a type `with id`, with the root's id and version ([Language](Language.md#handles)).
 
-*Since: Unreleased* — part-less composites: `handle @Enemy of :EnemyState composite @Bot` without `as` declares a
-composite *without a part*: one object per root, such as the enemy view of a bot. Its identity is the root's id alone,
-its version is the root's, and it has no part, so `@Enemy~` exists exactly when `@Bot` has a version. Its handles are
-those of its own type, never equal to its root's handles; on the wire and in its text form it is written like a handle
-type that is not composite, with the root's id and version ([Language](Language.md#handles)).
+**Keyed.** `handle @Stats of :Brain keyed by @Enemy with part :Number integer between 0 and 9 versioned by revision`
+declares objects of their own that a root's id and a part name: their identity is the root's id and the part, without
+the root's version, and they have their own version, lifetime, owner and source. `@Stats~` exists exactly when
+`@Stats` has a version. Without `with part` a keyed type has one object per root id.
 
-**Store files.** *Since: Unreleased.* `handle @UnitFiles of :Store(@Unit) composite @Repository as { part: :Text max 256 }`
-declares the type of the files a [store](Documents.md#stores) of `@Unit` is read from: a handle names a root, such as a
-repository at a commit, and the part is the path of a file within it. Such a *store file type* is composite with a
-part, its part is Text, and `@Unit` is a declared handle type with a Text id that is neither composite nor a store file type itself;
-anything else is `schema.invalidHandle`. A store file type has no state schema: a host reads its files through the
-type's resolver as document text, never as state. It is no field, argument, List element, union alternative or Map key
-type and no network `owns` target (`schema.invalidHandle`), and scripts cannot name it: the compiler does not receive it,
-so naming it is an unknown handle type. Reading a store through such handles is described in
-[Documents](Documents.md#reading-from-handles).
+A type's root is a handle type `with id`: a root that has a root itself, attached or keyed, is
+`schema.invalidHandle`. Every form compares and orders by type first, then by the root's id and then by the part, so
+handles of different types are never equal ([Language](Language.md#handles)).
+
+**Stateless types.** A type without `of`, such as `handle @Repository with id :Text max 64 versioned by hash(#sha1)`,
+names objects whose state GES never reads. It stands everywhere another handle type may, but has no projections, no
+content hash and no store: `versioned by hash(#ges)` and a projection of it are `schema.invalidHandle`, and a state
+read in a script is a compile error that names the missing `of` ([Language](Language.md#handles)). The id of a root
+handle is a logical name, which only the host interprets: `@Repository:content` names a source, not a path or address.
+A [store](Documents.md#reading-from-handles) is read from such root handles with the paths of their root files.
 
 **State.** The state schema is a declared, non-abstract schema; it may be a field type elsewhere too. A state field
 named `id`, `version` or `root` would collide with the handle's members and is `schema.invalidHandle`. Handle types take
@@ -856,14 +868,14 @@ no role; a handle type is reached by the schemas that name it. The state schema 
 `schema.invalidHandle`. A handle field cannot be a `key`. A handle Map is encodable with `max`, which counts entries;
 without it, it is document-only.
 
-**Composites inside their root.** A composite field reached from the state schema of its own root, such as a
+**Attached types inside their root.** An attached field reached from the state schema of its own root, such as a
 `:List(@UnitSlot)` inside `:Composition`, would repeat the root's identity in every element. A relative encoding that
 sends only the parts is an open point; until it is specified, such a field is `schema.notEncodable`, while document
 checking accepts it.
 
 **Networks.** A [network](Network.md#declaration) names the side that owns the objects of a handle type with
-`server owns @Target`. At most one `owns` route names a type per network; a composite type has no route of its own,
-since its root's owner owns it. `server owns @Unit as :UnitPublic` lets the other side read the state only as that
+`server owns @Target`. At most one `owns` route names a type per network; an attached type has no route of its own,
+since its root's owner owns it; a keyed type has its own. `server owns @Unit as :UnitPublic` lets the other side read the state only as that
 [projection](#projections), and `sending state` declares that the owner sends the state along with its handles; the
 [network declaration](Network.md#declaration) owns their rules. Sessions do not yet transfer handle state or resolve
 handles over the network: `sending state` enters only the network hash and the generated layout.
@@ -875,7 +887,7 @@ projection that would let it pin them is an open point.
 
 > **Since: Unreleased**
 
-The content hash of a `:ContentHash` type is SHA-256 over the UTF-8 bytes of the compact
+The content hash of a type `versioned by hash(#ges)` is SHA-256 over the UTF-8 bytes of the compact
 [product JSON](MessageFormat.md#value-objects) value object of the state, normalized against the state schema:
 
 - defaults are applied, so a state that leaves out a field with a default equals one that writes the default;
@@ -914,7 +926,7 @@ schema :Composition as { name: :Text max 64, kinds: :List(:Text max 16) max 8, m
 projection :UnitDisplay of :Composition as { name, kinds, icon: presentation.icon }
 projection :UnitLabel of :UnitDisplay as { name }
 
-handle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }
+handle @Unit of :Composition with id :Text max 64 versioned by hash(#ges)
 ```
 
 **Fields.** A projection names a declared, non-abstract schema or another projection as its *source* and lists its
@@ -969,7 +981,7 @@ projection's name. The conversion belongs to the schemas, not to handles, so scr
 **Projected handles.** `@Unit(:UnitDisplay)` is a handle of `@Unit` that can read only `:UnitDisplay`, and
 `@Unit(:UnitDisplay)~` one that carries the version of that projection. It stands wherever `@Unit` stands: as a field,
 argument or List element type and as a union alternative; a Map key is a handle type without projection. A projection
-that is no projection of the handle type, a projection of a composite or of a store file type, and a projection with
+that is no projection of the handle type, a projection of an attached or a stateless type, and a projection with
 `@Name` beside `@Name(:P)` of the same type in one union are `schema.invalidProjection`. The projection is part of the
 static type only: the wire form, the identity, equality, Map keys and the [handle text form](Language.md#handle-text-form)
 are those of `@Unit`, so `@Unit(:UnitDisplay)` encodes and compares like `@Unit`. The version of `@Unit(:UnitDisplay)~`
@@ -977,10 +989,10 @@ depends on the version form:
 
 | Version | Version of a projected handle |
 | --- | --- |
-| `:ContentHash` | the [content hash](#content-hash) of the projection's Record, normalized against the projection |
-| `:Number integer` | the revision of the whole object; a receiver of a projection may see a new revision without a change of the projection |
-| `:Hash(...)` | the owner's hash of the whole object |
-| `:Nothing` | none; `@Name(:P)~` is `schema.invalidHandle` |
+| `hash(#ges)` | the [content hash](#content-hash) of the projection's Record, normalized against the projection |
+| `revision` | the revision of the whole object; a receiver of a projection may see a new revision without a change of the projection |
+| `hash(#sha256)`, `hash(#sha1)` | the owner's hash of the whole object |
+| none | none; `@Name(:P)~` is `schema.invalidHandle` |
 
 The canonical form writes a projected handle as `@Name(P)` or `@Name(P)~` with the projection's name, so a wire
 schema whose fields name a projection changes its hash when another projection is named, although the bytes do not
@@ -1075,7 +1087,7 @@ be encoded; binding a schema that reaches another type for encoding fails with
 | `:Poly max n` | yes | yes |
 | `:Dice max n` | yes | yes |
 | `:TypeName` with only encodable fields | yes | yes |
-| `@Name`, `@Name~`, except a [composite reached from its root's state](#handles) | yes | yes |
+| `@Name`, `@Name~`, except an [attached type reached from its root's state](#handles) | yes | yes |
 | `:Map(@Name → T) max n` with an encodable `T` | yes | yes |
 | A union of encodable alternatives, such as `:Text max 8 \| :Unit \| :Nothing` | yes | yes |
 | `:Tag`, `:Text`, `:Bytes`, `:List`, `:List(T)`, `:Map(@Name → T)`, `:Dice`, `:Poly` without a set or `max` | no | yes |
@@ -1112,8 +1124,8 @@ Source errors use the phase `schema` with line and column, in the manner of
 | `schema.invalidExpression` | a [computed field](#computed-fields) has another type than its expression, constraints, a key or optional Boolean, reads a type or name it cannot (a later computed field, a union, a reserved GES name without backticks, an optional list in an aggregate), gives `hypot` or `atan2` another number of arguments, combines operands without a value, or a sum of quantities or percentages stands inside arithmetic |
 | `schema.invalidRoute` | a [network route](Network.md#declaration) breaks its rules |
 | `schema.duplicateRoute` | a [network route](Network.md#declaration) repeats a root with the same side and verb, or a second `owns` names the same handle type |
-| `schema.invalidHandle` | a [handle declaration](#handles) has fields other than `id` and `version` or `part`, a bound that is no literal or constant, a state that is not a declared non-abstract schema or has a field named `id`, `version` or `root`, a composite root that is composite itself, or a role; a `~` on a type without a version; a Map key other than one handle type without `~`; an `owns` route of a composite type |
-| `schema.invalidProjection` | a [projection](#projections) names a source that is no declared non-abstract, unpacked schema or projection, a field the source or a Record on a path lacks, a path through anything but a Record or into a handle, a field twice, a computed field or a field of a recursive List, or projections form a cycle; `@Name(:P)` names no projection of the handle type, a composite or store file type, or stands beside `@Name` of the same type in one union; in a network, an `owns ... as :P` whose `:P` does not narrow the state, or a route from the owner that carries the type in another view ([Network](Network.md#declaration)) *Since: Unreleased.* |
+| `schema.invalidHandle` | a [handle declaration](#handles) has a bound that is no literal or constant, a revision `max` that is no literal or constant, a hash other than `#ges`, `#sha256` or `#sha1`, a state that is not a declared non-abstract schema or has a field named `id`, `version` or `root`, a root that is no declared handle type or has a root itself, `versioned by hash(#ges)` without a state, or a role; a `~` on a type without a version; a Map key other than one handle type without `~`; an `owns` route of an attached type |
+| `schema.invalidProjection` | a [projection](#projections) names a source that is no declared non-abstract, unpacked schema or projection, a field the source or a Record on a path lacks, a path through anything but a Record or into a handle, a field twice, a computed field or a field of a recursive List, or projections form a cycle; `@Name(:P)` names no projection of the handle type, an attached or stateless type, or stands beside `@Name` of the same type in one union; in a network, an `owns ... as :P` whose `:P` does not narrow the state, or a route from the owner that carries the type in another view ([Network](Network.md#declaration)) *Since: Unreleased.* |
 | `schema.invalidDefault` | a [default](#defaults) lies outside its field's range or off its step, is fractional for an `integer` field, is no tag of the set or longer than `max`, has another kind than its field, stands on a key, a union or an optional field or argument with a literal, is no literal on an argument, names a sibling of another type or optionality, or names one for a type that generated code declares per field; a default of a [fixed List](#fixed-lists) that is no literal or record default of its single element type, a record literal on a field that is not one schema, or that names an unknown or computed field, a field twice, a field without a literal, a let or a parameter, or leaves out a required field without a default |
 
 `schema.notEncodable`, `schema.invalidRange`, `schema.invalidStep`, `schema.invalidBound`,
@@ -1222,24 +1234,25 @@ argument <name or _ name> <type>
 messages <MessageName>
 argument <name or _ name> <type>
 member <MessageName>
-handle <HandleName>
+handle <HandleName> [attached <HandleName> | keyed <HandleName>]
+stateless
 id <type>
-version <version>
-handle <HandleName> composite <HandleName>
-store <HandleName>
 part <type>
+version <version>
 ```
 
-A [handle type](#handles) is a declaration reached like a schema: its `handle` line, then `id` and `version`, or for a
-composite `part`, which a part-less composite omits, followed by its root's declaration when first reached. Its state schema is not written. `<version>` is
-`Nothing`, `ContentHash`, `Hash(#sha256)`, `Hash(#sha1)` or `Number integer` with an optional range. The *handle hash*
-of a type is FNV-1a 64 over `gess1` and its declarations, so the [network hash](Network.md#network-hash) can name it.
-A [store file type](#handles) writes the `store` line with the name of its store's handle type after its `handle`
-line; the store's type is not written as a declaration. *Since: Unreleased* — store file types.
+A [handle type](#handles) is a declaration reached like a schema. Its `handle` line names its form: ` attached <Root>`
+or ` keyed <Root>` for a type with a root, nothing for a type `with id`. A stateless type then writes `stateless`. A
+type `with id` writes `id`, a type with a root and a part `part`; a part-less type writes neither. Every type that is
+not attached writes `version`, where `<version>` is `none`, `hash(#ges)`, `hash(#sha256)`, `hash(#sha1)` or
+`revision Number integer`, the last with ` between 0e0 and <n>` for `revision max n`. A type with a root is followed by
+its root's declaration when first reached. Its state schema is not written, so the three forms of one name, id or
+part and version have different hashes. The *handle hash* of a type is FNV-1a 64 over `gess1` and its declarations,
+so the [network hash](Network.md#network-hash) can name it.
 Its *link hash*, which a Program records for the type, runs FNV-1a 64 over the same text followed by the line
 `state <hash>`, where `<hash>` is the state schema's hash as 16 lowercase hexadecimal digits; it therefore covers the
-name, the id, part and version forms, a composite's root and the state schema. A store file type has no state, so
-its link hash is its handle hash. *Since: Unreleased.*
+name, the form, the id, part and version and the state schema. A stateless type has no state, so its link hash is its
+handle hash. *Since: Unreleased.*
 When the state schema has [projections](#projections) in the schema set, the link hash adds one line
 `projection <Name> <hash>` per projection of the handle type, in scalar order of the name, after the `state` line,
 with the projection's schema hash, so a Program and a host agree on what each projection reads; without projections the
@@ -1405,8 +1418,8 @@ caller owns the mapping from keys to objects. Message arguments have no key. A
 | union of `n` alternatives | index in declared order, `width(n)` bits, then the alternative |
 | `:Nothing` as an alternative | no bits |
 | `:TypeName` | its fields inline |
-| `@Name` | the id, as its `integer` or `:Text max n`; for a composite the root's id, then the part if it has one |
-| `@Name~` | the id, then the version: a `:Number integer` revision as such, a hash as its 160 or 256 bits, one byte after the other; for a composite the root's id and version, then the part if it has one |
+| `@Name` | the id, as its `integer` or `:Text max n`; for a type with a root the root's id, then the part if it has one |
+| `@Name~` | the id, then the version: a revision as its `integer`, a hash as its 160 or 256 bits, one byte after the other; for an attached type the root's id and version, for a keyed type the root's id and its own version, each then the part if it has one |
 | `:Map(@Name → T) max n` | entry count, `width(n + 1)` bits, then for each entry in ascending [key order](Language.md#handles) the key as `@Name` and the value |
 
 `max` counts UTF-8 bytes for Text, characters for a Tag, which is ASCII, elements for a List,
@@ -1929,7 +1942,7 @@ var positionX = reader.ReadNumber(x);                             // double, wit
   the `[]` handle. `BeginNested` enters a nested schema, Point, Vector, Box, corner of a Box (`area.lower`) or point of
   a Poly. There is no end call: the cursor knows where a list or nesting ends.
 - A handle field is entered with `BeginNested`; its parts follow as `target.id`, `target.version` for `@Name~` (an
-  `Integer` revision or the hash as `Bytes` of exactly 20 or 32 bytes) and `target.part` for a composite with a part,
+  `Integer` revision or the hash as `Bytes` of exactly 20 or 32 bytes) and `target.part` for a type with a root and a part,
   where `id` is the root's id. A handle Map is a list whose element `lastSeen[]` is entered with `BeginNested` and holds
   `lastSeen[].key`, a handle, and `lastSeen[].value`; the writer and reader leave the key order to the caller. A handle
   alternative of a union is `subject:@Drone`. *Since: Unreleased.*
@@ -2585,11 +2598,11 @@ the model types already hold valid values. The result is a copy that shares no m
 the generation does not declare gets no conversion.
 
 **Handles.** *Since: Unreleased.* Every handle type a generation reaches becomes one value type `<Name>Handle`, in
-models and wire code alike. A handle field reaches only its handle type and, for a composite, its root's handle type,
-whose `<Name>Handle` the composite holds; it never reaches the state schema, which a handle names in its documentation
+models and wire code alike. A handle field reaches only its handle type and, for a type with a root and a part, its root's
+handle type, whose `<Name>Handle` it holds; it never reaches the state schema, which a handle names in its documentation
 only. The state is a model type of a generation only when a root reaches it otherwise or is itself a model root, as in
 the [generation layout](#generation-layout). Conversely, a model root that is the state schema of a handle type with a
-Text id that is not composite reaches that handle type, so its `<Name>Handle` exists for [stores](#model-stores).
+Text id and no root reaches that handle type, so its `<Name>Handle` exists for [stores](#model-stores).
 Wire code generated with
 `--models` declares none and names the models' `<Name>Handle`, as it does their packed types, so the model generation
 must reach the same handle types:
@@ -2600,11 +2613,14 @@ must reach the same handle types:
 | `@Target`, no version | `struct TargetHandle { let id: Int }` | `readonly struct TargetHandle { long Id }` |
 | `@Unit`, content hash | `struct UnitHandle { let id: String; let version: GesHash32? }` | `readonly struct UnitHandle { string Id; GesHash32? Version }` |
 | `@Repository`, SHA-1 | `struct RepositoryHandle { let id: String; let version: GesHash20? }` | `readonly struct RepositoryHandle { string Id; GesHash20? Version }` |
-| `@UnitFile`, composite | `struct UnitFileHandle { let root: RepositoryHandle; let part: String; var version: GesHash20? }` | `readonly struct UnitFileHandle { RepositoryHandle Root; string Part; GesHash20? Version }` |
-| `@Enemy`, composite of `@Drone` without a part | `struct EnemyHandle { let id: Int; let version: Int? }` | `readonly struct EnemyHandle { long Id; long? Version }` |
+| `@UnitFile`, attached | `struct UnitFileHandle { let root: RepositoryHandle; let part: String; var version: GesHash20? }` | `readonly struct UnitFileHandle { RepositoryHandle Root; string Part; GesHash20? Version }` |
+| `@Enemy`, attached to `@Drone` without a part | `struct EnemyHandle { let id: Int; let version: Int? }` | `readonly struct EnemyHandle { long Id; long? Version }` |
+| `@DroneLog`, keyed by `@Drone`, revision | `struct DroneLogHandle { let root: DroneHandle; let part: Int; let version: Int? }` | `readonly struct DroneLogHandle { DroneHandle Root; long Part; long? Version }` |
 
-A type without a version has no `version` property, and a composite's `version` reads its root's. A part-less
-composite holds its root's id and version itself and reaches no `<Name>Handle` of its root. Swift types are
+A type without a version has no `version` property, and an attached type's `version` reads its root's. A keyed
+type's `root` carries the root's id without a version and `version` is its own; its constructor takes the root, the
+part and the version. A part-less type holds its root's id, and an attached one its root's version, itself and reaches
+no `<Name>Handle` of its root. A stateless type generates its `<Name>Handle` like any other. Swift types are
 `Hashable`, `Comparable`, `Sendable` and `Codable`; C# types implement `IEquatable<T>`, `IComparable<T>`, `==` and `!=`.
 Equality, hashing and order use the identity only, as in [scripts](Language.md#handles), so two handles of one object
 with different versions are equal. A constructor checks the id or part against its range or `max` and throws, as does
@@ -2827,8 +2843,8 @@ I/O: text goes in, a model comes out.
 > **Since: Unreleased**
 
 `--stores` (option `Stores`) generates a typed [store](Documents.md#stores) for every handle type whose state is a
-model root, whose id is Text and that is not composite: with `handle @Unit of :Unit as { id: :Text max 64, version:
-:ContentHash }` and the model root `:Unit`, the type `UnitStore` reads, holds and resolves the units. It includes
+model root, whose id is Text and that has no root: with `handle @Unit of :Unit with id :Text max 64 versioned by
+hash(#ges)` and the model root `:Unit`, the type `UnitStore` reads, holds and resolves the units. It includes
 `--documents` and concerns only model code; wire code with `--stores` is `generate.usage`. A store type of the
 name of another generated type, and a state type named `Entry`, which the store's nested `Entry` would hide, are
 `generate.nameCollision`.
@@ -2848,7 +2864,7 @@ builder.withHandleResolver(units, for: units.store.type)
 | --- | --- | --- |
 | type | `final class UnitStore: GesHandleResolver`, not `Sendable`, like `GesStore` | `sealed class UnitStore : IGesHandleResolver` |
 | read from files | `static func read(roots: [GesStoreRoot], files: some GesStoreFiles, hull: HullStore? = nil) throws -> UnitStore` | `static UnitStore Read(IReadOnlyList<GesStoreRoot> roots, IGesStoreFiles files, HullStore? hull = null)` |
-| read from handles | `static func read(roots: [GesHandle], resolver: some GesHandleResolver, hull: HullStore? = nil) throws -> UnitStore` | `static UnitStore Read(IReadOnlyList<GesHandle> roots, IGesHandleResolver resolver, HullStore? hull = null)` |
+| read from handles | `static func read(roots: [GesStoreSourceRoot], source: some GesStoreSource, hull: HullStore? = nil) throws -> UnitStore` | `static UnitStore Read(IReadOnlyList<GesStoreSourceRoot> roots, IGesStoreSource source, HullStore? hull = null)` |
 | untyped store | `store: GesStore` | `GesStore Store` |
 | roots read | `sources: [GesHandle]` | `IReadOnlyList<GesHandle> Sources` |
 | entries | `entries: [Entry]`, sorted by id | `IReadOnlyList<Entry> Entries` |
@@ -2861,7 +2877,7 @@ builder.withHandleResolver(units, for: units.store.type)
 
 - **Projections.** *Since: Unreleased.* The store keeps one index per [projection](#projections) of its handle type
   that the generation declares: the handles of every entry, sorted by id, each with the version of the projection, the
-  [content hash](#content-hash) of the projected state for a `:ContentHash` type and the entry's version otherwise. Such a
+  [content hash](#content-hash) of the projected state for a type `versioned by hash(#ges)` and the entry's version otherwise. Such a
   handle is what a script receives as `@Unit(:UnitDisplay)~`, so a receiver caches per handle and projection, and the
   untyped store computes the same hashes (`GesStore.Index(projection)`). The projected value of an entry is
   `UnitDisplay(entry.value)` (C# `UnitDisplay.From(entry.Value)`).
@@ -2928,8 +2944,8 @@ handle type, `max` and `value`, a field named `[]` (*Since: Unreleased* — hand
 A [model message](#model-message-sets) is a type with `kind` `message`, its arguments as `fields` and `tags`, and a model
 set one with `kind` `messages`, its parameters as `fields` when it has any and `members`; schema types have `kind`
 `schema`, which only a generation with a model set writes. *Since: Unreleased.* When a type reaches a handle type, the layout adds `handles` last, ordered by name, each with `name`, `hash`,
-`state`, `version` (`none`, `revision`, `sha1`, `sha256` or `contentHash`) and either `id` or, for a composite, `root`
-and `part`, for a part-less composite `root` and `id`, a key with `kind` `integer` and `lower` and `upper` or `kind` `text` and `max`. *Since: Unreleased* — handles.
+`state` (left out for a stateless type), `version` (`none`, `revision`, `sha1`, `sha256` or `ges`; an attached type's
+is its root's), for a type with a root `form` (`attached` or `keyed`) and `root`, and `part` or, without one, `id`, a key with `kind` `integer` and `lower` and `upper` or `kind` `text` and `max`. *Since: Unreleased* — handles.
 *Since: Unreleased* — projections: a [projection](#projections) type adds `conversions` after `takes`, one per source the
 generation declares, nearest first, each with `source` and `paths`, the path of every taken field from that source's root
 as `.`-joined field names in field order; a handle adds `projections`, the generated projections of its state, ordered by
@@ -2955,10 +2971,12 @@ exact decimals. Hashes are 16 lowercase hexadecimal digits, and a binary64 value
   given, without repetition, each network followed by its route roots), `parameters`, `types`, only when a handle type is
   reached `handles`, and, only with a network root, `networks`.
 - Handles are ordered by name and have `name`, `hash` (the [handle hash](#canonical-form)), `state` (the state schema's
-  name; the state is a type of the layout only when a root reaches it otherwise, since the wire carries only the identity
-  and a state need not be encodable), `id` (an `integer` or `text` encoding) and `version` (`kind` `none`, `revision`
-  with the `integer` encoding, `sha1`, `sha256` or `contentHash`), or for a composite `root` and `part` instead of `id`
-  and `version`; a part-less composite writes `root` before its root's `id` and `version`. *Since: Unreleased.*
+  name, left out for a stateless type; the state is a type of the layout only when a root reaches it otherwise, since the
+  wire carries only the identity and a state need not be encodable), for a type with a root `form` (`attached` or
+  `keyed`), then `id` (an `integer` or `text` encoding) or for a type with a root and a part `root` and `part` instead,
+  a part-less type writing `root` before its root's `id`, and `version` (`kind` `none`, `revision` with the `integer`
+  encoding, `sha1`, `sha256` or `ges`), which an attached type with a part leaves out; a part-less attached type writes
+  its root's. *Since: Unreleased.*
 - A parameter has `name`, `type` (`Number`, `Quantity` or `Percentage`), `unit` (the portable
   unit name, or `none`) and `value`, the exact decimal of its value in base units as the binding
   hash spells it. Parameters are reached by any root and ordered by name.

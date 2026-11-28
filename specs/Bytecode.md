@@ -101,10 +101,10 @@ Record of a schema in `P`'s source chain to `P`, reading `P` from the host's reg
 state read of the first handle type with that projection for its `EntryAddress`. The view is no part of the Program's
 other data and needs no import of its own. On a
 handle, `MemberAccess` reads `id` and `version` from the identity, `root` gives `nothing`, `@Root` (the
-root type's name with `@`, which needs a `HandleType` import) reads the root handle of a composite, without a
-version for a part-less composite, and `nothing` of another handle, `@id` reads the identity as a Map with `root` and
-`part` for a composite with a part and with `root` alone for any other handle (the compiler emits it for `h.id` of a
-type that may be a part-less composite; *Since: Unreleased*), and every other member reads the resolved state.
+root type's name with `@`, which needs a `HandleType` import) reads the root handle, without a version, of a type
+attached to or keyed by that root, `@id` reads the identity as a Map with `root` and `part` for a handle with a part and
+with `root` alone for any other handle (the compiler emits it for `h.id` of a type with a root; *Since: Unreleased*),
+and every other member reads the resolved state.
 
 Existing string and compact list pools remain important. Constants that fit the
 linear instruction shape are encoded directly in typed load instructions:
@@ -1536,10 +1536,10 @@ nibble is a format convention, not a second runtime dispatch step.
 | 0x47 | `KeysOfStore` | - | result register | `TypeOperand`=handle type string | - | - | Store read `@X[:keys]`: the List of handles of every object of the type in key order, `nothing` if its resolver does not enumerate ([Host runtime](HostRuntime.md#stores)). |
 | 0x48 | `ValuesOfStore` | - | result register | `TypeOperand`=handle type string | - | - | Store read `@X[:values]`: the List of states of every object of the type in key order, `nothing` if its resolver does not enumerate ([Host runtime](HostRuntime.md#stores)). |
 | 0x49 | `EntriesOfStore` | - | result register | `TypeOperand`=handle type string | - | - | Store read `@X[:entries]`: the List of `{key, value}` Maps of every object of the type in key order, `nothing` if its resolver does not enumerate ([Host runtime](HostRuntime.md#stores)). |
-| 0x4A | `CountParts` | - | result register | `XRegister`=root | `TypeOperand`=composite handle type string | - | Store read `@X(root)[:count]`: the number of parts of one root, `nothing` if the root is no handle of the root type or the resolver does not enumerate. |
-| 0x4B | `KeysOfParts` | - | result register | `XRegister`=root | `TypeOperand`=composite handle type string | - | Store read `@X(root)[:keys]`: the List of part handles of one root in key order, `nothing` if the root is no handle of the root type or the resolver does not enumerate. |
-| 0x4C | `ValuesOfParts` | - | result register | `XRegister`=root | `TypeOperand`=composite handle type string | - | Store read `@X(root)[:values]`: the List of part states of one root in key order, `nothing` if the root is no handle of the root type or the resolver does not enumerate. |
-| 0x4D | `EntriesOfParts` | - | result register | `XRegister`=root | `TypeOperand`=composite handle type string | - | Store read `@X(root)[:entries]`: the List of `{key, value}` Maps of one root in key order, `nothing` if the root is no handle of the root type or the resolver does not enumerate. |
+| 0x4A | `CountParts` | - | result register | `XRegister`=root | `TypeOperand`=handle type string with a root and a part | - | Store read `@X(root)[:count]`: the number of parts of one root, `nothing` if the root is no handle of the root type or the resolver does not enumerate. |
+| 0x4B | `KeysOfParts` | - | result register | `XRegister`=root | `TypeOperand`=handle type string with a root and a part | - | Store read `@X(root)[:keys]`: the List of part handles of one root in key order, `nothing` if the root is no handle of the root type or the resolver does not enumerate. |
+| 0x4C | `ValuesOfParts` | - | result register | `XRegister`=root | `TypeOperand`=handle type string with a root and a part | - | Store read `@X(root)[:values]`: the List of part states of one root in key order, `nothing` if the root is no handle of the root type or the resolver does not enumerate. |
+| 0x4D | `EntriesOfParts` | - | result register | `XRegister`=root | `TypeOperand`=handle type string with a root and a part | - | Store read `@X(root)[:entries]`: the List of `{key, value}` Maps of one root in key order, `nothing` if the root is no handle of the root type or the resolver does not enumerate. |
 | 0x4E..0x4F | reserved | - | - | - | - | - | Reserved tail of Group 1. |
 
 ### Group 2 - Boolean Algebra, Comparison, Math And Random

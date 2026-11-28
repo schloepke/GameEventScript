@@ -48,13 +48,13 @@ enum GesHandleTypeNames {
     // The alternatives' names without `@`, in source order.
     static func names(_ typeName: String) -> [String] { alternatives(typeName).map { split($0).name } }
 
-    // Whether the alternatives share a root and one of them is a part-less composite, whose `id` is a root without a part.
-    static func hasPartlessComposite(_ typeName: String, _ handleTypes: [String: GesHandleType]) -> Bool {
+    // Whether the alternatives share a root and one of them has no part, so its `id` is a root without a part.
+    static func hasRootWithoutPart(_ typeName: String, _ handleTypes: [String: GesHandleType]) -> Bool {
         guard commonRoot(typeName, handleTypes) != nil else { return false }
         return alternatives(typeName).contains { handleTypes[split($0).name]?.part == nil }
     }
 
-    // The root type all alternatives share, or nil when one is no declared composite or the roots differ.
+    // The root type all alternatives share, or nil when one is no declared type with a root or the roots differ.
     static func commonRoot(_ typeName: String, _ handleTypes: [String: GesHandleType]) -> GesHandleType? {
         var common: GesHandleType?
         for alternative in alternatives(typeName) {

@@ -676,28 +676,30 @@ internal sealed partial class GesFileScope
         }
     }
 
-    // A handle type's state is a declared, non-abstract schema, a composite's root a handle type that is not composite
-    // itself; its id, part and revision are resolved like field types, without lets.
+    // A handle type's state, when it has one, is a declared, non-abstract schema; the root of a type attached to or keyed by one
+    // is a handle type without a root itself; its id, part and revision are resolved like field types, without lets.
     internal void ResolveHandles(Dictionary<string, GesResolvedDeclaration> all)
     {
         _lets.Clear();
         foreach (var handle in _ownHandles)
         {
             var syntax = handle.Syntax;
-            if (syntax.Store.Length > 0)
-                handle.Store = StoreOf(handle);
+            if (syntax.State.Length == 0) handle.State = null;
             else if (!all.TryGetValue(syntax.State, out var state) || state.Kind != GesSchemaKind.Schema)
                 throw Error(Code.InvalidHandle, syntax.StateOffset, $"The state of '@{handle.Name}', ':{syntax.State}', is no declared schema.");
             else if (state.Abstract) throw Error(Code.InvalidHandle, syntax.StateOffset, $"The state of '@{handle.Name}', ':{syntax.State}', is abstract.");
             else handle.State = state;
+            if (syntax.Version == GesHandleVersionKind.GesHash && handle.State is null)
+                throw Error(Code.InvalidHandle, syntax.VersionOffset, $"'@{handle.Name}' has no state, whose content hash 'hash(#ges)' would be its version.");
             if (syntax.Root.Length > 0)
             {
                 var root = Handle(syntax.Root, syntax.RootOffset);
                 if (root.Syntax.Root.Length > 0)
-                    throw Error(Code.InvalidHandle, syntax.RootOffset, $"'@{syntax.Root}' is composite itself; composites have one level.");
+                    throw Error(Code.InvalidHandle, syntax.RootOffset, $"'@{syntax.Root}' has a root itself; a root has none.");
                 handle.Root = root;
             }
 
+            if (syntax.Revision is { } revision) handle.Revision = ResolveRevision(revision, all);
             if (syntax.Id is null) continue;
             handle.Id = ResolveType(syntax.Id, all);
             if (handle.Id.Kind == GesSchemaTypeKind.Number)
@@ -705,46 +707,34 @@ internal sealed partial class GesFileScope
                     if (bound.IsParameter) throw Error(Code.InvalidHandle, bound.Offset, "A handle type's bounds are literals or constants, never parameters.");
                     else if (bound.Value.Exponent + Digits(Math.Abs(bound.Value.Significand)) > 18)
                         throw Error(Code.InvalidHandle, bound.Offset, "An integer id or part lies within 18 digits.");
-            if (syntax.Revision is { } revision) handle.Revision = ResolveType(revision, all);
         }
     }
 
-    // A store file type `:Store(@Unit)` is composite with a Text part, and its store's type is a declared handle type
-    // with a Text id that is neither composite nor a store file type itself.
-    private GesResolvedHandle StoreOf(GesResolvedHandle handle)
+    // `revision` is an integer Number without a range, `revision max n` one between 0 and n, whose maximum lies within 18 digits.
+    private GesResolvedType ResolveRevision(GesSchemaTypeSyntax revision, Dictionary<string, GesResolvedDeclaration> all)
     {
-        var syntax = handle.Syntax;
-        if (syntax.Root.Length == 0)
-            throw Error(Code.InvalidHandle, syntax.StoreOffset, $"The store file type '@{handle.Name}' is no composite; it names the files of a root.");
-        if (syntax.Id is null)
-            throw Error(Code.InvalidHandle, syntax.RootOffset, $"The store file type '@{handle.Name}' has no part; it names a file of a root by its path.");
-        if (syntax.Id.Kind != GesSchemaTypeKind.Text)
-            throw Error(Code.InvalidHandle, syntax.Id.Offset, $"The part of the store file type '@{handle.Name}' is a path, a :Text with max.");
-        var target = Handle(syntax.Store, syntax.StoreOffset);
-        if (target.Syntax.Store.Length > 0 || target.Syntax.Root.Length > 0 || target.Syntax.Id!.Kind != GesSchemaTypeKind.Text)
-            throw Error(Code.InvalidHandle, syntax.StoreOffset, $"A store holds a handle type with a Text id that is not composite, unlike '@{syntax.Store}'.");
-        target.Files.Add(handle);
-        return target;
+        var type = ResolveType(revision, all);
+        if (type.Constraints.Upper is { } upper)
+        {
+            if (upper.IsParameter) throw Error(Code.InvalidHandle, upper.Offset, "A revision's maximum is a literal or a constant, never a parameter.");
+            if (upper.Value.Significand <= 0 || upper.Value.Exponent < 0 || upper.Value.Exponent + Digits(upper.Value.Significand) > 18)
+                throw Error(Code.InvalidHandle, upper.Offset, "A revision's maximum is a positive integer within 18 digits.");
+        }
+
+        return type;
     }
 
-    // A state field named `id`, `version` or `root` would collide with the handle's members; a store file type has no state.
+    // A state field named `id`, `version` or `root` would collide with the handle's members; a type without state has none.
     internal void CheckHandleState(GesResolvedHandle handle)
     {
-        if (handle.Store is not null) return;
+        if (handle.State is not { } state) return;
         foreach (var name in new[] { "id", "version", "root" })
-            if (Array.Exists(handle.State.Fields, field => field.Name == name) || Array.Exists(handle.State.Computed, field => field.Name == name))
-                throw Error(Code.InvalidHandle, handle.Syntax.StateOffset, $"The state ':{handle.State.Name}' of '@{handle.Name}' has a field '{name}', which collides with the handle's members.");
+            if (Array.Exists(state.Fields, field => field.Name == name) || Array.Exists(state.Computed, field => field.Name == name))
+                throw Error(Code.InvalidHandle, handle.Syntax.StateOffset, $"The state ':{state.Name}' of '@{handle.Name}' has a field '{name}', which collides with the handle's members.");
     }
 
     private GesResolvedHandle Handle(string name, int offset)
         => _handles.TryGetValue(name, out var handle) ? handle : throw Error(Code.UnknownName, offset, $"Handle type '@{name}' is not declared.");
-
-    private GesResolvedHandle KeyHandle(string name, int offset)
-    {
-        var handle = Handle(name, offset);
-        return handle.Syntax.Store.Length == 0 ? handle
-            : throw Error(Code.InvalidHandle, offset, $"'@{name}' is a store file type, which only reading a store uses.");
-    }
 
     internal void Resolve(Dictionary<string, GesResolvedDeclaration> all, Dictionary<string, GesResolvedDeclaration> messages)
     {
@@ -1229,12 +1219,13 @@ internal sealed partial class GesFileScope
         return result;
     }
 
-    // `@Name(:P)` names a projection that narrows the state of a handle type that is neither composite nor a store file
-    // type. Narrowing follows the declared sources by name, since projections are composed only later.
+    // `@Name(:P)` names a projection that narrows the state of a handle type without a root. Narrowing follows the declared sources by name, since projections are composed only later.
     private GesResolvedDeclaration HandleProjection(GesResolvedHandle handle, GesSchemaTypeSyntax type, Dictionary<string, GesResolvedDeclaration> all)
     {
         if (handle.Root is not null)
-            throw Error(Code.InvalidProjection, type.ProjectionOffset, $"'@{type.Name}' is composite; a projection reads a handle type that is not.");
+            throw Error(Code.InvalidProjection, type.ProjectionOffset, $"'@{type.Name}' has a root; a projection reads a handle type without one.");
+        if (handle.State is null)
+            throw Error(Code.InvalidProjection, type.ProjectionOffset, $"'@{type.Name}' has no state, which a projection could read.");
         if (!all.TryGetValue(type.Projection, out var projection) || !projection.IsProjection)
             throw Error(Code.InvalidProjection, type.ProjectionOffset, $"':{type.Projection}' is no declared projection.");
         var source = projection;
@@ -1253,8 +1244,6 @@ internal sealed partial class GesFileScope
         if (type.Kind == GesSchemaTypeKind.Handle)
         {
             var handle = Handle(type.Name, type.Offset);
-            if (handle.Syntax.Store.Length > 0)
-                throw Error(Code.InvalidHandle, type.Offset, $"'@{type.Name}' is a store file type, which only reading a store uses.");
             if (type.Versioned && !handle.Versioned)
                 throw Error(Code.InvalidHandle, type.Offset, $"'@{type.Name}' has no version, so '@{type.Name}~' does not exist.");
             var projection = type.Projection.Length > 0 ? HandleProjection(handle, type, all) : null;
@@ -1311,7 +1300,7 @@ internal sealed partial class GesFileScope
             Axes = axes,
             Reference = reference,
             ReferenceName = type.Name,
-            Handle = type.Key.Length > 0 ? KeyHandle(type.Key, type.KeyOffset) : null,
+            Handle = type.Key.Length > 0 ? Handle(type.Key, type.KeyOffset) : null,
             Offset = type.Offset
         };
     }
@@ -1416,7 +1405,7 @@ internal static class GesSchemaCanonical
         return builder.ToString();
     }
 
-    // The form a handle hash runs over: the handle type's declaration and, for a composite, its root's. A handle type has
+    // The form a handle hash runs over: the handle type's declaration and, for a type with a root, its root's. A handle type has
     // no parameters and never reaches its state.
     internal static string HandleForm(GesResolvedHandle handle)
     {

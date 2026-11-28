@@ -419,7 +419,7 @@ final class GenerateTests: XCTestCase {
     func testSplitOutputPlacesAHandleTypeInTheFileOfItsDeclaration() throws {
         let set = try GesSchemaSet(sources: [
             GesSchemaSource(name: "states.gess", text: "schema :Composition as { name: :Text max 4 }\n"),
-            GesSchemaSource(name: "handles.gess", text: "handle @Unit of :Composition as { id: :Text max 4, version: :ContentHash }\n"),
+            GesSchemaSource(name: "handles.gess", text: "handle @Unit of :Composition with id :Text max 4 versioned by hash(#ges)\n"),
             GesSchemaSource(name: "commands.gess", text: "model schema :Move as { unit: @Unit, units: :List(@Unit~) max 2 }\n"),
         ])
         for language in [GesSchemaLanguage.csharp, .swift] {
@@ -446,12 +446,12 @@ final class GenerateTests: XCTestCase {
         // The store type has no declaration of its own; it goes with the handle type, as <Name>Handle does.
         let set = try GesSchemaSet(sources: [
             GesSchemaSource(name: "states.gess", text: "model(data) schema :Unit as { name: :Text max 64 }\n"),
-            GesSchemaSource(name: "handles.gess", text: "handle @Unit of :Unit as { id: :Text max 64, version: :ContentHash }\n"),
+            GesSchemaSource(name: "handles.gess", text: "handle @Unit of :Unit with id :Text max 64 versioned by hash(#ges)\n"),
         ])
         let single = try GesSchemaSet(sources: [
             GesSchemaSource(
                 name: "units.gess",
-                text: "handle @Unit of :Unit as { id: :Text max 64, version: :ContentHash }\nmodel(data) schema :Unit as { name: :Text max 64 }\n"
+                text: "handle @Unit of :Unit with id :Text max 64 versioned by hash(#ges)\nmodel(data) schema :Unit as { name: :Text max 64 }\n"
             )
         ])
         for language in [GesSchemaLanguage.csharp, .swift] {
@@ -474,9 +474,9 @@ final class GenerateTests: XCTestCase {
     func testHandleFieldsReachTheirHandleTypesButNotTheirStates() throws {
         let set = try GesSchemaSet(
             parsing: "schema :Composition as { name: :Text max 4 }\nschema :Source as { text: :Text }\n"
-                + "handle @Unit of :Composition as { id: :Text max 4, version: :ContentHash }\n"
-                + "handle @Repository of :Source as { id: :Text max 4, version: :Hash(#sha1) }\n"
-                + "handle @UnitFile of :Composition composite @Repository as { part: :Text max 8 }\n"
+                + "handle @Unit of :Composition with id :Text max 4 versioned by hash(#ges)\n"
+                + "handle @Repository of :Source with id :Text max 4 versioned by hash(#sha1)\n"
+                + "handle @UnitFile of :Composition attached to @Repository with part :Text max 8\n"
                 + "model schema :Move as { unit: @Unit~, parts: :List(@Unit) max 2, file: @UnitFile~ | :Nothing }\n"
                 + "model schema :Stock as { move: :Move, unit: :Composition }\n"
         )
@@ -488,7 +488,7 @@ final class GenerateTests: XCTestCase {
                 try GesSchemaGenerator.generateModelFiles(set, roots: roots, options: options).map { $0.path.hasSuffix(fileExtension) ? String($0.path.dropLast(fileExtension.count)) : $0.path }
             }
 
-            // A composite brings its root's handle type, which it holds, and neither handle brings its state.
+            // An attached type brings its root's handle type, which it holds, and neither handle brings its state.
             XCTAssertEqual(try types(["Move"]), ["Game.Net.Move", "Game.Net.RepositoryHandle", "Game.Net.UnitFileHandle", "Game.Net.UnitHandle", "_Game.Net", ".ges-generated.json"])
             // A state that a root reaches otherwise is a model type; a state of no reached field stays out.
             XCTAssertEqual(
@@ -572,11 +572,11 @@ final class GenerateTests: XCTestCase {
     func testStoreNamesCollideWithNoTopLevelType() throws {
         // A dependency parameter named roots, a store named like a top-level type and a state type named Entry.
         let sources = [
-            "model(store) schema :Roots as { name: :Text max 8 }\nhandle @Roots of :Roots as { id: :Text max 8, version: :ContentHash }\n"
-                + "model(store) schema :Unit as { roots: @Roots }\nhandle @Unit of :Unit as { id: :Text max 8, version: :ContentHash }\n",
-            "model(store) schema :Unit as { name: :Text max 8 }\nhandle @Unit of :Unit as { id: :Text max 8, version: :ContentHash }\n"
+            "model(store) schema :Roots as { name: :Text max 8 }\nhandle @Roots of :Roots with id :Text max 8 versioned by hash(#ges)\n"
+                + "model(store) schema :Unit as { roots: @Roots }\nhandle @Unit of :Unit with id :Text max 8 versioned by hash(#ges)\n",
+            "model(store) schema :Unit as { name: :Text max 8 }\nhandle @Unit of :Unit with id :Text max 8 versioned by hash(#ges)\n"
                 + "model(store) schema :UnitStore as { name: :Text max 8 }\n",
-            "model(store) schema :Entry as { name: :Text max 8 }\nhandle @Entry of :Entry as { id: :Text max 8, version: :ContentHash }\n",
+            "model(store) schema :Entry as { name: :Text max 8 }\nhandle @Entry of :Entry with id :Text max 8 versioned by hash(#ges)\n",
         ]
         for source in sources {
             let set = try GesSchemaSet(parsing: source)
@@ -587,11 +587,11 @@ final class GenerateTests: XCTestCase {
     }
 
     func testHandleTypesWithoutAModelStoreGenerateNone() throws {
-        // A Number id, a composite and a state that is no model root generate no store.
+        // A Number id, an attached type and a state that is no model root generate no store.
         let set = try GesSchemaSet(
-            parsing: "model(store) schema :Contact as { label: :Text max 8 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 9, version: :Nothing }\n"
-                + "handle @Slot of :Contact composite @Target as { part: :Text max 8 }\nschema :Other as { label: :Text max 8 }\n"
-                + "handle @Other of :Other as { id: :Text max 8, version: :Nothing }\n"
+            parsing: "model(store) schema :Contact as { label: :Text max 8 }\nhandle @Target of :Contact with id :Number integer between 0 and 9\n"
+                + "handle @Slot of :Contact attached to @Target with part :Text max 8\nschema :Other as { label: :Text max 8 }\n"
+                + "handle @Other of :Other with id :Text max 8\n"
         )
         for language in [GesSchemaLanguage.csharp, .swift] {
             let generated = try GesSchemaGenerator.generateModels(set, roots: GesSchemaGenerator.modelRoots(set, group: "store"), options: stores(language))
@@ -600,7 +600,7 @@ final class GenerateTests: XCTestCase {
     }
 
     func testWireCodeTakesNoStores() throws {
-        let set = try GesSchemaSet(parsing: "model(store) schema :Unit as { name: :Text max 8 }\nhandle @Unit of :Unit as { id: :Text max 8, version: :ContentHash }\n")
+        let set = try GesSchemaSet(parsing: "model(store) schema :Unit as { name: :Text max 8 }\nhandle @Unit of :Unit with id :Text max 8 versioned by hash(#ges)\n")
         XCTAssertEqual(code { try GesSchemaGenerator.generate(set, roots: ["Unit"], parameters: GesSchemaParameters(), options: stores(.swift)) }, "generate.usage")
     }
 }

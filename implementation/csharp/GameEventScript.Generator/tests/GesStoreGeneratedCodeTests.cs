@@ -105,11 +105,11 @@ public sealed class GesStoreGeneratedCodeTests
     }
 
     [TestMethod]
-    [DataRow("model(store) schema :Roots as { name: :Text max 8 }\nhandle @Roots of :Roots as { id: :Text max 8, version: :ContentHash }\n"
-        + "model(store) schema :Unit as { roots: @Roots }\nhandle @Unit of :Unit as { id: :Text max 8, version: :ContentHash }\n")]
-    [DataRow("model(store) schema :Unit as { name: :Text max 8 }\nhandle @Unit of :Unit as { id: :Text max 8, version: :ContentHash }\n"
+    [DataRow("model(store) schema :Roots as { name: :Text max 8 }\nhandle @Roots of :Roots with id :Text max 8 versioned by hash(#ges)\n"
+        + "model(store) schema :Unit as { roots: @Roots }\nhandle @Unit of :Unit with id :Text max 8 versioned by hash(#ges)\n")]
+    [DataRow("model(store) schema :Unit as { name: :Text max 8 }\nhandle @Unit of :Unit with id :Text max 8 versioned by hash(#ges)\n"
         + "model(store) schema :UnitStore as { name: :Text max 8 }\n")]
-    [DataRow("model(store) schema :Entry as { name: :Text max 8 }\nhandle @Entry of :Entry as { id: :Text max 8, version: :ContentHash }\n")]
+    [DataRow("model(store) schema :Entry as { name: :Text max 8 }\nhandle @Entry of :Entry with id :Text max 8 versioned by hash(#ges)\n")]
     public void RejectsStoresWhoseNamesCollide(string schemas)
     {
         Assert.AreEqual("generate.nameCollision", Code(schemas, GesSchemaLanguage.CSharp));
@@ -119,11 +119,11 @@ public sealed class GesStoreGeneratedCodeTests
     [TestMethod]
     public void LeavesHandleTypesWithoutAModelStoreOut()
     {
-        // A Number id, a composite and a state that is no model root generate no store.
+        // A Number id, an attached type and a state that is no model root generate no store.
         var set = GesSchemaSet.Parse(new GesSchemaSource("names.gess",
-            "model(store) schema :Contact as { label: :Text max 8 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 9, version: :Nothing }\n"
-            + "handle @Slot of :Contact composite @Target as { part: :Text max 8 }\nschema :Other as { label: :Text max 8 }\n"
-            + "handle @Other of :Other as { id: :Text max 8, version: :Nothing }\n"));
+            "model(store) schema :Contact as { label: :Text max 8 }\nhandle @Target of :Contact with id :Number integer between 0 and 9\n"
+            + "handle @Slot of :Contact attached to @Target with part :Text max 8\nschema :Other as { label: :Text max 8 }\n"
+            + "handle @Other of :Other with id :Text max 8\n"));
         var code = GesSchemaGenerator.GenerateModels(set, GesSchemaGenerator.ModelRoots(set, "store"), Options(GesSchemaLanguage.CSharp, "Names"));
         Assert.DoesNotContain("Store :", code);
     }
@@ -134,9 +134,9 @@ public sealed class GesStoreGeneratedCodeTests
         // The store type has no declaration of its own; it goes with the handle type, as <Name>Handle does.
         var set = GesSchemaSet.Parse(
             new GesSchemaSource("states.gess", "model(data) schema :Unit as { name: :Text max 64 }\n"),
-            new GesSchemaSource("handles.gess", "handle @Unit of :Unit as { id: :Text max 64, version: :ContentHash }\n"));
+            new GesSchemaSource("handles.gess", "handle @Unit of :Unit with id :Text max 64 versioned by hash(#ges)\n"));
         var single = GesSchemaSet.Parse(new GesSchemaSource("units.gess",
-            "handle @Unit of :Unit as { id: :Text max 64, version: :ContentHash }\nmodel(data) schema :Unit as { name: :Text max 64 }\n"));
+            "handle @Unit of :Unit with id :Text max 64 versioned by hash(#ges)\nmodel(data) schema :Unit as { name: :Text max 64 }\n"));
         foreach (var language in new[] { GesSchemaLanguage.CSharp, GesSchemaLanguage.Swift })
         {
             var extension = language == GesSchemaLanguage.Swift ? ".swift" : ".g.cs";

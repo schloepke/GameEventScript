@@ -109,6 +109,9 @@ internal struct GesSchemaNode
     internal bool IsTagBit;
     internal bool IsTagText;
 
+    // A handle group of a keyed type, whose version is its own.
+    internal bool KeyedHandle;
+
     // A record of a packed schema, whose delta is its whole word.
     internal bool Packed;
     // A :Bytes max n: a Text on the wire whose bytes need not be UTF-8.
@@ -570,7 +573,7 @@ internal static class GesSchemaBinder
     }
 
     // The nodes of one handle type on its own, with its version when it has one: the group, the id or the root's id, the
-    // version and a composite's part, as a field of the type would hold them. Generation lays them out.
+    // version and the part of a type with a part, as a field of the type would hold them. Generation lays them out.
     internal static GesSchemaNode[] BindHandle(GesResolvedHandle handle)
     {
         var build = new Build(new GesSchemaParameters());
@@ -911,15 +914,17 @@ internal static class GesSchemaBinder
                 else build.Levels[reference] = level;
                 break;
             case GesSchemaTypeKind.Handle:
-                // The identity: the id, or a composite's root id; the version for `~`; a composite's part, if it has one.
+                // The identity: the id, or the root id of a type with a root; the version for `~`, an attached type's its
+                // root's; the part, if the type has one.
                 var handle = type.Handle!;
-                CheckComposite(scope, handle, type.Offset, build.Levels.ContainsKey);
+                CheckRootReach(scope, handle, type.Offset, build.Levels.ContainsKey);
                 node.Kind = GesSchemaNodeKind.Group;
                 node.SchemaName = handle.Name;
+                node.KeyedHandle = handle.IsKeyed;
                 build.Nodes.Add(node);
                 var identity = handle.Root ?? handle;
                 AddType(build, identity.Scope, identity.Id, "id", path + ".id", false, false, lists);
-                if (type.Versioned) AddVersion(build, identity, path + ".version", lists);
+                if (type.Versioned) AddVersion(build, handle.VersionOwner, path + ".version", lists);
                 if (handle.HasPart) AddType(build, handle.Scope, handle.Id, "part", path + ".part", false, false, lists);
                 break;
             case GesSchemaTypeKind.Map when type.Handle is { } mapKey:
@@ -964,11 +969,11 @@ internal static class GesSchemaBinder
         build.Nodes.Add(new GesSchemaNode { Kind = GesSchemaNodeKind.Text, IsBytes = true, Fixed = true, MaxCount = length, Name = "version", Path = path, ValueKind = GesSchemaTypeKind.Bytes, SchemaName = "", Next = build.Nodes.Count + 1 });
     }
 
-    // A composite reached from the state of its own root would repeat the root's identity in each element; a relative
-    // encoding is an open point.
-    private static void CheckComposite(GesFileScope scope, GesResolvedHandle handle, int offset, Func<GesResolvedDeclaration, bool> enclosing)
+    // A handle of a type with a root reached from the state of its own root would repeat the root's identity in each element;
+    // a relative encoding is an open point.
+    private static void CheckRootReach(GesFileScope scope, GesResolvedHandle handle, int offset, Func<GesResolvedDeclaration, bool> enclosing)
     {
-        if (handle.Root is { } root && enclosing(root.State))
+        if (handle.Root is { State: { } rootState } root && enclosing(rootState))
             throw scope.Error(Code.NotEncodable, offset, $"'@{handle.Name}' inside the state of its root '@{root.Name}' points into its own root's value; each element would repeat the root's identity, so it has no encoding.");
     }
 
@@ -1053,12 +1058,12 @@ internal static class GesSchemaBinder
                 CheckEncodable(type.Reference!, lists, known, levels);
                 break;
             case GesSchemaTypeKind.Handle:
-                CheckComposite(scope, type.Handle!, type.Offset, levels.ContainsKey);
+                CheckRootReach(scope, type.Handle!, type.Offset, levels.ContainsKey);
                 break;
             case GesSchemaTypeKind.Map when type.Handle is { } mapKey:
                 if (type.Max is null) throw scope.Error(Code.NotEncodable, type.Offset, "A Map without max has no hard limit.");
                 if (lists >= MaximumListNesting) throw scope.Error(Code.NotEncodable, type.Offset, $"Lists nest at most {MaximumListNesting} levels for encoding.");
-                CheckComposite(scope, mapKey, type.Offset, levels.ContainsKey);
+                CheckRootReach(scope, mapKey, type.Offset, levels.ContainsKey);
                 foreach (var alternative in type.Element!)
                     if (alternative.Kind != GesSchemaTypeKind.Nothing) CheckEncodable(scope, alternative, lists + 1, known, levels);
                 break;

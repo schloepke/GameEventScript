@@ -106,24 +106,25 @@ class SchemaApiExternalInputTests(unittest.TestCase):
             case.expected['schema']['store'] = expected
         return case
 
-    def test_handle_roots_reach_the_adapter_with_refs_and_versions(self):
+    def test_store_sources_reach_the_adapter_with_versions(self):
         request = prepare(self.cases['store-handle-roots'])['store']
-        self.assertEqual({'#main': 7}, request['refs'])
         self.assertEqual(3, request['latest'])
-        self.assertEqual(['@UnitFiles:content~#main/units.gesd', '@UnitFiles:mod/mod.gesd'], request['stores'][0]['handles'])
+        self.assertEqual([{'handle': '@Repository:content~7', 'path': 'units.gesd'}, {'handle': '@Repository:mod', 'path': 'mod.gesd'}],
+                         request['stores'][0]['sources'])
         self.assertIsNone(request['stores'][0]['roots'])
         self.assertIsNone(request['files'][0]['version'])
         self.assertEqual(4, prepare(self.cases['store-handle-version-mismatch'])['store']['files'][0]['version'])
         named = prepare(self.cases['store-entries'])['store']
-        self.assertEqual(({}, None), (named['refs'], named['latest']))
-        self.assertIsNone(named['stores'][0]['handles'])
+        self.assertIsNone(named['latest'])
+        self.assertIsNone(named['stores'][0]['sources'])
 
     def test_malformed_handle_setups_are_document_errors(self):
         def both(store):
             store['stores'][0]['roots'] = []
-        changes = [both, lambda c: c.update(refs={'#main': -1}), lambda c: c.update(refs=[]), lambda c: c.update(latest=True),
-                   lambda c: c['files'][0].update(version='4'), lambda c: c['stores'][0].update(handles=['units.gesd']),
-                   lambda c: c['stores'][0].update(handles='@UnitFiles:mod/mod.gesd'), lambda c: c['stores'][0].pop('handles')]
+        changes = [both, lambda c: c.update(refs={'#main': 7}), lambda c: c.update(latest=True),
+                   lambda c: c['files'][0].update(version='4'), lambda c: c['stores'][0].update(sources=[{'handle': 'units.gesd', 'path': 'a'}]),
+                   lambda c: c['stores'][0].update(sources=[{'handle': '@Repository:mod'}]),
+                   lambda c: c['stores'][0].update(sources='@Repository:mod'), lambda c: c['stores'][0].pop('sources')]
         for change in changes:
             with self.assertRaises(InvalidDocument):
                 prepare(self.store_case('store-handle-roots', change))

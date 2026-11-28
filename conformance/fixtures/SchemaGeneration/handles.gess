@@ -1,18 +1,21 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
-// The fixture of the checked-in handle code: handle types without, with a revision, a content hash and a SHA-1 version,
-// a composite, handle fields with and without the version, as list elements, union alternatives and Map keys, in wire
-// records with deltas and in models.
+// The fixture of the checked-in handle code: handle types without, with a revision, a GES hash and a SHA-1 version, one
+// attached to a root, one keyed by a root with a version of its own, one without state, handle fields with and without the
+// version, as list elements, union alternatives and Map keys, in wire records with deltas and in models.
 schema :DroneState as { x: :Quantity(m) between -200m and 200m step 0.05m, y: :Quantity(m) between -200m and 200m step 0.05m }
 schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }
 schema :Composition as { name: :Text max 64, slots: :Number integer between 0 and 16 }
 schema :Source as { text: :Text }
 
-handle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }
-handle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }
-handle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }
-handle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }
-handle @UnitFile of :Composition composite @Repository as { part: :Text max 256 }
+handle @Drone of :DroneState with id :Number integer between 0 and 255 versioned by revision max 1000
+handle @Target of :Contact with id :Number integer between 0 and 65535
+handle @Unit of :Composition with id :Text max 64 versioned by hash(#ges)
+handle @Repository of :Source with id :Text max 64 versioned by hash(#sha1)
+handle @UnitFile of :Composition attached to @Repository
+  with part :Text max 256
+handle @DroneLog of :Source keyed by @Drone with part :Number integer between 0 and 15 versioned by revision max 500
+handle @Squad with id :Text max 32
 
 wire(handles) model(handles) schema :Sighting as {
   target: @Target
@@ -21,6 +24,8 @@ wire(handles) model(handles) schema :Sighting as {
   file: @UnitFile~
   subject: @Drone | @Target
   pilot: @Drone~ | :Nothing
+  log: @DroneLog~ optional
+  squad: @Squad
 }
 
 wire(handles) model(handles) schema :Memory as {

@@ -660,7 +660,7 @@ Each `owns` route writes one line after the routes, in ascending order of the ha
 gesBlock: case
 id: network-owns
 schemaApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nschema :Contact as { label: :Text max 16 }\nschema :Composition as { name: :Text max 64 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nhandle @UnitSlot of :Contact composite @Unit as { part: :Number integer between 0 and 15 }\nnetwork :Game as {\n  server publishes :World latest\n  server owns @Unit\n  client owns @Target\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nschema :Contact as { label: :Text max 16 }\nschema :Composition as { name: :Text max 64 }\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Unit of :Composition with id :Text max 64 versioned by hash(#ges)\nhandle @UnitSlot of :Contact attached to @Unit with part :Number integer between 0 and 15\nnetwork :Game as {\n  server publishes :World latest\n  server owns @Unit\n  client owns @Target\n}\n"]
   network: "Game"
 ```
 
@@ -668,7 +668,7 @@ schemaApi:
 
 ```yaml
 gesBlock: expect
-schema: {"network": {"canonical": "gesn1\nnetwork Game\nroute server publishes World latest 0 777b346c4d18936f\nowns client Target dd9da4ea4ed63220 5d824ec98db00017\nowns server Unit 84dc8d47579275f1 a40cb19f52bc920b\n", "hash": "87c04ab685dd8d0d"}}
+schema: {"network": {"canonical": "gesn1\nnetwork Game\nroute server publishes World latest 0 777b346c4d18936f\nowns client Target a804d14c26ff9903 5d824ec98db00017\nowns server Unit c937254224118591 a40cb19f52bc920b\n", "hash": "543a186d9c71ca87"}}
 ```
 
 ---
@@ -683,7 +683,7 @@ Another state schema changes the `owns` line and the network hash; compare the p
 gesBlock: case
 id: network-owns-state
 schemaApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nschema :Contact as { label: :Text max 32 }\nschema :Composition as { name: :Text max 64 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nhandle @UnitSlot of :Contact composite @Unit as { part: :Number integer between 0 and 15 }\nnetwork :Game as {\n  server publishes :World latest\n  server owns @Unit\n  client owns @Target\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nschema :Contact as { label: :Text max 32 }\nschema :Composition as { name: :Text max 64 }\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Unit of :Composition with id :Text max 64 versioned by hash(#ges)\nhandle @UnitSlot of :Contact attached to @Unit with part :Number integer between 0 and 15\nnetwork :Game as {\n  server publishes :World latest\n  server owns @Unit\n  client owns @Target\n}\n"]
   network: "Game"
 ```
 
@@ -691,7 +691,7 @@ schemaApi:
 
 ```yaml
 gesBlock: expect
-schema: {"network": {"canonical": "gesn1\nnetwork Game\nroute server publishes World latest 0 777b346c4d18936f\nowns client Target dd9da4ea4ed63220 6f41f8c997dc4e29\nowns server Unit 84dc8d47579275f1 a40cb19f52bc920b\n", "hash": "5a21ea8473a6b7d9"}}
+schema: {"network": {"canonical": "gesn1\nnetwork Game\nroute server publishes World latest 0 777b346c4d18936f\nowns client Target a804d14c26ff9903 6f41f8c997dc4e29\nowns server Unit c937254224118591 a40cb19f52bc920b\n", "hash": "98d023907593965b"}}
 ```
 
 ---
@@ -706,7 +706,7 @@ An `owns` route of a composite type is `schema.invalidHandle`.
 gesBlock: case
 id: network-owns-composite
 schemaApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nschema :Contact as { label: :Text max 16 }\nschema :Composition as { name: :Text max 64 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nhandle @UnitSlot of :Contact composite @Unit as { part: :Number integer between 0 and 15 }\nnetwork :Game as {\n  server publishes :World latest\n  server owns @UnitSlot\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nschema :Contact as { label: :Text max 16 }\nschema :Composition as { name: :Text max 64 }\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Unit of :Composition with id :Text max 64 versioned by hash(#ges)\nhandle @UnitSlot of :Contact attached to @Unit with part :Number integer between 0 and 15\nnetwork :Game as {\n  server publishes :World latest\n  server owns @UnitSlot\n}\n"]
   network: "Game"
 ```
 
@@ -729,7 +729,7 @@ A second `owns` of the same type is `schema.duplicateRoute`, even from the other
 gesBlock: case
 id: network-owns-twice
 schemaApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nschema :Contact as { label: :Text max 16 }\nschema :Composition as { name: :Text max 64 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nhandle @UnitSlot of :Contact composite @Unit as { part: :Number integer between 0 and 15 }\nnetwork :Game as {\n  server publishes :World latest\n  server owns @Target\n  client owns @Target\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nschema :Contact as { label: :Text max 16 }\nschema :Composition as { name: :Text max 64 }\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Unit of :Composition with id :Text max 64 versioned by hash(#ges)\nhandle @UnitSlot of :Contact attached to @Unit with part :Number integer between 0 and 15\nnetwork :Game as {\n  server publishes :World latest\n  server owns @Target\n  client owns @Target\n}\n"]
   network: "Game"
 ```
 
@@ -752,7 +752,7 @@ The handle type must be declared.
 gesBlock: case
 id: network-owns-unknown
 schemaApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nschema :Contact as { label: :Text max 16 }\nschema :Composition as { name: :Text max 64 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nhandle @UnitSlot of :Contact composite @Unit as { part: :Number integer between 0 and 15 }\nnetwork :Game as {\n  server publishes :World latest\n  server owns @Missing\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nschema :Contact as { label: :Text max 16 }\nschema :Composition as { name: :Text max 64 }\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Unit of :Composition with id :Text max 64 versioned by hash(#ges)\nhandle @UnitSlot of :Contact attached to @Unit with part :Number integer between 0 and 15\nnetwork :Game as {\n  server publishes :World latest\n  server owns @Missing\n}\n"]
   network: "Game"
 ```
 
@@ -775,7 +775,7 @@ A network needs at least one route that sends or publishes.
 gesBlock: case
 id: network-owns-only
 schemaApi:
-  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nschema :Contact as { label: :Text max 16 }\nschema :Composition as { name: :Text max 64 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nhandle @UnitSlot of :Contact composite @Unit as { part: :Number integer between 0 and 15 }\nnetwork :Game as {\n  server owns @Target\n}\n"]
+  sources: ["wire schema :World as { tick: :Number integer between 0 and 65535 }\nschema :Contact as { label: :Text max 16 }\nschema :Composition as { name: :Text max 64 }\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Unit of :Composition with id :Text max 64 versioned by hash(#ges)\nhandle @UnitSlot of :Contact attached to @Unit with part :Number integer between 0 and 15\nnetwork :Game as {\n  server owns @Target\n}\n"]
   network: "Game"
 ```
 
@@ -798,7 +798,7 @@ schema: {"error": {"code": "schema.syntax", "line": 7, "column": 1}}
 gesBlock: case
 id: network-owns-projection
 schemaApi:
-  sources: ["schema :Composition as { name: :Text max 64, mass: :Number integer between 0 and 999 }\nschema :Contact as { label: :Text max 16 }\nprojection :UnitPublic of :Composition as { name }\nprojection :UnitName of :UnitPublic as { name }\nprojection :ContactLabel of :Contact as { label }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nhandle @Drone of :Composition as { id: :Number integer between 0 and 99, version: :Number integer between 0 and 65535 }\nwire schema :World as { units: :List(@Unit(:UnitPublic)) max 8, names: :List(@Unit(:UnitName)) max 8, drone: @Drone(:UnitPublic) }\nwire schema :Order as { unit: @Unit, drone: @Drone~ }\nnetwork :Game as {\n  server publishes :World latest\n  client sends :Order reliable\n  server owns @Unit as :UnitPublic sending state\n  server owns @Drone as :UnitPublic\n}\n"]
+  sources: ["schema :Composition as { name: :Text max 64, mass: :Number integer between 0 and 999 }\nschema :Contact as { label: :Text max 16 }\nprojection :UnitPublic of :Composition as { name }\nprojection :UnitName of :UnitPublic as { name }\nprojection :ContactLabel of :Contact as { label }\nhandle @Unit of :Composition with id :Text max 64 versioned by hash(#ges)\nhandle @Drone of :Composition with id :Number integer between 0 and 99 versioned by revision max 65535\nwire schema :World as { units: :List(@Unit(:UnitPublic)) max 8, names: :List(@Unit(:UnitName)) max 8, drone: @Drone(:UnitPublic) }\nwire schema :Order as { unit: @Unit, drone: @Drone~ }\nnetwork :Game as {\n  server publishes :World latest\n  client sends :Order reliable\n  server owns @Unit as :UnitPublic sending state\n  server owns @Drone as :UnitPublic\n}\n"]
   network: "Game"
 ```
 
@@ -806,7 +806,7 @@ schemaApi:
 
 ```yaml
 gesBlock: expect
-schema: {"network": {"canonical": "gesn1\nnetwork Game\nroute server publishes World latest 0 bd34856e6c61272a\nroute client sends Order reliable 0 36c5c80fa57d409d\nowns server Drone 7472eebcfd7fed1f c72fa4103594b877 as UnitPublic c4809d16c5c44c68\nowns server Unit 84dc8d47579275f1 c72fa4103594b877 as UnitPublic c4809d16c5c44c68 sending\n", "hash": "c838f5bcf06f1b45"}}
+schema: {"network": {"canonical": "gesn1\nnetwork Game\nroute server publishes World latest 0 a478bbe4ccbfc0ce\nroute client sends Order reliable 0 3b4a5c1d4ee24fa1\nowns server Drone c515315f47a1ab52 c72fa4103594b877 as UnitPublic c4809d16c5c44c68\nowns server Unit c937254224118591 c72fa4103594b877 as UnitPublic c4809d16c5c44c68 sending\n", "hash": "b7d883670c726fb3"}}
 ```
 
 ---
@@ -821,7 +821,7 @@ Without `as` and `sending state` the `owns` line keeps its earlier form; compare
 gesBlock: case
 id: network-owns-projection-hash
 schemaApi:
-  sources: ["schema :Composition as { name: :Text max 64, mass: :Number integer between 0 and 999 }\nschema :Contact as { label: :Text max 16 }\nprojection :UnitPublic of :Composition as { name }\nprojection :UnitName of :UnitPublic as { name }\nprojection :ContactLabel of :Contact as { label }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nhandle @Drone of :Composition as { id: :Number integer between 0 and 99, version: :Number integer between 0 and 65535 }\nwire schema :World as { units: :List(@Unit(:UnitPublic)) max 8, names: :List(@Unit(:UnitName)) max 8, drone: @Drone(:UnitPublic) }\nwire schema :Order as { unit: @Unit, drone: @Drone~ }\nnetwork :Game as {\n  server publishes :World latest\n  client sends :Order reliable\n  server owns @Unit\n  server owns @Drone\n}\n"]
+  sources: ["schema :Composition as { name: :Text max 64, mass: :Number integer between 0 and 999 }\nschema :Contact as { label: :Text max 16 }\nprojection :UnitPublic of :Composition as { name }\nprojection :UnitName of :UnitPublic as { name }\nprojection :ContactLabel of :Contact as { label }\nhandle @Unit of :Composition with id :Text max 64 versioned by hash(#ges)\nhandle @Drone of :Composition with id :Number integer between 0 and 99 versioned by revision max 65535\nwire schema :World as { units: :List(@Unit(:UnitPublic)) max 8, names: :List(@Unit(:UnitName)) max 8, drone: @Drone(:UnitPublic) }\nwire schema :Order as { unit: @Unit, drone: @Drone~ }\nnetwork :Game as {\n  server publishes :World latest\n  client sends :Order reliable\n  server owns @Unit\n  server owns @Drone\n}\n"]
   network: "Game"
 ```
 
@@ -829,7 +829,7 @@ schemaApi:
 
 ```yaml
 gesBlock: expect
-schema: {"network": {"canonical": "gesn1\nnetwork Game\nroute server publishes World latest 0 bd34856e6c61272a\nroute client sends Order reliable 0 36c5c80fa57d409d\nowns server Drone 7472eebcfd7fed1f c72fa4103594b877\nowns server Unit 84dc8d47579275f1 c72fa4103594b877\n", "hash": "47c16d0cdd8a1a71"}}
+schema: {"network": {"canonical": "gesn1\nnetwork Game\nroute server publishes World latest 0 a478bbe4ccbfc0ce\nroute client sends Order reliable 0 3b4a5c1d4ee24fa1\nowns server Drone c515315f47a1ab52 c72fa4103594b877\nowns server Unit c937254224118591 c72fa4103594b877\n", "hash": "16aa60cfbd77de43"}}
 ```
 
 ---
@@ -844,7 +844,7 @@ A handle of the owned type in a route from its owner that reads more than the ot
 gesBlock: case
 id: network-owns-projection-full-view
 schemaApi:
-  sources: ["schema :Composition as { name: :Text max 64, mass: :Number integer between 0 and 999 }\nschema :Contact as { label: :Text max 16 }\nprojection :UnitPublic of :Composition as { name }\nprojection :UnitName of :UnitPublic as { name }\nprojection :ContactLabel of :Contact as { label }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nhandle @Drone of :Composition as { id: :Number integer between 0 and 99, version: :Number integer between 0 and 65535 }\nwire schema :World as { units: :List(@Unit) max 8 }\nnetwork :Game as {\n  server publishes :World latest\n  server owns @Unit as :UnitPublic\n}\n"]
+  sources: ["schema :Composition as { name: :Text max 64, mass: :Number integer between 0 and 999 }\nschema :Contact as { label: :Text max 16 }\nprojection :UnitPublic of :Composition as { name }\nprojection :UnitName of :UnitPublic as { name }\nprojection :ContactLabel of :Contact as { label }\nhandle @Unit of :Composition with id :Text max 64 versioned by hash(#ges)\nhandle @Drone of :Composition with id :Number integer between 0 and 99 versioned by revision max 65535\nwire schema :World as { units: :List(@Unit) max 8 }\nnetwork :Game as {\n  server publishes :World latest\n  server owns @Unit as :UnitPublic\n}\n"]
   network: "Game"
 ```
 
@@ -867,7 +867,7 @@ A projection the other side's projection does not narrow is `schema.invalidProje
 gesBlock: case
 id: network-owns-projection-other-view
 schemaApi:
-  sources: ["schema :Composition as { name: :Text max 64, mass: :Number integer between 0 and 999 }\nschema :Contact as { label: :Text max 16 }\nprojection :UnitPublic of :Composition as { name }\nprojection :UnitName of :UnitPublic as { name }\nprojection :ContactLabel of :Contact as { label }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nhandle @Drone of :Composition as { id: :Number integer between 0 and 99, version: :Number integer between 0 and 65535 }\nwire schema :World as { unit: @Unit(:UnitPublic) }\nnetwork :Game as {\n  server publishes :World latest\n  server owns @Unit as :UnitName\n}\n"]
+  sources: ["schema :Composition as { name: :Text max 64, mass: :Number integer between 0 and 999 }\nschema :Contact as { label: :Text max 16 }\nprojection :UnitPublic of :Composition as { name }\nprojection :UnitName of :UnitPublic as { name }\nprojection :ContactLabel of :Contact as { label }\nhandle @Unit of :Composition with id :Text max 64 versioned by hash(#ges)\nhandle @Drone of :Composition with id :Number integer between 0 and 99 versioned by revision max 65535\nwire schema :World as { unit: @Unit(:UnitPublic) }\nnetwork :Game as {\n  server publishes :World latest\n  server owns @Unit as :UnitName\n}\n"]
   network: "Game"
 ```
 
@@ -890,7 +890,7 @@ The projection of an `owns` route narrows the state of the handle type; otherwis
 gesBlock: case
 id: network-owns-projection-foreign
 schemaApi:
-  sources: ["schema :Composition as { name: :Text max 64, mass: :Number integer between 0 and 999 }\nschema :Contact as { label: :Text max 16 }\nprojection :UnitPublic of :Composition as { name }\nprojection :UnitName of :UnitPublic as { name }\nprojection :ContactLabel of :Contact as { label }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nhandle @Drone of :Composition as { id: :Number integer between 0 and 99, version: :Number integer between 0 and 65535 }\nwire schema :World as { tick: :Number integer between 0 and 65535 }\nnetwork :Game as {\n  server publishes :World latest\n  server owns @Unit as :ContactLabel\n}\n"]
+  sources: ["schema :Composition as { name: :Text max 64, mass: :Number integer between 0 and 999 }\nschema :Contact as { label: :Text max 16 }\nprojection :UnitPublic of :Composition as { name }\nprojection :UnitName of :UnitPublic as { name }\nprojection :ContactLabel of :Contact as { label }\nhandle @Unit of :Composition with id :Text max 64 versioned by hash(#ges)\nhandle @Drone of :Composition with id :Number integer between 0 and 99 versioned by revision max 65535\nwire schema :World as { tick: :Number integer between 0 and 65535 }\nnetwork :Game as {\n  server publishes :World latest\n  server owns @Unit as :ContactLabel\n}\n"]
   network: "Game"
 ```
 
@@ -913,7 +913,7 @@ The projection must be declared.
 gesBlock: case
 id: network-owns-projection-unknown
 schemaApi:
-  sources: ["schema :Composition as { name: :Text max 64, mass: :Number integer between 0 and 999 }\nschema :Contact as { label: :Text max 16 }\nprojection :UnitPublic of :Composition as { name }\nprojection :UnitName of :UnitPublic as { name }\nprojection :ContactLabel of :Contact as { label }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nhandle @Drone of :Composition as { id: :Number integer between 0 and 99, version: :Number integer between 0 and 65535 }\nwire schema :World as { tick: :Number integer between 0 and 65535 }\nnetwork :Game as {\n  server publishes :World latest\n  server owns @Unit as :Missing\n}\n"]
+  sources: ["schema :Composition as { name: :Text max 64, mass: :Number integer between 0 and 999 }\nschema :Contact as { label: :Text max 16 }\nprojection :UnitPublic of :Composition as { name }\nprojection :UnitName of :UnitPublic as { name }\nprojection :ContactLabel of :Contact as { label }\nhandle @Unit of :Composition with id :Text max 64 versioned by hash(#ges)\nhandle @Drone of :Composition with id :Number integer between 0 and 99 versioned by revision max 65535\nwire schema :World as { tick: :Number integer between 0 and 65535 }\nnetwork :Game as {\n  server publishes :World latest\n  server owns @Unit as :Missing\n}\n"]
   network: "Game"
 ```
 
@@ -936,7 +936,7 @@ A projected side has no revision of the owned type, so a pinned `@Drone(:UnitPub
 gesBlock: case
 id: network-owns-projection-pinned-revision
 schemaApi:
-  sources: ["schema :Composition as { name: :Text max 64, mass: :Number integer between 0 and 999 }\nschema :Contact as { label: :Text max 16 }\nprojection :UnitPublic of :Composition as { name }\nprojection :UnitName of :UnitPublic as { name }\nprojection :ContactLabel of :Contact as { label }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\nhandle @Drone of :Composition as { id: :Number integer between 0 and 99, version: :Number integer between 0 and 65535 }\nwire schema :World as { drone: @Drone(:UnitPublic)~ }\nnetwork :Game as {\n  server publishes :World latest\n  server owns @Drone as :UnitPublic\n}\n"]
+  sources: ["schema :Composition as { name: :Text max 64, mass: :Number integer between 0 and 999 }\nschema :Contact as { label: :Text max 16 }\nprojection :UnitPublic of :Composition as { name }\nprojection :UnitName of :UnitPublic as { name }\nprojection :ContactLabel of :Contact as { label }\nhandle @Unit of :Composition with id :Text max 64 versioned by hash(#ges)\nhandle @Drone of :Composition with id :Number integer between 0 and 99 versioned by revision max 65535\nwire schema :World as { drone: @Drone(:UnitPublic)~ }\nnetwork :Game as {\n  server publishes :World latest\n  server owns @Drone as :UnitPublic\n}\n"]
   network: "Game"
 ```
 

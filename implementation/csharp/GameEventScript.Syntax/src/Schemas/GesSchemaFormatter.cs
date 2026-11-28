@@ -113,34 +113,36 @@ internal static class GesSchemaFormatter
                     builder.Append("}\n");
                     break;
                 case GesSchemaDeclarationKind.Handle:
-                    builder.Append("handle @").Append(declaration.Name).Append(" of :").Append(declaration.State);
-                    if (declaration.Root.Length > 0)
+                    builder.Append("handle @").Append(declaration.Name);
+                    if (declaration.State.Length > 0) builder.Append(" of :").Append(declaration.State);
+                    switch (declaration.Form)
                     {
-                        builder.Append(" composite @").Append(declaration.Root);
-                        if (declaration.Id is { } part)
-                        {
-                            builder.Append(" as { part: ");
-                            Type(part, builder, "");
-                            builder.Append(" }");
-                        }
-
-                        builder.Append('\n');
-                        break;
+                        case GesSchemaHandleForm.Attached:
+                            builder.Append(" attached to @").Append(declaration.Root);
+                            break;
+                        case GesSchemaHandleForm.Keyed:
+                            builder.Append(" keyed by @").Append(declaration.Root);
+                            break;
                     }
 
-                    builder.Append(" as { id: ");
-                    Type(declaration.Id!, builder, "");
-                    builder.Append(", version: ");
+                    if (declaration.Id is { } key)
+                    {
+                        builder.Append(declaration.Form == GesSchemaHandleForm.Plain ? " with id " : " with part ");
+                        Type(key, builder, "");
+                    }
+
                     switch (declaration.Version)
                     {
-                        case GesHandleVersionKind.None: builder.Append(":Nothing"); break;
-                        case GesHandleVersionKind.ContentHash: builder.Append(":ContentHash"); break;
-                        case GesHandleVersionKind.Sha1: builder.Append(":Hash(#sha1)"); break;
-                        case GesHandleVersionKind.Sha256: builder.Append(":Hash(#sha256)"); break;
-                        default: Type(declaration.Revision!, builder, ""); break;
+                        case GesHandleVersionKind.GesHash: builder.Append(" versioned by hash(#ges)"); break;
+                        case GesHandleVersionKind.Sha1: builder.Append(" versioned by hash(#sha1)"); break;
+                        case GesHandleVersionKind.Sha256: builder.Append(" versioned by hash(#sha256)"); break;
+                        case GesHandleVersionKind.Revision:
+                            builder.Append(" versioned by revision");
+                            if (declaration.Revision!.Constraints.Upper is { } upper) builder.Append(" max ").Append(Value(upper));
+                            break;
                     }
 
-                    builder.Append(" }\n");
+                    builder.Append('\n');
                     break;
                 case GesSchemaDeclarationKind.Messages:
                     builder.Append("messages ").Append(declaration.Name);

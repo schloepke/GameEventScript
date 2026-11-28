@@ -11,7 +11,7 @@ import XCTest
 final class HandleRefTests: XCTestCase {
     private static let schemas =
         "schema :DroneState as { altitude: :Number integer between 0 and 1000 }\n"
-        + "handle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\n"
+        + "handle @Drone of :DroneState with id :Number integer between 0 and 255 versioned by revision max 1000\n"
 
     private static func droneType() throws -> GesHandleType { try GesSchemaSet(sources: [GesSchemaSource(name: "drones.gess", text: schemas)]).handleTypes[0] }
 

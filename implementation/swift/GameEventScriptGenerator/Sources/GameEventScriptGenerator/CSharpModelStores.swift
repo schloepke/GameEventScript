@@ -115,8 +115,8 @@ extension GesCSharpModelEmitter {
         code.line("    => new \(name)(GesStore.Read(__HandleType, roots, files, \(passed)));")
         code.blank()
         storeReadDocumentation(&code, dependencies.map { ($0.name, $0.parameter) }, files: false)
-        code.line("public static \(name) Read(IReadOnlyList<GesHandle> roots, IGesHandleResolver resolver\(parameters))")
-        code.line("    => new \(name)(GesStore.Read(__HandleType, roots, resolver, \(passed)));")
+        code.line("public static \(name) Read(IReadOnlyList<GesStoreSourceRoot> roots, IGesStoreSource source\(parameters))")
+        code.line("    => new \(name)(GesStore.Read(__HandleType, roots, source, \(passed)));")
         code.blank()
         code.line("/// <summary>Answers a read of an entry's state: its state, with its content hash for a type that declares one, or missing.</summary>")
         code.line("/// <param name=\"call\">The call holding the handle and receiving the answer.</param>")
@@ -172,17 +172,21 @@ extension GesCSharpModelEmitter {
     }
 
     private static func storeReadDocumentation(_ code: inout Code, _ dependencies: [(name: String, parameter: String)], files: Bool) {
-        code.line(files ? "/// <summary>Reads the store from named roots, whose files a source supplies.</summary>" : "/// <summary>Reads the store from root handles, whose files a resolver answers.</summary>")
+        code.line(
+            files
+                ? "/// <summary>Reads the store from named roots, whose files a source supplies.</summary>"
+                : "/// <summary>Reads the store from versioned sources: root handles and the paths of their root files, whose files a source answers.</summary>"
+        )
         code.line("/// <param name=\"roots\">The roots, read in this order.</param>")
-        code.line(files ? "/// <param name=\"files\">The source of every file's text.</param>" : "/// <param name=\"resolver\">The resolver that answers the root files and their imports.</param>")
+        code.line(files ? "/// <param name=\"files\">The source of every file's text.</param>" : "/// <param name=\"source\">The source that answers every file by root handle and path.</param>")
         for dependency in dependencies {
             let parameter = dependency.parameter.hasPrefix("@") ? String(dependency.parameter.dropFirst()) : dependency.parameter
             code.line("/// <param name=\"\(parameter)\">The store of <c>@\(dependency.name)</c>, whose entries this store's entries may name or pin; none when null.</param>")
         }
         code.line("/// <returns>The store.</returns>")
-        code.line("/// <exception cref=\"ArgumentNullException\">Thrown when the roots, a root or the " + (files ? "files" : "resolver") + " are null.</exception>")
-        code.line("/// <exception cref=\"ArgumentException\">Thrown when two roots share a name or a root is no store file of the type.</exception>")
+        code.line("/// <exception cref=\"ArgumentNullException\">Thrown when the roots, a root or the " + (files ? "files" : "source") + " are null.</exception>")
+        code.line(files ? "/// <exception cref=\"ArgumentException\">Thrown when two roots share a name.</exception>" : "/// <exception cref=\"ArgumentException\">Thrown when a root handle carries a part or two roots have equal handles.</exception>")
         code.line("/// <exception cref=\"GesStoreException\">Thrown when the store has errors; the exception lists every one.</exception>")
-        if !files { code.line("/// <exception cref=\"GesHandleException\">Thrown when the resolver answers a file wrongly.</exception>") }
+        if !files { code.line("/// <exception cref=\"GesHandleException\">Thrown when the source answers an invalid or another version of a root.</exception>") }
     }
 }

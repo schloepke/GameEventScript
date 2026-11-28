@@ -9,7 +9,8 @@ namespace GameEventScript.Syntax;
 
 /// <summary>
 /// Recognizes the text form of a handle (specs/Language.md#handle-text-form): <c>@Type:id</c> with an optional
-/// <c>~version</c> or ref and an optional <c>/part</c>. Documents and Runtime's <c>GesHandle.Parse</c> share this one
+/// <c>~version</c> or ref and an optional <c>/part</c>; a keyed handle writes its version or ref after the part instead,
+/// <c>@Type:id/part~version</c>. Documents and Runtime's <c>GesHandle.Parse</c> share this one
 /// scanner; Runtime builds the handle from the recognized parts.
 /// </summary>
 internal static class GesHandleLiteral
@@ -51,8 +52,9 @@ internal static class GesHandleLiteral
     /// <summary>The recognized parts of a handle.</summary>
     internal readonly struct Parts
     {
-        internal Parts(string typeName, Key id, VersionForm version, long revision, string versionText, bool hasPart, Key part)
+        internal Parts(string typeName, Key id, VersionForm version, long revision, string versionText, bool hasPart, Key part, bool versionAfterPart)
         {
+            VersionAfterPart = versionAfterPart;
             TypeName = typeName;
             Id = id;
             Version = version;
@@ -77,6 +79,9 @@ internal static class GesHandleLiteral
         internal bool HasPart { get; }
 
         internal Key Part { get; }
+
+        // Whether the version or ref follows the part, as in the text of a keyed handle.
+        internal bool VersionAfterPart { get; }
     }
 
     // Reads a handle at `start`, which holds `@`, without looking at what follows it. Returns the end of the handle, or
@@ -102,54 +107,70 @@ internal static class GesHandleLiteral
         if (position < text.Length && text[position] == '~')
         {
             position++;
-            if (allowPin && (position == text.Length || IsDelimiter(text, position)))
-            {
-                pin = position - 1;
-            }
-            else if (position < text.Length && text[position] == '#')
-            {
-                var tagStart = ++position;
-                while (position < text.Length && (GesText.IsAsciiLetter(text[position]) || text[position] is >= '0' and <= '9')) position++;
-                versionText = text.Substring(tagStart, position - tagStart);
-                if (!GesText.IsTagName(versionText)) return -1;
-                version = VersionForm.Tag;
-            }
-            else if (position < text.Length && text[position] == '\'')
-            {
-                if (ReadQuoted(text, ref position) is not { } quoted) return -1;
-                versionText = quoted;
-                version = VersionForm.Text;
-            }
-            else
-            {
-                var versionStart = position;
-                while (position < text.Length && (GesText.IsAsciiLetter(text[position]) || text[position] is >= '0' and <= '9' or '-')) position++;
-                var span = text.AsSpan(versionStart, position - versionStart);
-                if (span.Length is 40 or 64 && IsLowerHex(span))
-                {
-                    versionText = span.ToString();
-                    version = VersionForm.Hash;
-                }
-                else if (ReadsAsInteger(span) && long.TryParse(span.ToString(), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out revision))
-                {
-                    version = VersionForm.Revision;
-                }
-                else
-                {
-                    return -1;
-                }
-            }
+            if (allowPin && (position == text.Length || IsDelimiter(text, position))) pin = position - 1;
+            else if (!ReadVersion(text, ref position, out version, out revision, out versionText)) return -1;
         }
+
         var hasPart = false;
+        var versionAfterPart = false;
         Key part = default;
         if (position < text.Length && text[position] == '/' && !IsComment(text, position))
         {
             position++;
             if (!ReadKey(text, ref position, true, out part)) return -1;
             hasPart = true;
+
+            // A keyed handle's version follows its part; a version after the id and after the part is no handle.
+            if (position < text.Length && text[position] == '~')
+            {
+                if (version != VersionForm.None || pin >= 0) return -1;
+                position++;
+                if (!ReadVersion(text, ref position, out version, out revision, out versionText)) return -1;
+                versionAfterPart = true;
+            }
         }
-        parts = new Parts(typeName, id, version, revision, versionText, hasPart, part);
+
+        parts = new Parts(typeName, id, version, revision, versionText, hasPart, part, versionAfterPart);
         return position;
+    }
+
+    // A version or ref after `~`: `#tag`, a quoted Text, 40 or 64 lowercase hexadecimal digits or a decimal revision.
+    private static bool ReadVersion(string text, ref int position, out VersionForm version, out long revision, out string versionText)
+    {
+        version = VersionForm.None;
+        revision = 0;
+        versionText = "";
+        if (position < text.Length && text[position] == '#')
+        {
+            var tagStart = ++position;
+            while (position < text.Length && (GesText.IsAsciiLetter(text[position]) || text[position] is >= '0' and <= '9')) position++;
+            versionText = text.Substring(tagStart, position - tagStart);
+            if (!GesText.IsTagName(versionText)) return false;
+            version = VersionForm.Tag;
+            return true;
+        }
+
+        if (position < text.Length && text[position] == '\'')
+        {
+            if (ReadQuoted(text, ref position) is not { } quoted) return false;
+            versionText = quoted;
+            version = VersionForm.Text;
+            return true;
+        }
+
+        var versionStart = position;
+        while (position < text.Length && (GesText.IsAsciiLetter(text[position]) || text[position] is >= '0' and <= '9' or '-')) position++;
+        var span = text.AsSpan(versionStart, position - versionStart);
+        if (span.Length is 40 or 64 && IsLowerHex(span))
+        {
+            versionText = span.ToString();
+            version = VersionForm.Hash;
+            return true;
+        }
+
+        if (!ReadsAsInteger(span) || !long.TryParse(span.ToString(), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out revision)) return false;
+        version = VersionForm.Revision;
+        return true;
     }
 
     // Reads a handle in a document at `start`, which holds `@`. Returns the end of the handle, or -1 when the text there
@@ -177,7 +198,8 @@ internal static class GesHandleLiteral
     }
 
     // Whether a Text id or part may be written without quotes: a nonempty bare run that does not read as an integer
-    // and, for a part, neither starts with `/` nor contains `//`.
+    // and, for a part, neither starts with `/` nor contains `//`. `~` is no bare character, so a part that holds one, which
+    // would read as a keyed handle's version, is quoted.
     internal static bool IsBare(string text, bool isPart)
     {
         if (text.Length == 0 || ReadsAsInteger(text.AsSpan())) return false;

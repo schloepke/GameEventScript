@@ -1003,11 +1003,7 @@ enum GesSwiftEmitter {
             }
         }
         if let part { readHandleKey(&code, part, "part", target + ".part") }
-        let arguments = "uncheckedId: id" + (version != nil ? ", version: version" : "")
-        code.line(
-            value.handleRoot != nil
-                ? "\(target) = \(value.handleType)(uncheckedRoot: \(GesCSharpEmitter.handleRootType(value))(\(arguments)), part: part)" : "\(target) = \(value.handleType)(\(arguments))"
-        )
+        code.line("\(target) = \(GesCSharpEmitter.handleConstruction(value, versioned: version != nil, swift: true))")
         code.close()
     }
 

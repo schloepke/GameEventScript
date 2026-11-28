@@ -73,7 +73,7 @@ final class DocumentTests: XCTestCase {
 
     // A pinned reference in an unpinned handle field breaks the schema, which reading alone accepts.
     func testCheckWithSchemasChecksEachDocumentAgainstItsHeader() throws {
-        let state = try tool.file("state.gess", "schema :Composition as { name: :Text max 32 }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\n")
+        let state = try tool.file("state.gess", "schema :Composition as { name: :Text max 32 }\nhandle @Unit of :Composition with id :Text max 64 versioned by hash(#ges)\n")
         let army = try tool.file("army.gess", "schema :Army as { parts: :List(@Unit) max 4 }\n")
         let pinned = try tool.file("pinned.gesd", ":Schema(:Army)\nparts: [@Unit:x~#live]\n")
         let good = try tool.file("army.gesd", ":Schema(:Army)\nparts: [@Unit:x, @Unit:y]\n")
@@ -122,10 +122,10 @@ final class DocumentTests: XCTestCase {
             "units.gess",
             """
             schema :Hull as { armor: :Number integer between 0 and 100 }
-            handle @Hull of :Hull as { id: :Text max 32, version: :ContentHash }
+            handle @Hull of :Hull with id :Text max 32 versioned by hash(#ges)
             schema :Composition as { name: :Text max 64, hull: @Hull~, escort: @Unit optional }
-            handle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }
-            handle @Slot of :Composition composite @Unit as { part: :Number integer between 0 and 15 }
+            handle @Unit of :Composition with id :Text max 16 versioned by hash(#ges)
+            handle @Slot of :Composition attached to @Unit with part :Number integer between 0 and 15
 
             """
         )
@@ -149,9 +149,9 @@ final class DocumentTests: XCTestCase {
         XCTAssertEqual(unknown.code, 1)
         XCTAssertEqual(unknown.error, "\(hulls): error schema.unknownName: The schemas of --schema declare no handle type @Ship.\n")
 
-        let composite = tool.run(["document", "check", "--schema", schemas, "--store", "@Slot", hulls])
-        XCTAssertEqual(composite.code, 1)
-        XCTAssertEqual(composite.error, "\(hulls): error cli.usage: @Slot is composite; a store needs a type of its own. (Parameter 'type')\n")
+        let attached = tool.run(["document", "check", "--schema", schemas, "--store", "@Slot", hulls])
+        XCTAssertEqual(attached.code, 1)
+        XCTAssertEqual(attached.error, "\(hulls): error cli.usage: @Slot has a root; a store needs a type of its own. (Parameter 'type')\n")
 
         let twice = tool.run(["document", "check", "--schema", schemas, "--store", "@Hull", hulls, "--store", "@Hull", hulls])
         XCTAssertEqual(twice.code, 2)

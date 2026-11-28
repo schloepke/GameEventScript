@@ -51,18 +51,29 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     case handle = "Handle"
 }
 
+/// How a handle type names its objects: by its own id, as part of a root it is attached to, or keyed by a root with its
+/// own source.
+@_spi(Syntax) public enum GesSchemaHandleForm: UInt8, Sendable, Equatable {
+    /// A type with its own id, `with id`.
+    case plain
+    /// A type attached to a root, `attached to @Root`, with the root's version.
+    case attached
+    /// A type keyed by a root, `keyed by @Root`, with its own version, owner and source.
+    case keyed
+}
+
 /// The kind of version a handle type declares.
 public enum GesHandleVersionKind: UInt8, Sendable, Equatable {
-    /// The type has no versions; every handle means the current state.
+    /// The type has no versions, written without `versioned by`; every handle means the current state.
     case none
-    /// An integer revision the owner counts, ascending with each change.
+    /// An integer revision the owner counts, ascending with each change, written `revision` or `revision max n`.
     case revision
-    /// A SHA-1 hash of 20 bytes the owner computes over its own representation.
+    /// A SHA-1 hash of 20 bytes the owner computes over its own representation, written `hash(#sha1)`.
     case sha1
-    /// A SHA-256 hash of 32 bytes the owner computes over its own representation.
+    /// A SHA-256 hash of 32 bytes the owner computes over its own representation, written `hash(#sha256)`.
     case sha256
-    /// The content hash of 32 bytes that GES computes over the state.
-    case contentHash
+    /// The content hash of 32 bytes that GES computes over the state, written `hash(#ges)`.
+    case gesHash
 }
 
 @_spi(Syntax) public enum GesSchemaTypeNames {
@@ -425,13 +436,12 @@ public enum GesHandleVersionKind: UInt8, Sendable, Equatable {
     @_spi(Syntax) public var routes: [GesSchemaRouteSyntax] = []
     /// The fields a projection takes from its source, which `state` names, in written order.
     @_spi(Syntax) public var taken: [GesSchemaTakenSyntax] = []
-    /// A handle declaration: its state schema, the composite root without `@`, the id or part type, the version form and the
-    /// revision's type, each with where it starts. A part-less composite has a root and no id or part type.
+    /// A handle declaration: its state schema (empty for a type without state), its form, the root without `@` of a type
+    /// attached to or keyed by one, the id of a plain type or the optional part of the others, the version kind and the
+    /// revision's type, each with where it starts.
     @_spi(Syntax) public var state = ""
     @_spi(Syntax) public var stateOffset = 0
-    /// The handle type of a store file type, `:Store(@Type)`, without `@`; empty otherwise, when `state` names the state.
-    @_spi(Syntax) public var store = ""
-    @_spi(Syntax) public var storeOffset = 0
+    @_spi(Syntax) public var form = GesSchemaHandleForm.plain
     @_spi(Syntax) public var root = ""
     @_spi(Syntax) public var rootOffset = 0
     @_spi(Syntax) public var id: GesSchemaTypeSyntax?

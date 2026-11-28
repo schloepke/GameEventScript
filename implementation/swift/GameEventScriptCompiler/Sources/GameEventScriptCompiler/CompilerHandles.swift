@@ -88,9 +88,9 @@ extension GesCompiler {
         }
         switch member {
         case "id":
-            // A part-less composite holds its root's id as its own, so only `@id` reads its identity as a root without a
-            // part; types whose composites all have a part keep the plain member.
-            r.emit(.memberAccess, d, builder.text(GesHandleTypeNames.hasPartlessComposite(typeName, handleTypes) ? "@id" : "id"), value)
+            // A type with a root and without a part holds its root's id as its own, so only `@id` reads its identity as a
+            // root without a part; types that all have a part keep the plain member.
+            r.emit(.memberAccess, d, builder.text(GesHandleTypeNames.hasRootWithoutPart(typeName, handleTypes) ? "@id" : "id"), value)
         case "version":
             r.emit(.memberAccess, d, builder.text(member), value)
         case "root":
@@ -132,7 +132,7 @@ extension GesCompiler {
     }
 
     // The static type of an expression as far as handle lowering needs it: bindings with a declared type, record
-    // fields, `h.root` of composites and casts.
+    // fields, `h.root` of types with a root and casts.
     func staticTypeName(_ e: GesExpression, _ scope: GesScope) -> String? {
         switch e.kind {
         case .name(let name): return scope.type(name)

@@ -40,7 +40,7 @@ sources:
   - name: identity-members.ges
     program: main
 handles:
-  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Contacted of :Contact as { id: :Number integer between 0 and 65535, version: :ContentHash }\nhandle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }\nhandle @RepoFile of :Contact composite @Repository as { part: :Text max 256 }\n"]
+  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState with id :Number integer between 0 and 255 versioned by revision max 1000\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Contacted of :Contact with id :Number integer between 0 and 65535 versioned by hash(#ges)\nhandle @Repository of :Source with id :Text max 64 versioned by hash(#sha1)\nhandle @RepoFile of :Contact attached to @Repository with part :Text max 256\n"]
   resolvers: []
 ```
 
@@ -87,7 +87,7 @@ steps:
           - name: fileVersion
             value: { type: ":Bytes", value: "3f2a000000000000000000000000000000000001" }
           - name: root
-            value: { type: ":Handle", value: "@Repository:content~3f2a000000000000000000000000000000000001" }
+            value: { type: ":Handle", value: "@Repository:content" }
           - name: text
             value: { type: ":Text", value: "@Target:3" }
           - name: droneText
@@ -109,7 +109,7 @@ sources:
   - name: parameter-checks-and-unions.ges
     program: main
 handles:
-  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Contacted of :Contact as { id: :Number integer between 0 and 65535, version: :ContentHash }\nhandle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }\nhandle @RepoFile of :Contact composite @Repository as { part: :Text max 256 }\n"]
+  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState with id :Number integer between 0 and 255 versioned by revision max 1000\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Contacted of :Contact with id :Number integer between 0 and 65535 versioned by hash(#ges)\nhandle @Repository of :Source with id :Text max 64 versioned by hash(#sha1)\nhandle @RepoFile of :Contact attached to @Repository with part :Text max 256\n"]
   resolvers: []
 ```
 
@@ -178,7 +178,7 @@ sources:
   - name: equality-ignores-version.ges
     program: main
 handles:
-  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Contacted of :Contact as { id: :Number integer between 0 and 65535, version: :ContentHash }\nhandle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }\nhandle @RepoFile of :Contact composite @Repository as { part: :Text max 256 }\n"]
+  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState with id :Number integer between 0 and 255 versioned by revision max 1000\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Contacted of :Contact with id :Number integer between 0 and 65535 versioned by hash(#ges)\nhandle @Repository of :Source with id :Text max 64 versioned by hash(#sha1)\nhandle @RepoFile of :Contact attached to @Repository with part :Text max 256\n"]
   resolvers: []
 ```
 
@@ -228,9 +228,9 @@ steps:
 
 ---
 
-## Test: a part-less composite is keyed by its root's id
+## Test: a part-less attached type is identified by its root's id
 
-A composite without a part is one per root: `@Enemy:3` names the Enemy of the Drone 3 and equals itself across root versions, never
+An attached type without a part is one per root: `@Enemy:3` names the Enemy of the Drone 3 and equals itself across root versions, never
 the root. `root` gives the root without a version, `id.root` its id, and `id.part` is `nothing`. It orders by type name and
 then the root's id.
 
@@ -243,7 +243,7 @@ sources:
   - name: partless-composite-identity.ges
     program: main
 handles:
-  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Brain as { aggro: :Number integer between 0 and 10 }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Enemy of :Brain composite @Drone\n"]
+  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Brain as { aggro: :Number integer between 0 and 10 }\nhandle @Drone of :DroneState with id :Number integer between 0 and 255 versioned by revision max 1000\nhandle @Enemy of :Brain attached to @Drone\n"]
   resolvers: []
 ```
 
@@ -303,6 +303,89 @@ steps:
 
 ---
 
+## Test: a keyed type has its own version
+
+A type keyed by a root is identified by the root's id and its part and carries a version of its own after both:
+`@Stats:3/7~12`. Versions do not take part in equality, a keyed handle never equals its root, and handles order by type,
+then root id, then part. A Text part with `~` or `/` is quoted. *Since: Unreleased.*
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-identity
+sources:
+  - name: keyed-identity.ges
+    program: main
+handles:
+  schemas: ["schema :Brain as { aggro: :Number integer between 0 and 10 }\nhandle @Enemy with id :Number integer between 0 and 99 versioned by revision max 1000\nhandle @Stats of :Brain keyed by @Enemy with part :Number integer between 0 and 9 versioned by revision\nhandle @Tag keyed by @Enemy with part :Text max 16\nhandle @Mind of :Brain keyed by @Enemy versioned by revision\n"]
+  resolvers: []
+```
+
+### Source code under test
+
+```ges
+module main
+on Seen(stats as @Stats, later as @Stats, enemy as @Enemy, tag as @Tag, mind as @Mind, items) {
+  emit Out(versions: stats = later, root: mind = enemy, version: stats.version, rootHandle: stats.root, rootId: stats.id.root, part: stats.id.part, tagPart: tag.id.part, text: stats as :Text, tagText: tag as :Text, mindText: mind as :Text, sorted: items[:sort ascending])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| seen | Seen | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  seen:
+    input:
+      args:
+        - name: stats
+          value: { type: ":Handle", value: "@Stats:3/7~12" }
+        - name: later
+          value: { type: ":Handle", value: "@Stats:3/7~13" }
+        - name: enemy
+          value: { type: ":Handle", value: "@Enemy:3~5" }
+        - name: tag
+          value: { type: ":Handle", value: "@Tag:3/'a~b'" }
+        - name: mind
+          value: { type: ":Handle", value: "@Mind:3~2" }
+        - name: items
+          value: { type: ":List", items: [{ type: ":Handle", value: "@Stats:4/0" }, { type: ":Handle", value: "@Stats:3/7~1" }, { type: ":Handle", value: "@Enemy:9" }, { type: ":Handle", value: "@Stats:3/2" }] }
+    local:
+      - name: Out
+        args:
+          - name: versions
+            value: { type: ":Boolean", value: "true" }
+          - name: root
+            value: { type: ":Boolean", value: "false" }
+          - name: version
+            value: { type: ":Number.int64", value: "12" }
+          - name: rootHandle
+            value: { type: ":Handle", value: "@Enemy:3" }
+          - name: rootId
+            value: { type: ":Number.int64", value: "3" }
+          - name: part
+            value: { type: ":Number.int64", value: "7" }
+          - name: tagPart
+            value: { type: ":Text", value: "a~b" }
+          - name: text
+            value: { type: ":Text", value: "@Stats:3/7~12" }
+          - name: tagText
+            value: { type: ":Text", value: "@Tag:3/'a~b'" }
+          - name: mindText
+            value: { type: ":Text", value: "@Mind:3~2" }
+          - name: sorted
+            value: { type: ":List", items: [{ type: ":Handle", value: "@Enemy:9" }, { type: ":Handle", value: "@Stats:3/2" }, { type: ":Handle", value: "@Stats:3/7~1" }, { type: ":Handle", value: "@Stats:4/0" }] }
+```
+
+---
+
 ## Test: a state read resolves a document answer
 
 A member other than the identity members reads the state; the resolver answers with a document naming the state schema.
@@ -316,7 +399,7 @@ sources:
   - name: state-read-document.ges
     program: main
 handles:
-  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Contacted of :Contact as { id: :Number integer between 0 and 65535, version: :ContentHash }\nhandle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }\nhandle @RepoFile of :Contact composite @Repository as { part: :Text max 256 }\n"]
+  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState with id :Number integer between 0 and 255 versioned by revision max 1000\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Contacted of :Contact with id :Number integer between 0 and 65535 versioned by hash(#ges)\nhandle @Repository of :Source with id :Text max 64 versioned by hash(#sha1)\nhandle @RepoFile of :Contact attached to @Repository with part :Text max 256\n"]
   answers:
     - { handle: "@Target:3", document: ":Schema(:Contact)\nlabel: 'Alpha'\nstrength: 42\n" }
 ```
@@ -370,7 +453,7 @@ sources:
   - name: state-read-record.ges
     program: main
 handles:
-  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Contacted of :Contact as { id: :Number integer between 0 and 65535, version: :ContentHash }\nhandle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }\nhandle @RepoFile of :Contact composite @Repository as { part: :Text max 256 }\n"]
+  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState with id :Number integer between 0 and 255 versioned by revision max 1000\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Contacted of :Contact with id :Number integer between 0 and 65535 versioned by hash(#ges)\nhandle @Repository of :Source with id :Text max 64 versioned by hash(#sha1)\nhandle @RepoFile of :Contact attached to @Repository with part :Text max 256\n"]
   answers:
     - { handle: "@Target:4", record: ":Record(\"Contact\", [label: 'Beta', strength: 7])" }
 ```
@@ -427,7 +510,7 @@ sources:
   - name: state-missing.ges
     program: main
 handles:
-  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Contacted of :Contact as { id: :Number integer between 0 and 65535, version: :ContentHash }\nhandle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }\nhandle @RepoFile of :Contact composite @Repository as { part: :Text max 256 }\n"]
+  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState with id :Number integer between 0 and 255 versioned by revision max 1000\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Contacted of :Contact with id :Number integer between 0 and 65535 versioned by hash(#ges)\nhandle @Repository of :Source with id :Text max 64 versioned by hash(#sha1)\nhandle @RepoFile of :Contact attached to @Repository with part :Text max 256\n"]
   answers:
     - { handle: "@Target:9", missing: true }
 ```
@@ -483,7 +566,7 @@ sources:
   - name: state-cache-per-invocation.ges
     program: main
 handles:
-  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Contacted of :Contact as { id: :Number integer between 0 and 65535, version: :ContentHash }\nhandle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }\nhandle @RepoFile of :Contact composite @Repository as { part: :Text max 256 }\n"]
+  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState with id :Number integer between 0 and 255 versioned by revision max 1000\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Contacted of :Contact with id :Number integer between 0 and 65535 versioned by hash(#ges)\nhandle @Repository of :Source with id :Text max 64 versioned by hash(#sha1)\nhandle @RepoFile of :Contact attached to @Repository with part :Text max 256\n"]
   answers:
     - { handle: "@Target:3", document: ":Schema(:Contact)\nlabel: 'Alpha'\nstrength: 42\n" }
     - { handle: "@Target:3", document: ":Schema(:Contact)\nlabel: 'Beta'\nstrength: 7\n" }
@@ -555,7 +638,7 @@ sources:
   - name: state-defaults-applied.ges
     program: main
 handles:
-  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Contacted of :Contact as { id: :Number integer between 0 and 65535, version: :ContentHash }\nhandle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }\nhandle @RepoFile of :Contact composite @Repository as { part: :Text max 256 }\n"]
+  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState with id :Number integer between 0 and 255 versioned by revision max 1000\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Contacted of :Contact with id :Number integer between 0 and 65535 versioned by hash(#ges)\nhandle @Repository of :Source with id :Text max 64 versioned by hash(#sha1)\nhandle @RepoFile of :Contact attached to @Repository with part :Text max 256\n"]
   answers:
     - { handle: "@Target:3", document: ":Schema(:Contact)\nlabel: 'Alpha'\nstrength: 420\n" }
 ```
@@ -611,7 +694,7 @@ sources:
   - name: state-wrong-schema.ges
     program: main
 handles:
-  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Contacted of :Contact as { id: :Number integer between 0 and 65535, version: :ContentHash }\nhandle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }\nhandle @RepoFile of :Contact composite @Repository as { part: :Text max 256 }\n"]
+  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState with id :Number integer between 0 and 255 versioned by revision max 1000\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Contacted of :Contact with id :Number integer between 0 and 65535 versioned by hash(#ges)\nhandle @Repository of :Source with id :Text max 64 versioned by hash(#sha1)\nhandle @RepoFile of :Contact attached to @Repository with part :Text max 256\n"]
   answers:
     - { handle: "@Target:3", document: ":Schema(:Source)\ntext: 'x'\n" }
 ```
@@ -664,7 +747,7 @@ sources:
   - name: resolver-failure.ges
     program: main
 handles:
-  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Contacted of :Contact as { id: :Number integer between 0 and 65535, version: :ContentHash }\nhandle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }\nhandle @RepoFile of :Contact composite @Repository as { part: :Text max 256 }\n"]
+  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState with id :Number integer between 0 and 255 versioned by revision max 1000\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Contacted of :Contact with id :Number integer between 0 and 65535 versioned by hash(#ges)\nhandle @Repository of :Source with id :Text max 64 versioned by hash(#sha1)\nhandle @RepoFile of :Contact attached to @Repository with part :Text max 256\n"]
   answers:
     - { handle: "@Target:3", fail: true }
 ```
@@ -722,7 +805,7 @@ sources:
   - name: revision-passed.ges
     program: main
 handles:
-  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Contacted of :Contact as { id: :Number integer between 0 and 65535, version: :ContentHash }\nhandle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }\nhandle @RepoFile of :Contact composite @Repository as { part: :Text max 256 }\n"]
+  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState with id :Number integer between 0 and 255 versioned by revision max 1000\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Contacted of :Contact with id :Number integer between 0 and 65535 versioned by hash(#ges)\nhandle @Repository of :Source with id :Text max 64 versioned by hash(#sha1)\nhandle @RepoFile of :Contact attached to @Repository with part :Text max 256\n"]
   answers:
     - { handle: "@Drone:7", document: ":Schema(:DroneState)\naltitude: 120\ncallsign: 'Gnabblo'\n", version: { type: ":Number.int64", value: "3" } }
 ```
@@ -801,7 +884,7 @@ sources:
   - name: unversioned-passes-version.ges
     program: main
 handles:
-  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Contacted of :Contact as { id: :Number integer between 0 and 65535, version: :ContentHash }\nhandle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }\nhandle @RepoFile of :Contact composite @Repository as { part: :Text max 256 }\n"]
+  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState with id :Number integer between 0 and 255 versioned by revision max 1000\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Contacted of :Contact with id :Number integer between 0 and 65535 versioned by hash(#ges)\nhandle @Repository of :Source with id :Text max 64 versioned by hash(#sha1)\nhandle @RepoFile of :Contact attached to @Repository with part :Text max 256\n"]
   answers:
     - { handle: "@Target:3", document: ":Schema(:Contact)\nlabel: 'Alpha'\nstrength: 42\n", version: { type: ":Number.int64", value: "1" } }
 ```
@@ -854,7 +937,7 @@ sources:
   - name: content-hash-computed.ges
     program: main
 handles:
-  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Contacted of :Contact as { id: :Number integer between 0 and 65535, version: :ContentHash }\nhandle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }\nhandle @RepoFile of :Contact composite @Repository as { part: :Text max 256 }\n"]
+  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState with id :Number integer between 0 and 255 versioned by revision max 1000\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Contacted of :Contact with id :Number integer between 0 and 65535 versioned by hash(#ges)\nhandle @Repository of :Source with id :Text max 64 versioned by hash(#sha1)\nhandle @RepoFile of :Contact attached to @Repository with part :Text max 256\n"]
   answers:
     - { handle: "@Contacted:1", document: ":Schema(:Contact)\nlabel: 'Alpha'\nstrength: 42\n" }
     - { handle: "@Contacted:2", document: ":Schema(:Contact)\nlabel: 'Alpha'\nstrength: 42\n" }
@@ -944,7 +1027,7 @@ sources:
   - name: content-hash-normalized.ges
     program: main
 handles:
-  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Contacted of :Contact as { id: :Number integer between 0 and 65535, version: :ContentHash }\nhandle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }\nhandle @RepoFile of :Contact composite @Repository as { part: :Text max 256 }\n"]
+  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState with id :Number integer between 0 and 255 versioned by revision max 1000\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Contacted of :Contact with id :Number integer between 0 and 65535 versioned by hash(#ges)\nhandle @Repository of :Source with id :Text max 64 versioned by hash(#sha1)\nhandle @RepoFile of :Contact attached to @Repository with part :Text max 256\n"]
   answers:
     - { handle: "@Contacted:2", record: ":Record(\"Contact\", [label: 'Alpha', strength: 42.0])" }
 ```
@@ -996,7 +1079,7 @@ sources:
   - name: map-keys.ges
     program: main
 handles:
-  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Contacted of :Contact as { id: :Number integer between 0 and 65535, version: :ContentHash }\nhandle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }\nhandle @RepoFile of :Contact composite @Repository as { part: :Text max 256 }\n"]
+  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState with id :Number integer between 0 and 255 versioned by revision max 1000\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Contacted of :Contact with id :Number integer between 0 and 65535 versioned by hash(#ges)\nhandle @Repository of :Source with id :Text max 64 versioned by hash(#sha1)\nhandle @RepoFile of :Contact attached to @Repository with part :Text max 256\n"]
   resolvers: []
 ```
 
@@ -1055,7 +1138,7 @@ sources:
   - name: sort-and-group-order.ges
     program: main
 handles:
-  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Contacted of :Contact as { id: :Number integer between 0 and 65535, version: :ContentHash }\nhandle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }\nhandle @RepoFile of :Contact composite @Repository as { part: :Text max 256 }\n"]
+  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState with id :Number integer between 0 and 255 versioned by revision max 1000\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Contacted of :Contact with id :Number integer between 0 and 65535 versioned by hash(#ges)\nhandle @Repository of :Source with id :Text max 64 versioned by hash(#sha1)\nhandle @RepoFile of :Contact attached to @Repository with part :Text max 256\n"]
   resolvers: []
 ```
 
@@ -1108,7 +1191,7 @@ sources:
   - name: timer-named-by-handle.ges
     program: main
 handles:
-  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Contacted of :Contact as { id: :Number integer between 0 and 65535, version: :ContentHash }\nhandle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }\nhandle @RepoFile of :Contact composite @Repository as { part: :Text max 256 }\n"]
+  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState with id :Number integer between 0 and 255 versioned by revision max 1000\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Contacted of :Contact with id :Number integer between 0 and 65535 versioned by hash(#ges)\nhandle @Repository of :Source with id :Text max 64 versioned by hash(#sha1)\nhandle @RepoFile of :Contact attached to @Repository with part :Text max 256\n"]
   resolvers: []
 ```
 
@@ -1167,7 +1250,7 @@ sources:
   - name: text-form.ges
     program: main
 handles:
-  schemas: ["schema :Source as { text: :Text }\nschema :Composition as { name: :Text max 64 }\nhandle @Unit of :Composition as { id: :Text max 64, version: :Nothing }\nhandle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }\nhandle @RepoFile of :Source composite @Repository as { part: :Text max 256 }\nhandle @UnitSlot of :Composition composite @Unit as { part: :Number integer between 0 and 16 }\n"]
+  schemas: ["schema :Source as { text: :Text }\nschema :Composition as { name: :Text max 64 }\nhandle @Unit of :Composition with id :Text max 64\nhandle @Repository of :Source with id :Text max 64 versioned by hash(#sha1)\nhandle @RepoFile of :Source attached to @Repository with part :Text max 256\nhandle @UnitSlot of :Composition attached to @Unit with part :Number integer between 0 and 16\n"]
   resolvers: []
 ```
 
@@ -1244,7 +1327,7 @@ sources:
   - name: text-form-part-slashes.ges
     program: main
 handles:
-  schemas: ["schema :Source as { text: :Text }\nhandle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }\nhandle @RepoFile of :Source composite @Repository as { part: :Text max 256 }\n"]
+  schemas: ["schema :Source as { text: :Text }\nhandle @Repository of :Source with id :Text max 64 versioned by hash(#sha1)\nhandle @RepoFile of :Source attached to @Repository with part :Text max 256\n"]
   resolvers: []
 ```
 
@@ -1303,7 +1386,7 @@ sources:
   - name: state-free-data.ges
     program: main
 handles:
-  schemas: ["schema :Bag as { label: :Text max 16, extra: :Map, items: :List }\nhandle @Bag of :Bag as { id: :Number integer between 0 and 9, version: :ContentHash }\n"]
+  schemas: ["schema :Bag as { label: :Text max 16, extra: :Map, items: :List }\nhandle @Bag of :Bag with id :Number integer between 0 and 9 versioned by hash(#ges)\n"]
   answers:
     - { handle: "@Bag:1", document: ":Schema(:Bag)\nlabel: 'kit'\nextra: [a: 1]\nitems: [2, 'b']\n" }
 ```
@@ -1361,7 +1444,7 @@ sources:
   - name: revision-carried-version.ges
     program: main
 handles:
-  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Contacted of :Contact as { id: :Number integer between 0 and 65535, version: :ContentHash }\nhandle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }\nhandle @RepoFile of :Contact composite @Repository as { part: :Text max 256 }\n"]
+  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState with id :Number integer between 0 and 255 versioned by revision max 1000\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Contacted of :Contact with id :Number integer between 0 and 65535 versioned by hash(#ges)\nhandle @Repository of :Source with id :Text max 64 versioned by hash(#sha1)\nhandle @RepoFile of :Contact attached to @Repository with part :Text max 256\n"]
   answers:
     - { handle: "@Drone:8", document: ":Schema(:DroneState)\naltitude: 80\ncallsign: 'Pip'\n" }
     - { handle: "@Drone:9", missing: true }
@@ -1442,7 +1525,7 @@ sources:
   - name: untyped-read-without-resolver.ges
     program: main
 handles:
-  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Contacted of :Contact as { id: :Number integer between 0 and 65535, version: :ContentHash }\nhandle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }\nhandle @RepoFile of :Contact composite @Repository as { part: :Text max 256 }\n"]
+  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState with id :Number integer between 0 and 255 versioned by revision max 1000\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Contacted of :Contact with id :Number integer between 0 and 65535 versioned by hash(#ges)\nhandle @Repository of :Source with id :Text max 64 versioned by hash(#sha1)\nhandle @RepoFile of :Contact attached to @Repository with part :Text max 256\n"]
   resolvers: [Drone]
   answers:
     - { handle: "@Drone:7", document: ":Schema(:DroneState)\naltitude: 120\ncallsign: 'Gnabblo'\n", version: { type: ":Number.int64", value: "3" } }
@@ -1508,7 +1591,7 @@ sources:
   - name: content-hash-default-and-computed.ges
     program: main
 handles:
-  schemas: ["schema :Gauge as { reading: :Number integer between 0 and 100, scale: :Number integer between 1 and 10 default 2, doubled: :Number computed by reading * scale }\nhandle @Meter of :Gauge as { id: :Number integer between 0 and 255, version: :ContentHash }\n"]
+  schemas: ["schema :Gauge as { reading: :Number integer between 0 and 100, scale: :Number integer between 1 and 10 default 2, doubled: :Number computed by reading * scale }\nhandle @Meter of :Gauge with id :Number integer between 0 and 255 versioned by hash(#ges)\n"]
   answers:
     - { handle: "@Meter:1", document: ":Schema(:Gauge)\nreading: 21\n" }
     - { handle: "@Meter:2", document: ":Schema(:Gauge)\nreading: 21\nscale: 2\n" }
@@ -1593,7 +1676,7 @@ sources:
   - name: resolve-ref.ges
     program: main
 handles:
-  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Contacted of :Contact as { id: :Number integer between 0 and 65535, version: :ContentHash }\nhandle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }\nhandle @RepoFile of :Contact composite @Repository as { part: :Text max 256 }\n"]
+  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState with id :Number integer between 0 and 255 versioned by revision max 1000\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Contacted of :Contact with id :Number integer between 0 and 65535 versioned by hash(#ges)\nhandle @Repository of :Source with id :Text max 64 versioned by hash(#sha1)\nhandle @RepoFile of :Contact attached to @Repository with part :Text max 256\n"]
   answers:
     - { ref: "@Drone:7~#live", version: { type: ":Number.int64", value: "5" } }
     - { ref: "@Drone:7~#gone", missing: true }
@@ -1687,7 +1770,7 @@ sources:
   - name: receive-rejects-ref.ges
     program: main
 handles:
-  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Contacted of :Contact as { id: :Number integer between 0 and 65535, version: :ContentHash }\nhandle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }\nhandle @RepoFile of :Contact composite @Repository as { part: :Text max 256 }\n"]
+  schemas: ["schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }\nschema :DroneState as { altitude: :Number integer between 0 and 1000, callsign: :Text max 16 }\nschema :Source as { text: :Text }\nhandle @Drone of :DroneState with id :Number integer between 0 and 255 versioned by revision max 1000\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Contacted of :Contact with id :Number integer between 0 and 65535 versioned by hash(#ges)\nhandle @Repository of :Source with id :Text max 64 versioned by hash(#sha1)\nhandle @RepoFile of :Contact attached to @Repository with part :Text max 256\n"]
   answers:
     - { handle: "@Drone:7", document: ":Schema(:DroneState)\naltitude: 120\ncallsign: 'Gnabblo'\n" }
 ```
@@ -1750,7 +1833,7 @@ sources:
   - name: projected-reads.ges
     program: main
 handles:
-  schemas: ["schema :Composition as { name: :Text max 32, icon: :Text max 16, mass: :Number integer between 0 and 1000, label: :Text max 8 }\nprojection :UnitDisplay of :Composition as { name, icon, label }\nprojection :UnitLabel of :UnitDisplay as { label }\nhandle @Unit of :Composition as { id: :Number integer between 0 and 255, version: :Nothing }\nhandle @Squad of :Composition as { id: :Number integer between 0 and 255, version: :Nothing }\n"]
+  schemas: ["schema :Composition as { name: :Text max 32, icon: :Text max 16, mass: :Number integer between 0 and 1000, label: :Text max 8 }\nprojection :UnitDisplay of :Composition as { name, icon, label }\nprojection :UnitLabel of :UnitDisplay as { label }\nhandle @Unit of :Composition with id :Number integer between 0 and 255\nhandle @Squad of :Composition with id :Number integer between 0 and 255\n"]
   answers:
     - { handle: "@Unit:3", record: ":Record(\"Composition\", [name: 'Radar tower', icon: 'radar', mass: 400, label: 'RT'])" }
     - { handle: "@Unit:4", record: ":Record(\"UnitDisplay\", [name: 'Radar tower', icon: 'radar', label: 'RT'])" }
@@ -1836,7 +1919,7 @@ sources:
   - name: not-visible.ges
     program: main
 handles:
-  schemas: ["schema :Composition as { name: :Text max 32, icon: :Text max 16, mass: :Number integer between 0 and 1000, label: :Text max 8 }\nprojection :UnitDisplay of :Composition as { name, icon, label }\nprojection :UnitLabel of :UnitDisplay as { label }\nhandle @Unit of :Composition as { id: :Number integer between 0 and 255, version: :Nothing }\nhandle @Squad of :Composition as { id: :Number integer between 0 and 255, version: :Nothing }\n"]
+  schemas: ["schema :Composition as { name: :Text max 32, icon: :Text max 16, mass: :Number integer between 0 and 1000, label: :Text max 8 }\nprojection :UnitDisplay of :Composition as { name, icon, label }\nprojection :UnitLabel of :UnitDisplay as { label }\nhandle @Unit of :Composition with id :Number integer between 0 and 255\nhandle @Squad of :Composition with id :Number integer between 0 and 255\n"]
   answers:
     - { handle: "@Unit:5", notVisible: true }
 ```
@@ -1898,7 +1981,7 @@ sources:
   - name: projected-union.ges
     program: main
 handles:
-  schemas: ["schema :Composition as { name: :Text max 32, icon: :Text max 16, mass: :Number integer between 0 and 1000, label: :Text max 8 }\nprojection :UnitDisplay of :Composition as { name, icon, label }\nprojection :UnitLabel of :UnitDisplay as { label }\nhandle @Unit of :Composition as { id: :Number integer between 0 and 255, version: :Nothing }\nhandle @Squad of :Composition as { id: :Number integer between 0 and 255, version: :Nothing }\n"]
+  schemas: ["schema :Composition as { name: :Text max 32, icon: :Text max 16, mass: :Number integer between 0 and 1000, label: :Text max 8 }\nprojection :UnitDisplay of :Composition as { name, icon, label }\nprojection :UnitLabel of :UnitDisplay as { label }\nhandle @Unit of :Composition with id :Number integer between 0 and 255\nhandle @Squad of :Composition with id :Number integer between 0 and 255\n"]
   answers:
     - { handle: "@Unit:3", record: ":Record(\"Composition\", [name: 'Radar tower', icon: 'radar', mass: 400, label: 'RT'])" }
     - { handle: "@Squad:3", record: ":Record(\"Composition\", [name: 'Radar tower', icon: 'radar', mass: 400, label: 'RT'])" }
@@ -1972,7 +2055,7 @@ sources:
   - name: emit-keeps-view.ges
     program: main
 handles:
-  schemas: ["schema :Composition as { name: :Text max 32, icon: :Text max 16, mass: :Number integer between 0 and 1000, label: :Text max 8 }\nprojection :UnitDisplay of :Composition as { name, icon, label }\nprojection :UnitLabel of :UnitDisplay as { label }\nhandle @Unit of :Composition as { id: :Number integer between 0 and 255, version: :Nothing }\nhandle @Squad of :Composition as { id: :Number integer between 0 and 255, version: :Nothing }\n"]
+  schemas: ["schema :Composition as { name: :Text max 32, icon: :Text max 16, mass: :Number integer between 0 and 1000, label: :Text max 8 }\nprojection :UnitDisplay of :Composition as { name, icon, label }\nprojection :UnitLabel of :UnitDisplay as { label }\nhandle @Unit of :Composition with id :Number integer between 0 and 255\nhandle @Squad of :Composition with id :Number integer between 0 and 255\n"]
   answers:
     - { handle: "@Unit:3", record: ":Record(\"Composition\", [name: 'Radar tower', icon: 'radar', mass: 400, label: 'RT'])" }
 ```
@@ -2044,7 +2127,7 @@ sources:
   - name: record-projection.ges
     program: main
 handles:
-  schemas: ["schema :Composition as { name: :Text max 32, icon: :Text max 16, mass: :Number integer between 0 and 1000, label: :Text max 8 }\nprojection :UnitDisplay of :Composition as { name, icon, label }\nprojection :UnitLabel of :UnitDisplay as { label }\nhandle @Unit of :Composition as { id: :Number integer between 0 and 255, version: :Nothing }\nhandle @Squad of :Composition as { id: :Number integer between 0 and 255, version: :Nothing }\n"]
+  schemas: ["schema :Composition as { name: :Text max 32, icon: :Text max 16, mass: :Number integer between 0 and 1000, label: :Text max 8 }\nprojection :UnitDisplay of :Composition as { name, icon, label }\nprojection :UnitLabel of :UnitDisplay as { label }\nhandle @Unit of :Composition with id :Number integer between 0 and 255\nhandle @Squad of :Composition with id :Number integer between 0 and 255\n"]
 ```
 
 ### Source code under test

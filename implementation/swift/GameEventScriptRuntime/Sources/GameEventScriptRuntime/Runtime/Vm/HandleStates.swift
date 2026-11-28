@@ -76,7 +76,7 @@ enum GesHandleStates {
         let view = projection?.declaration ?? type.resolved.state!
         let projected = delivered === view ? state : try project(view, state, symbol)
         let full = delivered === type.resolved.state && projection != nil ? state : .nothing
-        if type.version == .contentHash {
+        if type.version == .gesHash {
             let computed = try hash(type, delivered, state)
             if !passed.isNothing && !versionEquals(passed, computed) {
                 throw fault(GesDiagnosticCodes.runtimeHandleVersionMismatch, "The content hash of \(symbol) differs.", symbol)
@@ -98,7 +98,7 @@ enum GesHandleStates {
         if wider.state.isNothing { return GesHandleState(state: .nothing, version: wider.version, notVisible: wider.notVisible) }
         let symbol = handle.description
         let projected = try project(projection.declaration, wider.state, symbol)
-        if type.version != .contentHash { return GesHandleState(state: projected, version: wider.version) }
+        if type.version != .gesHash { return GesHandleState(state: projected, version: wider.version) }
         let version = try hash(type, projection.declaration, projected)
         if handle.hasVersion && !versionEquals(handle.version, version) {
             throw fault(GesDiagnosticCodes.runtimeHandleVersionMismatch, "The content hash of \(symbol) differs.", symbol)
@@ -159,7 +159,7 @@ enum GesHandleStates {
         switch kind {
         case .revision: version.valueKind == .integer && version.unit == .none
         case .sha1: version.valueKind == .bytes && version.asBytes.count == GesHash20.length
-        case .sha256, .contentHash: version.valueKind == .bytes && version.asBytes.count == GesHash32.length
+        case .sha256, .gesHash: version.valueKind == .bytes && version.asBytes.count == GesHash32.length
         case .none: false
         }
     }

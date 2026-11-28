@@ -21,14 +21,16 @@ identity: an `id`, which is an integer Number or a Text, and a `version`.
 
 ```gess
 schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }
-handle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }
+handle @Target of :Contact with id :Number integer between 0 and 65535
 ```
 
-`@Target` has integer ids and no versions, so every `@Target` handle means the contact's current state. A type with
-`version: :Number integer` counts revisions, `:Hash(#sha1)` or `:Hash(#sha256)` carries a hash the owner computes
-(a Git commit, for example), and `:ContentHash` lets GES hash the state itself. A *composite* type such as
-`handle @UnitSlot of :Slot composite @Unit as { part: :Number integer between 0 and 15 }` addresses one part of a
-root object. [Schemas](../../specs/Schemas.md#handles) lists every form.
+`@Target` has integer ids and no versions, so every `@Target` handle means the contact's current state. A type
+`versioned by revision` counts revisions, `versioned by hash(#sha1)` or `hash(#sha256)` carries a hash the owner computes
+(a Git commit, for example), and `versioned by hash(#ges)` lets GES hash the state itself. An *attached* type such as
+`handle @UnitSlot of :Slot attached to @Unit with part :Number integer between 0 and 15` addresses one part of a
+root object and shares its version; a *keyed* type such as `handle @Stats of :Brain keyed by @Enemy` belongs to a root
+but has its own version and owner. A type without `of` is stateless: its handles name objects, such as repositories,
+whose state no script reads. [Schemas](../../specs/Schemas.md#handles) lists every form.
 
 ## Use handles in a script
 
@@ -65,7 +67,7 @@ using static GameEventScript.Runtime.Values.GesValue;
 
 var schemas = GesSchemaSet.Parse("""
     schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }
-    handle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }
+    handle @Target of :Contact with id :Number integer between 0 and 65535
     """);
 var target = schemas.HandleType("Target");
 
@@ -134,7 +136,7 @@ struct Radar: GesHandleResolver {
 
 let schemas = try GesSchemaSet(parsing: """
     schema :Contact as { label: :Text max 16, strength: :Number integer between 0 and 100 }
-    handle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }
+    handle @Target of :Contact with id :Number integer between 0 and 65535
     """)
 let target = try schemas.handleType("Target")
 
@@ -173,8 +175,9 @@ It prints the same `Alpha @Target:3`.
 
 ## Write handles as text and in documents
 
-A handle's text is `@Type:id`, followed by `~version` when it carries one and `/part` for a composite: `@Target:3`,
-`@Drone:7~120`, `@UnitSlot:drone.gnabblo/1`. A Text id that is not plain ASCII letters, digits, `.`, `_` and `-`, or
+A handle's text is `@Type:id`, followed by `~version` when it carries one and `/part` for a type with a part:
+`@Target:3`, `@Drone:7~120`, `@UnitSlot:drone.gnabblo/1`; a keyed handle writes its own version last, as in
+`@Stats:3/7~12`. A Text id that is not plain ASCII letters, digits, `.`, `_` and `-`, or
 that would read as an integer, is quoted: `@Unit:'One Two'`, `@Unit:'7'`. `as :Text`, console output and the API's
 `ToString`/`description` all write this form. `parse` does not read handles back; a value that arrives as text stays
 text.
@@ -185,7 +188,7 @@ an `@Name~` field, such as `unit` here; on `target`, `@Target:3~5` fails with `d
 
 ```gess
 schema :Composition as { name: :Text max 64, slots: :Number integer between 0 and 16 }
-handle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }
+handle @Unit of :Composition with id :Text max 64 versioned by hash(#ges)
 schema :Sighting as {
   target: @Target
   seen: :List(@Target) max 16

@@ -359,7 +359,7 @@ public sealed class GesSchemaGenerateTests
     {
         var set = GesSchemaSet.Parse(
             new GesSchemaSource("states.gess", "schema :Composition as { name: :Text max 4 }\n"),
-            new GesSchemaSource("handles.gess", "handle @Unit of :Composition as { id: :Text max 4, version: :ContentHash }\n"),
+            new GesSchemaSource("handles.gess", "handle @Unit of :Composition with id :Text max 4 versioned by hash(#ges)\n"),
             new GesSchemaSource("commands.gess", "model schema :Move as { unit: @Unit, units: :List(@Unit~) max 2 }\n"));
         foreach (var language in new[] { GesSchemaLanguage.CSharp, GesSchemaLanguage.Swift })
         {
@@ -388,9 +388,9 @@ public sealed class GesSchemaGenerateTests
     {
         var set = GesSchemaSet.Parse(
             "schema :Composition as { name: :Text max 4 }\nschema :Source as { text: :Text }\n" +
-            "handle @Unit of :Composition as { id: :Text max 4, version: :ContentHash }\n" +
-            "handle @Repository of :Source as { id: :Text max 4, version: :Hash(#sha1) }\n" +
-            "handle @UnitFile of :Composition composite @Repository as { part: :Text max 8 }\n" +
+            "handle @Unit of :Composition with id :Text max 4 versioned by hash(#ges)\n" +
+            "handle @Repository of :Source with id :Text max 4 versioned by hash(#sha1)\n" +
+            "handle @UnitFile of :Composition attached to @Repository with part :Text max 8\n" +
             "model schema :Move as { unit: @Unit~, parts: :List(@Unit) max 2, file: @UnitFile~ | :Nothing }\n" +
             "model schema :Stock as { move: :Move, unit: :Composition }\n");
         foreach (var language in new[] { GesSchemaLanguage.CSharp, GesSchemaLanguage.Swift })
@@ -399,7 +399,7 @@ public sealed class GesSchemaGenerateTests
             var options = new GesSchemaGenerateOptions { Language = language, Namespace = "Game.Net", Split = GesSchemaSplit.Schema };
             string[] Types(params string[] roots) => [.. GesSchemaGenerator.GenerateModelFiles(set, roots, options).Select(file => file.Path.Replace(extension, "", StringComparison.Ordinal))];
 
-            // A composite brings its root's handle type, which it holds, and neither handle brings its state.
+            // An attached type brings its root's handle type, which it holds, and neither handle brings its state.
             CollectionAssert.AreEqual(new[] { "Game.Net.Move", "Game.Net.RepositoryHandle", "Game.Net.UnitFileHandle", "Game.Net.UnitHandle", "_Game.Net", ".ges-generated.json" }, Types("Move"));
             // A state that a root reaches otherwise is a model type; a state of no reached field stays out.
             CollectionAssert.AreEqual(new[] { "Game.Net.Composition", "Game.Net.Move", "Game.Net.RepositoryHandle", "Game.Net.Stock", "Game.Net.UnitFileHandle", "Game.Net.UnitHandle", "_Game.Net", ".ges-generated.json" }, Types("Stock"));

@@ -80,7 +80,7 @@ public enum GesDiagnosticCodes {
     /// of a type without versions, or a union mixing handle and other types.
     public static let validateInvalidHandleUse = "validate.invalidHandleUse"
 
-    /// A projected handle type names no projection of the type's state, projects a composite, stands beside the same type
+    /// A projected handle type names no projection of the type's state, projects a type with a part, stands beside the same type
     /// without projection in a union, or reads a member that is no field of its projection.
     public static let validateInvalidProjection = "validate.invalidProjection"
 

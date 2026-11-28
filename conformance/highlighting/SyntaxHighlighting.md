@@ -166,7 +166,7 @@ and ANSI text preservation.
 ```
 
 ```highlight
-{"name":"schema handles and store files","language":"gess","source":"handle @Unit of :Unit as { id: :Text max 64, version: :ContentHash }\nhandle @UnitFiles of :Store(@Unit) composite @Repository as { part: :Text max 256 }\n","expect":[{"text":"handle","kind":"keyword"},{"text":"@Unit","kind":"type"},{"text":"of","kind":"keyword"},{"text":":ContentHash","kind":"type"},{"text":"@UnitFiles","kind":"type"},{"text":":Store","kind":"type"},{"text":"@Unit","occurrence":1,"kind":"type"},{"text":"composite","kind":"keyword"},{"text":"@Repository","kind":"type"}],"diagnostics":[]}
+{"name":"schema handle clauses","language":"gess","source":"handle @Unit of :Unit with id :Text max 64 versioned by hash(#ges)\nhandle @Repository with id :Text max 16\n  versioned by revision max 1000\nhandle @File attached to @Repository with part :Text max 256\nhandle @Stats of :Unit keyed by @Unit with part :Number integer between 0 and 9 versioned by hash(#sha1)\n","expect":[{"text":"handle","kind":"keyword"},{"text":"@Unit","kind":"type"},{"text":"of","kind":"keyword"},{"text":"versioned","occurrence":0,"kind":"keyword"},{"text":"by","occurrence":0,"kind":"keyword"},{"text":"hash","occurrence":0,"kind":"keyword"},{"text":"#ges","kind":"tag"},{"text":"@Repository","occurrence":0,"kind":"type"},{"text":"revision","kind":"keyword"},{"text":"1000","kind":"number"},{"text":"attached","kind":"keyword"},{"text":"to","occurrence":1,"kind":"keyword"},{"text":"part","occurrence":0,"kind":"keyword"},{"text":"keyed","kind":"keyword"},{"text":"@Unit","occurrence":1,"kind":"type"},{"text":"#sha1","kind":"tag"}],"diagnostics":[]}
 ```
 
 ```highlight
@@ -194,7 +194,7 @@ and ANSI text preservation.
 ```
 
 ```highlight
-{"name":"schema owns with a projection and sending state","language":"gess","source":"schema :C as { state: :Boolean }\nprojection :P of :C as { state }\nhandle @U of :C as { id: :Text max 8, version: :ContentHash }\nwire schema :W as { u: @U(:P) }\nnetwork :G as {\n  server publishes :W latest\n  server owns @U as :P sending state\n}\n","expect":[{"text":"state","occurrence":0,"kind":"identifier"},{"text":"projection","kind":"keyword"},{"text":"state","occurrence":1,"kind":"identifier"},{"text":"owns","kind":"keyword"},{"text":":P","occurrence":2,"kind":"type"},{"text":"sending","kind":"keyword"},{"text":"state","occurrence":2,"kind":"keyword"}],"diagnostics":[]}
+{"name":"schema owns with a projection and sending state","language":"gess","source":"schema :C as { state: :Boolean }\nprojection :P of :C as { state }\nhandle @U of :C with id :Text max 8 versioned by hash(#ges)\nwire schema :W as { u: @U(:P) }\nnetwork :G as {\n  server publishes :W latest\n  server owns @U as :P sending state\n}\n","expect":[{"text":"state","occurrence":0,"kind":"identifier"},{"text":"projection","kind":"keyword"},{"text":"state","occurrence":1,"kind":"identifier"},{"text":"owns","kind":"keyword"},{"text":":P","occurrence":2,"kind":"type"},{"text":"sending","kind":"keyword"},{"text":"state","occurrence":2,"kind":"keyword"}],"diagnostics":[]}
 ```
 
 ```highlight

@@ -30,11 +30,62 @@ public protocol GesStoreFiles {
     func read(root: String, path: String) -> String?
 }
 
+/// A root of a store read from versioned sources (specs/Documents.md#reading-from-handles): a root handle, whose id names
+/// the source logically, and the path of the root file within it.
+public struct GesStoreSourceRoot: Hashable, Sendable {
+    /// The root handle, which carries no part, optionally with a version or a ref.
+    public let handle: GesHandle
+    /// The path of the root file, relative to the root.
+    public let path: String
+
+    /// Creates a root.
+    /// - Parameters:
+    ///   - handle: The root handle, which carries no part, optionally with a version or a ref.
+    ///   - path: The path of the root file, relative to the root.
+    public init(handle: GesHandle, path: String) {
+        self.handle = handle
+        self.path = path
+    }
+}
+
+/// A file a ``GesStoreSource`` answers: its text, or missing, and optionally the version of its root it comes from.
+public struct GesStoreFile: Hashable {
+    /// The file's text, or nil when the root has no such file (`store.importMissing`).
+    public let text: String?
+    /// The version of the root the file comes from, or Nothing.
+    public let version: GesValue
+
+    /// Creates an answer.
+    /// - Parameters:
+    ///   - text: The file's text, or nil when the root has no such file.
+    ///   - version: The version of the root the file comes from, an integer Number or 20 or 32 Bytes; Nothing for none.
+    public init(text: String?, version: GesValue = .nothing) {
+        self.text = text
+        self.version = version
+    }
+
+    /// The answer of a file the root does not have, without a version.
+    public static var missing: GesStoreFile { GesStoreFile(text: nil) }
+}
+
+/// The versioned sources of a store's roots, such as repositories at a commit. GES reads no files itself: it asks for the
+/// file of each root handle and root-relative path a store reaches.
+public protocol GesStoreSource {
+    /// Returns a file of a root.
+    /// - Parameters:
+    ///   - root: The root handle: as given while the root has no known version, a ref included, afterwards with the
+    ///     version of the root's first answer.
+    ///   - path: The root-relative path, segments joined by `/`, without `.` or `..` segments, at most 256 UTF-8 bytes.
+    /// - Returns: The file, or ``GesStoreFile/missing``; an unknown ref answers missing.
+    /// - Throws: Any error of the source, which reading the store propagates unchanged.
+    func read(root: GesHandle, path: String) throws -> GesStoreFile
+}
+
 /// One object of a store: its id, its handle, its checked state and where it is declared.
 public struct GesStoreEntry {
     /// The entry's id: its module name, a `.` and its key, or only its key at the root.
     public let id: String
-    /// The entry's handle, which carries the content hash of `value` for a `:ContentHash` type.
+    /// The entry's handle, which carries the content hash of `value` for a type `versioned by hash(#ges)`.
     public let handle: GesHandle
     /// The state: a Record of the state type with the schema's defaults applied, as a resolver's state.
     public let value: GesValue
@@ -142,16 +193,16 @@ public final class GesStore: GesHandleResolver {
     }
 
     /// Returns the handles of every entry through a projection (specs/Schemas.md#projections), sorted by id, each carrying
-    /// the projection and its version: the content hash of the projected state for a `:ContentHash` type, the entry's
+    /// the projection and its version: the content hash of the projected state for a type `versioned by hash(#ges)`, the entry's
     /// version otherwise. The list is computed on each call.
     /// - Parameter projection: A projection of the store's state, one of ``GesHandleType/projections``.
     /// - Returns: The projected handles, as a script receives them as `@Name(:P)~`.
     /// - Throws: `GesApiError.invalidArgument` when `projection` is no projection of the store's state.
     public func index(_ projection: GesSchema) throws -> [GesHandle] {
-        if !projection.declaration.narrows(type.resolved.state) {
+        if !projection.declaration.narrows(type.resolved.state!) {
             throw GesApiError.invalidArgument("':\(projection.name)' is no projection of '@\(type.name)'.")
         }
-        let hashed = type.version == .contentHash
+        let hashed = type.version == .gesHash
         var result: [GesHandle] = []
         result.reserveCapacity(entries.count)
         for entry in entries {
@@ -167,77 +218,70 @@ public final class GesStore: GesHandleResolver {
 
     /// Reads a store of a handle type from its roots.
     /// - Parameters:
-    ///   - type: The handle type, whose id is Text and which is not composite.
+    ///   - type: The handle type, which has a state and a Text id and no root.
     ///   - roots: The roots, read in this order.
     ///   - files: The source of every file's text.
     ///   - dependencies: The stores of other types whose handles entries may name or pin.
     /// - Returns: The store.
-    /// - Throws: `GesApiError.invalidArgument` when the type is composite or has no Text id, two roots share a name, or
-    ///   two stores share a type; `GesStoreError` listing every error when the store has errors.
+    /// - Throws: `GesApiError.invalidArgument` when the type has no state, has a root or has no Text id, two roots share a
+    ///   name, or two stores share a type; `GesStoreError` listing every error when the store has errors.
     public static func read(_ type: GesHandleType, roots: [GesStoreRoot], files: some GesStoreFiles, dependencies: [GesStore] = []) throws -> GesStore {
         let (maxIdLength, others) = try Self.dependencies(type, dependencies)
         var names = Set<[UInt8]>()
         for root in roots where !names.insert(Array(root.name.utf8)).inserted {
             throw GesApiError.invalidArgument("Two roots are named '\(root.name)'.")
         }
-        var reading = Reading(type: type, maxIdLength: maxIdLength, fetch: { root, path in (files.read(root: root, path: path), false) }, dependencies: others)
+        var reading = Reading(type: type, maxIdLength: maxIdLength, fetch: { root, path in files.read(root: root, path: path) }, dependencies: others)
         return try reading.run(roots, nil)
     }
 
-    /// Reads a store of a handle type from versioned sources (specs/Documents.md#reading-from-handles): each root is a
-    /// handle of a store file type of `type` whose part is the path of the root file, and every file is requested from
-    /// the resolver as the composite handle of the same root with the file's root-relative path.
+    /// Reads a store of a handle type from versioned sources (specs/Documents.md#reading-from-handles): each root is a root
+    /// handle and the path of its root file, and every file is requested from the source by the root handle and the file's
+    /// root-relative path.
     /// - Parameters:
-    ///   - type: The handle type, whose id is Text and which is not composite.
-    ///   - roots: The root handles, read in this order; a root without a version is pinned by the version of its first
-    ///     answer.
-    ///   - resolver: The resolver of the store file type, which answers each file with its document text.
+    ///   - type: The handle type, which has a state and a Text id and no root.
+    ///   - roots: The roots, read in this order; a root without a version is pinned by the version of its first answer.
+    ///   - source: The source of every file.
     ///   - dependencies: The stores of other types whose handles entries may name or pin.
-    /// - Returns: The store, whose `sources` are the roots with the versions they were read at.
-    /// - Throws: `GesApiError.invalidArgument` when the type is composite or has no Text id, a root is no handle of a
-    ///   store file type of `type` with a Text part, two roots are equal, or two stores share a type; `GesHandleError`
-    ///   with `runtime.handleResolveFailed` when the resolver gave no answer or several, passed an invalid version, or
-    ///   failed to turn a ref into a version, and with `runtime.handleVersionMismatch` when it passed another version than
-    ///   the root's; `GesStoreError` listing every error when the store has errors. Errors the resolver throws
-    ///   propagate unchanged.
-    public static func read(_ type: GesHandleType, roots: [GesHandle], resolver: some GesHandleResolver, dependencies: [GesStore] = []) throws -> GesStore {
+    /// - Returns: The store, whose `sources` are the root handles with the versions they were read at.
+    /// - Throws: `GesApiError.invalidArgument` when the type has no state, has a root or has no Text id, a root handle
+    ///   carries a part, two roots have equal handles, or two stores share a type; `GesHandleError` with
+    ///   `runtime.handleResolveFailed` when the source passed an invalid version and with `runtime.handleVersionMismatch`
+    ///   when it passed another version than the root's; `GesStoreError` listing every error when the store has errors.
+    ///   Errors the source throws propagate unchanged.
+    public static func read(_ type: GesHandleType, roots: [GesStoreSourceRoot], source: some GesStoreSource, dependencies: [GesStore] = []) throws -> GesStore {
         let (maxIdLength, others) = try Self.dependencies(type, dependencies)
-        var fileType: GesHandleType?
-        let sources = HandleSources(resolver, roots.count)
+        let sources = HandleSources(source, roots.count)
+        var names: [GesStoreRoot] = []
+        names.reserveCapacity(roots.count)
         for root in roots {
-            if !root.isComposite || root.part.valueKind != .text {
-                throw GesApiError.invalidArgument("\(root) is no handle of a store file of @\(type.name) with a Text part.")
-            }
-            if fileType == nil || fileType!.name != root.typeName {
-                fileType = type.fileType(root.typeName)
-                if fileType == nil { throw GesApiError.invalidArgument("@\(root.typeName) is no store file type of @\(type.name).") }
-            }
-            if !sources.add(root, fileType!) { throw GesApiError.invalidArgument("The root \(root) is given twice.") }
+            if root.handle.hasPart { throw GesApiError.invalidArgument("The root \(root.handle) carries a part.") }
+            if !sources.add(root.handle) { throw GesApiError.invalidArgument("The root \(root.handle) is given twice.") }
+            names.append(GesStoreRoot(name: root.handle.description, path: root.path))
         }
-        let names = roots.map { GesStoreRoot(name: $0.description, path: $0.part.asText) }
         var reading = Reading(type: type, maxIdLength: maxIdLength, fetch: { root, path in try sources.read(root, path) }, dependencies: others)
         return try reading.run(names, sources)
     }
 
-    /// Answers a handle of a known id with its entry's state and, for a `:ContentHash` type, its content hash; any other as
+    /// Answers a handle of a known id with its entry's state and, for a type `versioned by hash(#ges)`, its content hash; any other as
     /// missing.
     /// - Parameter call: The call holding the handle.
     /// - Throws: `GesApiError.invalidOperation` outside the resolver invocation.
     public func resolve(_ call: GesHandleResolveCall) throws {
         let handle = call.handle
-        guard !handle.isComposite, handle.id.valueKind == .text, let entry = self[handle.id.asText] else {
+        guard !handle.hasPart, handle.id.valueKind == .text, let entry = self[handle.id.asText] else {
             try call.setMissing()
             return
         }
-        if type.version == .contentHash {
+        if type.version == .gesHash {
             try call.setState(entry.value, version: entry.handle.version)
         } else {
             try call.setState(entry.value)
         }
     }
 
-    /// Lists the handle of every entry, sorted by id, without versions; a store's type has no parts, so a root lists none.
-    /// - Parameter root: Ignored unless set: a store's type is not composite, so its parts are empty.
+    /// Lists the handle of every entry, sorted by id, without versions; a store's type has no root, so a root lists none.
+    /// - Parameter root: Ignored unless set: a store's type has no root, so nothing is attached to or keyed by one.
     /// - Returns: The entry handles, or an empty list for a root.
     public func handles(root: GesHandle?) -> [GesHandle]? {
         if root != nil { return [] }
@@ -246,7 +290,8 @@ public final class GesStore: GesHandleResolver {
 
     // The maximum id length of a store's type and the dependencies by type name, after checking both.
     private static func dependencies(_ type: GesHandleType, _ dependencies: [GesStore]) throws -> (Int64, [String: GesStore]) {
-        if type.root != nil { throw GesApiError.invalidArgument("@\(type.name) is composite; a store needs a type of its own.") }
+        if !type.hasState { throw GesApiError.invalidArgument("@\(type.name) has no state; a store needs a type with one.") }
+        if type.root != nil { throw GesApiError.invalidArgument("@\(type.name) has a root; a store needs a type of its own.") }
         guard let id = type.id, id.isText else { throw GesApiError.invalidArgument("@\(type.name) has no Text id.") }
         var others: [String: GesStore] = [:]
         for dependency in dependencies {
@@ -360,40 +405,37 @@ public final class GesStore: GesHandleResolver {
         let other: GesStoreEntry?
     }
 
-    // The text of a root's file, or nil when the root has none; `state` is true for a state answer instead of a document.
-    private typealias Fetch = (_ root: String, _ path: String) throws -> (text: String?, state: Bool)
+    // The text of a root's file, or nil when the root has none.
+    private typealias Fetch = (_ root: String, _ path: String) throws -> String?
 
     // The roots of a store read from handles, by the text form of each root handle, with the version each is read at.
     private final class HandleSources {
         private final class Source {
             let handle: GesHandle
-            let fileType: GesHandleType
-            var prepared = false
-            var unknownRef = false
-            var version = GesValue.nothing
+            var version: GesValue
 
-            init(_ handle: GesHandle, _ fileType: GesHandleType) {
+            init(_ handle: GesHandle) {
                 self.handle = handle
-                self.fileType = fileType
+                version = handle.version
             }
         }
 
-        private let resolver: any GesHandleResolver
+        private static let maxPathLength = 256
+        private let source: any GesStoreSource
         private var ordered: [Source] = []
         private var byName: [[UInt8]: Source] = [:]
-        private let call = GesHandleResolveCall()
 
-        init(_ resolver: any GesHandleResolver, _ capacity: Int) {
-            self.resolver = resolver
+        init(_ source: any GesStoreSource, _ capacity: Int) {
+            self.source = source
             ordered.reserveCapacity(capacity)
         }
 
-        func add(_ root: GesHandle, _ fileType: GesHandleType) -> Bool {
-            let source = Source(root, fileType)
+        func add(_ root: GesHandle) -> Bool {
+            let entry = Source(root)
             let name = Array(root.description.utf8)
             if byName[name] != nil { return false }
-            byName[name] = source
-            ordered.append(source)
+            byName[name] = entry
+            ordered.append(entry)
             return true
         }
 
@@ -402,69 +444,29 @@ public final class GesStore: GesHandleResolver {
             try ordered.map { $0.version.isNothing ? $0.handle : try $0.handle.withVersion($0.version) }
         }
 
-        func read(_ root: String, _ path: String) throws -> (text: String?, state: Bool) {
-            let source = byName[Array(root.utf8)]!
-            let fileType = source.fileType
-            if !source.prepared {
-                source.prepared = true
-                source.version = source.handle.version
-                if !source.handle.ref.isNothing {
-                    let version = try resolver.resolveRef(source.handle)
-                    if version.isNothing {
-                        source.unknownRef = true
-                    } else if !GesHandleStates.isVersionOf(fileType.version, version) {
-                        throw GesHandleError(
-                            code: GesDiagnosticCodes.runtimeHandleResolveFailed,
-                            symbol: root,
-                            message: "The resolver of @\(fileType.name) returned no valid version."
-                        )
-                    } else {
-                        source.version = version
-                    }
-                }
-            }
-            if source.unknownRef || Int64(path.utf8.count) > fileType.part!.maxLength { return (nil, false) }
-            let handle = try GesHandle(
-                typeName: fileType.name,
-                root: try GesHandle(typeName: fileType.root!.name, id: source.handle.id, version: source.version),
-                part: .text(path)
-            )
-            let answer: GesHandleResolveCall.AnswerKind
-            let text: String?
-            let passed: GesValue
-            call.begin(handle, fileType, nil, 0)
-            defer { call.end() }
-            try resolver.resolve(call)
-            answer = call.answer
-            text = call.text
-            passed = call.version
-            let symbol = handle.description
-            if answer == .none || answer == .several {
-                throw GesHandleError(code: GesDiagnosticCodes.runtimeHandleResolveFailed, symbol: symbol, message: "The resolver of @\(fileType.name) must give exactly one answer.")
-            }
+        func read(_ root: String, _ path: String) throws -> String? {
+            let entry = byName[Array(root.utf8)]!
+            if path.utf8.count > Self.maxPathLength { return nil }
+            let handle = entry.version.isNothing ? entry.handle : try entry.handle.withVersion(entry.version)
+            let file = try source.read(root: handle, path: path)
+            let passed = file.version
             if !passed.isNothing {
-                if !GesHandleStates.isVersionOf(fileType.version, passed) {
-                    throw GesHandleError(
-                        code: GesDiagnosticCodes.runtimeHandleResolveFailed,
-                        symbol: symbol,
-                        message: "The resolver of @\(fileType.name) passed no valid version of its type."
-                    )
+                let symbol = root + "/" + path
+                if !Self.isVersion(passed) {
+                    throw GesHandleError(code: GesDiagnosticCodes.runtimeHandleResolveFailed, symbol: symbol, message: "The source of \(root) passed no valid version.")
                 }
-                if source.version.isNothing {
-                    source.version = passed
-                } else if !GesHandleStates.versionEquals(source.version, passed) {
-                    throw GesHandleError(
-                        code: GesDiagnosticCodes.runtimeHandleVersionMismatch,
-                        symbol: symbol,
-                        message: "The resolver of @\(fileType.name) delivered another version of \(root)."
-                    )
+                if entry.version.isNothing {
+                    entry.version = passed
+                } else if !GesHandleStates.versionEquals(entry.version, passed) {
+                    throw GesHandleError(code: GesDiagnosticCodes.runtimeHandleVersionMismatch, symbol: symbol, message: "The source of \(root) delivered another version.")
                 }
             }
-            switch answer {
-            case .document: return (text, false)
-            case .state: return (nil, true)
-            default: return (nil, false)
-            }
+            return file.text
+        }
+
+        private static func isVersion(_ version: GesValue) -> Bool {
+            version.valueKind == .integer && version.unit == .none
+                || version.valueKind == .bytes && (version.asBytes.count == GesHash20.length || version.asBytes.count == GesHash32.length)
         }
     }
 
@@ -512,11 +514,7 @@ public final class GesStore: GesHandleResolver {
                 return
             }
             if !visited.insert(key).inserted { return }
-            let (fetched, state) = try fetch(root, path)
-            if state {
-                report(importer ?? addFile(root, path, nil), importer == nil ? -1 : importOffset, GesStoreError.importKind, "'\(path)' is an object's state, not a store file.")
-                return
-            }
+            let fetched = try fetch(root, path)
             guard let text = fetched else {
                 report(importer ?? addFile(root, path, nil), importer == nil ? -1 : importOffset, GesStoreError.importMissing, "The root '\(root)' has no file '\(path)'.")
                 return
@@ -553,11 +551,7 @@ public final class GesStore: GesHandleResolver {
         // The state document of `key: import 'path'`.
         private mutating func readStateDocument(_ file: SourceFile, _ item: GesStoreItem) throws {
             guard let path = imported(file, item) else { return }
-            let (fetched, state) = try fetch(file.root, path)
-            if state {
-                report(file, item.pathOffset, GesStoreError.importKind, "'\(path)' is an object's state, not a state document.")
-                return
-            }
+            let fetched = try fetch(file.root, path)
             guard let text = fetched else {
                 report(file, item.pathOffset, GesStoreError.importMissing, "The root '\(file.root)' has no file '\(path)'.")
                 return
@@ -672,7 +666,7 @@ public final class GesStore: GesHandleResolver {
                 failUnknown(pending, offset, "@" + name, name, pending.item.module, sortedIds)
                 return
             }
-            if pinned && type.version != .contentHash {
+            if pinned && type.version != .gesHash {
                 fail(pending, offset, GesStoreError.invalidPin, "@\(type.name) has no content hash to pin @\(name) to.")
                 return
             }
@@ -681,7 +675,7 @@ public final class GesStore: GesHandleResolver {
 
         // A complete handle names an entry of its type's store when the store is known.
         private mutating func resolveHandle(_ pending: Pending, _ site: Site, _ text: String, _ offset: Int, _ pinned: Bool) {
-            guard let handle = try? GesHandle(parsing: text), !handle.isComposite else {
+            guard let handle = try? GesHandle(parsing: text), !handle.hasPart else {
                 if pinned { fail(pending, offset, GesStoreError.invalidPin, "\(text) names no store entry to pin to.") }
                 return
             }
@@ -691,7 +685,7 @@ public final class GesStore: GesHandleResolver {
                     failUnknown(pending, offset, text, id ?? "", "", sortedIds)
                     return
                 }
-                if pinned && type.version != .contentHash {
+                if pinned && type.version != .gesHash {
                     fail(pending, offset, GesStoreError.invalidPin, "@\(type.name) has no content hash to pin \(text) to.")
                     return
                 }
@@ -706,7 +700,7 @@ public final class GesStore: GesHandleResolver {
                 failUnknown(pending, offset, text, id ?? "", "", store.entries.map(\.id))
                 return
             }
-            if pinned && store.type.version != .contentHash {
+            if pinned && store.type.version != .gesHash {
                 fail(pending, offset, GesStoreError.invalidPin, "@\(handle.typeName) has no content hash to pin \(text) to.")
                 return
             }
@@ -761,7 +755,7 @@ public final class GesStore: GesHandleResolver {
                 let state = try GesSchemaValues.normalizeState(declaration, GesSchemaValues.documentShapes(declaration, value, chosen: chosen), "", type.declarations)
                 let id = GesValue.text(pending.id)
                 let handle: GesHandle
-                if type.version == .contentHash {
+                if type.version == .gesHash {
                     handle = try GesHandle(typeName: type.name, id: id, version: .bytes(try GesSchemaValues.contentHash(type, state: state).bytes))
                 } else {
                     handle = try GesHandle(typeName: type.name, id: id)

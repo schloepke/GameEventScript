@@ -140,9 +140,9 @@ internal static partial class GesCompiler
             switch (member.Member)
             {
                 case "id":
-                    // A part-less composite holds its root's id as its own, so only `@id` reads its identity as a root
-                    // without a part; types whose composites all have a part keep the plain member.
-                    _builder.MemberAccess(destination, GesHandleTypeNames.HasPartlessComposite(typeName, module.HandleTypes) ? "@id" : "id", target);
+                    // A type with a root and without a part holds its root's id as its own, so only `@id` reads its identity
+                    // as a root without a part; types that all have a part keep the plain member.
+                    _builder.MemberAccess(destination, GesHandleTypeNames.HasRootWithoutPart(typeName, module.HandleTypes) ? "@id" : "id", target);
                     return;
                 case "version":
                     _builder.MemberAccess(destination, member.Member, target);
@@ -194,7 +194,7 @@ internal static partial class GesCompiler
         }
 
         // The static type of an expression as far as handle lowering needs it: bindings with a declared type, record
-        // fields, `h.root` of composites and casts.
+        // fields, `h.root` of types with a root and casts.
         private string? StaticTypeName(GesExpressionNode expression, LoweringContext context)
         {
             switch (expression)

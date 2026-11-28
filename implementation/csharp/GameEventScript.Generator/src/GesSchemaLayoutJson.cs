@@ -43,8 +43,9 @@ internal static class GesSchemaLayoutJson
                 json.BeginObject();
                 json.String("name", handle.Name);
                 json.String("hash", Hex(handle.Hash));
-                json.String("state", handle.State);
-                if (handle.IsComposite)
+                if (handle.State.Length > 0) json.String("state", handle.State);
+                if (handle.HasPart || handle.PartlessRoot.Length > 0) json.String("form", handle.Keyed ? "keyed" : "attached");
+                if (handle.HasPart)
                 {
                     json.String("root", handle.Root);
                     json.Key("part");
@@ -55,6 +56,10 @@ internal static class GesSchemaLayoutJson
                     if (handle.PartlessRoot.Length > 0) json.String("root", handle.PartlessRoot);
                     json.Key("id");
                     Encoding(json, handle.Id!);
+                }
+
+                if (!handle.HasPart || handle.Keyed)
+                {
                     json.Key("version");
                     json.BeginValueObject();
                     json.String("kind", GesLayoutHandle.VersionName(handle.Version));

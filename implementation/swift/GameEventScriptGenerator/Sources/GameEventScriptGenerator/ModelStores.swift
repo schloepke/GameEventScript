@@ -3,7 +3,7 @@
 
 @_spi(Generator) import GameEventScriptRuntime
 
-// A typed store of a handle type whose state is a model root, whose id is Text and that is not composite
+// A typed store of a handle type whose state is a model root, whose id is Text and that has no root
 // (specs/Schemas.md#model-stores): the type `<Name>Store` and the handle types of the other stores its state reaches,
 // which it takes as optional dependencies, ordered by name.
 struct GesModelStore {
@@ -20,7 +20,7 @@ extension GesModelPlanner {
     static func stores(_ layout: GesModelLayout, _ topLevel: Set<String>) throws(GesGeneratorError) -> [GesModelStore] {
         var typed: Set<String> = []
         for handle in layout.handles
-        where !handle.isComposite && handle.id?.isText == true && layout.roots.contains(handle.state)
+        where handle.root == nil && handle.partlessRoot == nil && !handle.state.isEmpty && handle.id?.isText == true && layout.roots.contains(handle.state)
             && layout.types.contains(where: { $0.name == handle.state && $0.kind == .schema })
         {
             typed.insert(handle.name)

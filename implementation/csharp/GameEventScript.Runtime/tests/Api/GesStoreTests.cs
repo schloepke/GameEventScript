@@ -12,12 +12,12 @@ namespace GameEventScript.Tests.Native.Api;
 public sealed class GesStoreTests
 {
     private const string Schemas = "schema :Hull as { armor: :Number integer between 0 and 100 }\n"
-        + "handle @Hull of :Hull as { id: :Text max 32, version: :ContentHash }\n"
+        + "handle @Hull of :Hull with id :Text max 32 versioned by hash(#ges)\n"
         + "schema :Composition as { name: :Text max 64, hull: @Hull~, escort: @Unit optional }\n"
-        + "handle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\n"
+        + "handle @Unit of :Composition with id :Text max 16 versioned by hash(#ges)\n"
         + "schema :Contact as { label: :Text max 16 }\n"
-        + "handle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\n"
-        + "handle @Slot of :Contact composite @Unit as { part: :Number integer between 0 and 15 }\n";
+        + "handle @Target of :Contact with id :Number integer between 0 and 65535\n"
+        + "handle @Slot of :Contact attached to @Unit with part :Number integer between 0 and 15\n";
 
     private static GesHandleType Type(string name)
     {
@@ -114,97 +114,82 @@ public sealed class GesStoreTests
         Assert.IsNull(GesStore.Combine("", ".."));
     }
 
-    private const string FileSchemas = "schema :Composition as { name: :Text max 16 }\n"
-        + "handle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\n"
-        + "schema :Source as { text: :Text }\n"
-        + "handle @Repository of :Source as { id: :Text max 16, version: :Number integer between 0 and 1000 }\n"
-        + "handle @UnitFiles of :Store(@Unit) composite @Repository as { part: :Text max 64 }\n"
-        + "handle @Other of :Source composite @Repository as { part: :Text max 64 }\n";
+    private const string SourceSchemas = "schema :Composition as { name: :Text max 16 }\n"
+        + "handle @Unit of :Composition with id :Text max 16 versioned by hash(#ges)\n"
+        + "handle @Repository with id :Text max 16 versioned by revision max 1000\n"
+        + "handle @File attached to @Repository with part :Text max 64\n"
+        + "handle @Stateless with id :Text max 16\n";
 
-    private static GesHandleType FileType(string name)
+    private static GesHandleType SourceType(string name)
     {
-        foreach (var type in GesSchemaSet.Parse([new GesSchemaSource("files.gess", FileSchemas)]).HandleTypes)
+        foreach (var type in GesSchemaSet.Parse([new GesSchemaSource("sources.gess", SourceSchemas)]).HandleTypes)
             if (type.Name == name) return type;
         throw new InvalidOperationException(name);
     }
 
-    private static readonly GesHandle Content = GesHandle.Parse("@UnitFiles:content/units.gesd");
+    private static readonly GesHandle Content = GesHandle.Parse("@Repository:content");
 
-    private static GesStore ReadUnits(Action<GesHandleResolveCall> answer) => GesStore.Read(FileType("Unit"), [Content], new Resolver(answer));
+    private static GesStore ReadUnits(Func<GesHandle, string, GesStoreFile> answer)
+        => GesStore.Read(SourceType("Unit"), [new GesStoreSourceRoot(Content, "units.gesd")], new Source(answer));
 
     [TestMethod]
-    public void ReadsThroughHandlesAndAnswersTheStatesOfItsEntries()
+    public void ReadsFromRootHandlesAndPinsTheVersionOfTheFirstAnswer()
     {
         var requested = new List<string>();
-        var store = ReadUnits(call =>
+        var store = ReadUnits((root, path) =>
         {
-            requested.Add(call.Handle.ToString());
-            if (call.Handle.Part.AsText() == "units.gesd") call.SetDocument(":Store(@Unit)\nimport 'more.gesd'\nscout: [name: 'Scout']\n", GesValue.GesInteger(9));
-            else call.SetDocument(":Store(@Unit)\none: [name: 'One']\n");
+            requested.Add(root + " " + path);
+            return path == "units.gesd"
+                ? new GesStoreFile(":Store(@Unit)\nimport 'more.gesd'\nscout: [name: 'Scout']\n", GesValue.GesInteger(9))
+                : new GesStoreFile(":Store(@Unit)\none: [name: 'One']\n");
         });
 
-        CollectionAssert.AreEqual(new[] { "@UnitFiles:content/units.gesd", "@UnitFiles:content~9/more.gesd" }, requested);
-        CollectionAssert.AreEqual(new[] { "@UnitFiles:content~9/units.gesd" }, store.Sources.Select(source => source.ToString()).ToArray());
-        Assert.AreEqual("@UnitFiles:content/units.gesd", store["one"]!.Origin.ModuleName);
+        CollectionAssert.AreEqual(new[] { "@Repository:content units.gesd", "@Repository:content~9 more.gesd" }, requested);
+        CollectionAssert.AreEqual(new[] { "@Repository:content~9" }, store.Sources.Select(source => source.ToString()).ToArray());
+        Assert.AreEqual("@Repository:content", store["one"]!.Origin.ModuleName);
 
         var call = new GesHandleResolveCall();
         var scout = store["scout"]!;
-        call.Begin(GesHandle.Create("Unit", GesValue.GesText("scout")), FileType("Unit"), null, 0);
+        call.Begin(GesHandle.Create("Unit", GesValue.GesText("scout")), SourceType("Unit"), null, 0);
         store.Resolve(call);
         Assert.AreEqual(GesHandleResolveCall.AnswerKind.State, call.Answer);
         Assert.AreEqual(scout.Value, call.Record);
         Assert.IsTrue(GesValue.Equals(scout.Handle.Version, call.Version));
-        call.Begin(GesHandle.Create("Unit", GesValue.GesText("ghost")), FileType("Unit"), null, 0);
+        call.Begin(GesHandle.Create("Unit", GesValue.GesText("ghost")), SourceType("Unit"), null, 0);
         store.Resolve(call);
         Assert.AreEqual(GesHandleResolveCall.AnswerKind.Missing, call.Answer);
         call.End();
     }
 
     [TestMethod]
-    public void ReportsAStateAnswerAsTheWrongKindOfFile()
+    public void FailsOnInvalidOrChangingVersionsAndPassesSourceErrorsOn()
     {
-        var exception = Assert.ThrowsExactly<GesStoreException>(() => ReadUnits(call => call.SetState(GesValue.GesNothing())));
-        Assert.AreEqual(GesStoreException.ImportKind, exception.Diagnostics[0].Code);
-    }
-
-    [TestMethod]
-    public void FailsOnMissingSeveralOrInvalidAnswersAndPassesResolverErrorsOn()
-    {
-        Assert.AreEqual(GesDiagnosticCodes.RuntimeHandleResolveFailed, Assert.ThrowsExactly<GesHandleException>(() => ReadUnits(_ => { })).Code);
-        Assert.AreEqual(GesDiagnosticCodes.RuntimeHandleResolveFailed, Assert.ThrowsExactly<GesHandleException>(() => ReadUnits(call =>
-        {
-            call.SetMissing();
-            call.SetMissing();
-        })).Code);
+        Assert.AreEqual(GesStoreException.ImportMissing, Assert.ThrowsExactly<GesStoreException>(() => ReadUnits((_, _) => GesStoreFile.Missing)).Diagnostics[0].Code);
         Assert.AreEqual(GesDiagnosticCodes.RuntimeHandleResolveFailed, Assert.ThrowsExactly<GesHandleException>(
-            () => ReadUnits(call => call.SetDocument(":Store(@Unit)\n", GesValue.GesBytes(new byte[] { 1 })))).Code);
+            () => ReadUnits((_, _) => new GesStoreFile(":Store(@Unit)\n", GesValue.GesBytes(new byte[] { 1 })))).Code);
+        var version = 1L;
+        Assert.AreEqual(GesDiagnosticCodes.RuntimeHandleVersionMismatch, Assert.ThrowsExactly<GesHandleException>(
+            () => ReadUnits((_, path) => new GesStoreFile(path == "units.gesd" ? ":Store(@Unit)\nimport 'more.gesd'\n" : ":Store(@Unit)\n", GesValue.GesInteger(version++)))).Code);
         var thrown = new InvalidOperationException("offline");
-        Assert.AreSame(thrown, Assert.ThrowsExactly<InvalidOperationException>(() => ReadUnits(_ => throw thrown)));
+        Assert.AreSame(thrown, Assert.ThrowsExactly<InvalidOperationException>(() => ReadUnits((_, _) => throw thrown)));
     }
 
     [TestMethod]
-    public void RejectsRootsThatAreNoStoreFiles()
+    public void RejectsRootHandlesWithAPartTwiceGivenRootsAndTypesWithoutAStore()
     {
-        var resolver = new Resolver(call => call.SetMissing());
-        Assert.ThrowsExactly<ArgumentException>(() => GesStore.Read(FileType("Unit"), [GesHandle.Parse("@Repository:content")], resolver));
-        Assert.ThrowsExactly<ArgumentException>(() => GesStore.Read(FileType("Unit"), [GesHandle.Parse("@Other:content/units.gesd")], resolver));
-        Assert.ThrowsExactly<ArgumentException>(() => GesStore.Read(FileType("Unit"), [Content, GesHandle.Parse("@UnitFiles:content/units.gesd")], resolver));
-        Assert.ThrowsExactly<ArgumentNullException>(() => GesStore.Read(FileType("Unit"), [Content], (IGesHandleResolver)null!));
-        Assert.ThrowsExactly<ArgumentException>(() => GesStore.Read(FileType("Other"), [], resolver));
-        Assert.IsEmpty(GesStore.Read(FileType("Unit"), [], resolver).Sources);
+        var source = new Source((_, _) => GesStoreFile.Missing);
+        var unit = SourceType("Unit");
+        Assert.ThrowsExactly<ArgumentException>(() => GesStore.Read(unit, [new GesStoreSourceRoot(GesHandle.Parse("@File:content/units.gesd"), "units.gesd")], source));
+        Assert.ThrowsExactly<ArgumentException>(() => GesStore.Read(unit, [new GesStoreSourceRoot(Content, "a.gesd"), new GesStoreSourceRoot(Content, "b.gesd")], source));
+        Assert.ThrowsExactly<ArgumentNullException>(() => GesStore.Read(unit, [new GesStoreSourceRoot(Content, "units.gesd")], (IGesStoreSource)null!));
+        Assert.ThrowsExactly<ArgumentException>(() => GesStore.Read(SourceType("Stateless"), [], source));
+        Assert.ThrowsExactly<ArgumentException>(() => GesStore.Read(SourceType("File"), [], source));
+        Assert.IsEmpty(GesStore.Read(unit, Array.Empty<GesStoreSourceRoot>(), source).Sources);
     }
 
-    [TestMethod]
-    public void LeavesStoreFileTypesOutOfScripts()
+    private sealed class Source(Func<GesHandle, string, GesStoreFile> answer) : IGesStoreSource
     {
-        var types = GesSchemaSet.Parse([new GesSchemaSource("files.gess", FileSchemas)]).HandleTypes;
-        _ = GameEventScriptProgram.CreateBuilder().WithHandleTypes(types).AddScript("on Seen(unit as @Unit) { }").Compile();
-        Assert.ThrowsExactly<GesCompileException>(() => GameEventScriptProgram.CreateBuilder().WithHandleTypes(types).AddScript("on Seen(file as @UnitFiles) { }").Compile());
-    }
-
-    private sealed class Resolver(Action<GesHandleResolveCall> answer) : IGesHandleResolver
-    {
-        public void Resolve(GesHandleResolveCall call) => answer(call);
+        public GesStoreFile Read(GesHandle root, string path) => answer(root, path);
     }
 
     private sealed class Files(params (string Root, string Path, string Text)[] files) : IGesStoreFiles

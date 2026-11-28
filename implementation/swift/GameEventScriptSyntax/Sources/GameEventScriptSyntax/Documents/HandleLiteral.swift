@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// Recognizes the text form of a handle (specs/Language.md#handle-text-form): `@Type:id` with an optional `~version` or
-/// ref and an optional `/part`. Documents and Runtime's `GesHandle(parsing:)` share this one scanner; Runtime builds
+/// ref and an optional `/part`; a keyed handle writes its version or ref after the part instead, `@Type:id/part~version`.
+/// Documents and Runtime's `GesHandle(parsing:)` share this one scanner; Runtime builds
 /// the handle from the recognized parts.
 @_spi(Syntax) public enum GesHandleLiteral {
     /// An id or part: an integer or a Text.
@@ -35,8 +36,10 @@
         @_spi(Syntax) public let id: Key
         /// The version or ref.
         @_spi(Syntax) public let version: Version
-        /// The part of a composite, or nil.
+        /// The part of a type attached to or keyed by a root, or nil.
         @_spi(Syntax) public let part: Key?
+        /// Whether the version or ref follows the part, as in the text of a keyed handle.
+        @_spi(Syntax) public let versionAfterPart: Bool
     }
 
     /// Reads a handle at `start`, which holds `@`, without looking at what follows it. Returns nil when the text there is
@@ -63,36 +66,54 @@
             position += 1
             if allowPin && (position == bytes.count || isDelimiter(bytes, position)) {
                 pin = position - 1
-            } else if position < bytes.count && bytes[position] == 35 {
-                position += 1
-                let tagStart = position
-                while position < bytes.count && GesNames.alnum(bytes[position]) { position += 1 }
-                let tag = String(decoding: bytes[tagStart..<position], as: UTF8.self)
-                guard GesNames.plain(tag) else { return nil }
-                version = .tag(tag)
-            } else if position < bytes.count && bytes[position] == 39 {
-                guard let text = quoted(bytes, &position) else { return nil }
-                version = .text(text)
             } else {
-                let versionStart = position
-                while position < bytes.count && (GesNames.alnum(bytes[position]) || bytes[position] == 45) { position += 1 }
-                let text = bytes[versionStart..<position]
-                if (text.count == 40 || text.count == 64) && text.allSatisfy({ GesNames.digit($0) || (97...102).contains($0) }) {
-                    version = .hash(String(decoding: text, as: UTF8.self))
-                } else if readsAsInteger(text), let revision = Int64(String(decoding: text, as: UTF8.self)) {
-                    version = .revision(revision)
-                } else {
-                    return nil
-                }
+                guard let read = readVersion(bytes, &position) else { return nil }
+                version = read
             }
         }
+
         var part: Key?
+        var versionAfterPart = false
         if position < bytes.count && bytes[position] == 47 && !isComment(bytes, position) {
             position += 1
             guard let read = key(bytes, &position, isPart: true) else { return nil }
             part = read
+
+            // A keyed handle's version follows its part; a version after the id and after the part is no handle.
+            if position < bytes.count && bytes[position] == 126 {
+                guard version == .none, pin == nil else { return nil }
+                position += 1
+                guard let read = readVersion(bytes, &position) else { return nil }
+                version = read
+                versionAfterPart = true
+            }
         }
-        return (position, Parts(typeName: typeName, id: id, version: version, part: part), pin)
+
+        return (position, Parts(typeName: typeName, id: id, version: version, part: part, versionAfterPart: versionAfterPart), pin)
+    }
+
+    // A version or ref after `~`: `#tag`, a quoted Text, 40 or 64 lowercase hexadecimal digits or a decimal revision.
+    private static func readVersion(_ bytes: [UInt8], _ position: inout Int) -> Version? {
+        if position < bytes.count && bytes[position] == 35 {
+            position += 1
+            let tagStart = position
+            while position < bytes.count && GesNames.alnum(bytes[position]) { position += 1 }
+            let tag = String(decoding: bytes[tagStart..<position], as: UTF8.self)
+            guard GesNames.plain(tag) else { return nil }
+            return .tag(tag)
+        }
+        if position < bytes.count && bytes[position] == 39 {
+            guard let text = quoted(bytes, &position) else { return nil }
+            return .text(text)
+        }
+        let versionStart = position
+        while position < bytes.count && (GesNames.alnum(bytes[position]) || bytes[position] == 45) { position += 1 }
+        let text = bytes[versionStart..<position]
+        if (text.count == 40 || text.count == 64) && text.allSatisfy({ GesNames.digit($0) || (97...102).contains($0) }) {
+            return .hash(String(decoding: text, as: UTF8.self))
+        }
+        guard readsAsInteger(text), let revision = Int64(String(decoding: text, as: UTF8.self)) else { return nil }
+        return .revision(revision)
     }
 
     /// Reads a handle in a document at `start`, which holds `@`. Returns nil when the text there is no well-formed
@@ -113,7 +134,8 @@
     }
 
     /// Whether a Text id or part may be written without quotes: a nonempty bare run that does not read as an integer
-    /// and, for a part, neither starts with `/` nor contains `//`.
+    /// and, for a part, neither starts with `/` nor contains `//`. `~` is no bare character, so a part that holds one,
+    /// which would read as a keyed handle's version, is quoted.
     @_spi(Syntax) public static func isBare(_ text: String, isPart: Bool) -> Bool {
         let bytes = Array(text.utf8)
         guard !bytes.isEmpty, !readsAsInteger(bytes[...]), bytes.allSatisfy({ isBareByte($0, isPart) }) else { return false }

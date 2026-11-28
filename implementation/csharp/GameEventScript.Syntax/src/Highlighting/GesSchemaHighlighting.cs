@@ -18,7 +18,7 @@ internal static class GesSchemaHighlighting
         "default", "true", "false", "abstract", "packed", "with", "all", "without", "computed", "by", "when", "otherwise", "or", "not", "of",
         "min", "clamp", "abs", "has", "sqrt", "cbrt", "sin", "cos", "tan", "asin", "acos", "atan", "atan2", "hypot", "exp", "ln",
         "floor", "ceil", "truncate", "round", "rad", "deg", "network", "client", "server", "sends", "publishes", "reliable",
-        "latest", "bulk", "at", "most", "every", "handle", "composite", "owns", "projection", "sending"
+        "latest", "bulk", "at", "most", "every", "handle", "attached", "keyed", "versioned", "owns", "projection", "sending"
     };
 
     internal static void Highlight(string text, GesSpanBuilder spans, List<GesHighlightDiagnostic> diagnostics)
@@ -77,8 +77,10 @@ internal static class GesSchemaHighlighting
                 var word = text.Substring(start, position - start);
 
                 // The words of `round half even`, `round half up` and `round half down` are keywords only there, and
-                // `state` is a keyword only in `sending state`.
-                var mode = previous == "round" && word == "half" || previous == "half" && word is "even" or "up" or "down" || previous == "sending" && word == "state";
+                // `state` is a keyword only in `sending state`; `to`, `id`, `part`, `revision` and `hash` only in a handle's
+                // `attached to`, `with id`, `with part`, `versioned by revision` and `versioned by hash`.
+                var mode = previous == "round" && word == "half" || previous == "half" && word is "even" or "up" or "down" || previous == "sending" && word == "state"
+                    || previous == "attached" && word == "to" || previous == "with" && word is "id" or "part" || previous == "by" && word is "revision" or "hash";
                 kind = Keywords.Contains(word) || mode ? GesSyntaxKind.Keyword : char.IsUpper(c) ? GesSyntaxKind.Message : GesSyntaxKind.Identifier;
                 previous = word;
                 spans.Add(start, position - start, kind);

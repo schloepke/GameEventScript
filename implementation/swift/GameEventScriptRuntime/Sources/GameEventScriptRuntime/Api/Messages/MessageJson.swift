@@ -257,11 +257,13 @@ final class GesMessageJsonCodec {
         }
     }
 
-    // A handle object; a ref is never written. A composite carries its root's id and version and its part.
+    // A handle object; a ref is never written. A handle of a type with a root carries its root's id and its part, if any; a
+    // keyed handle with a part is marked, since it writes its own version after the part.
     func encodeHandle(_ handle: GesHandle, _ depth: Int) throws -> GesValue {
         guard handle.ref.isNothing else { throw GesJson.error() }
         var fields: [(String, GesValue)] = [("name", .text(handle.typeName)), ("id", try encode(handle.id, depth + 1))]
-        if handle.isComposite { fields.append(("part", try encode(handle.part, depth + 1))) }
+        if handle.hasPart { fields.append(("part", try encode(handle.part, depth + 1))) }
+        if handle.isKeyed { fields.append(("keyed", .boolean(true))) }
         if handle.hasVersion { fields.append(("version", try encode(handle.version, depth + 1))) }
         return Self.typed("Handle", fields)
     }
@@ -269,14 +271,20 @@ final class GesMessageJsonCodec {
     func decodeHandle(_ value: GesValue, _ depth: Int) throws -> GesHandle {
         let hasPart = value.asMap?.get("part") != nil
         let hasVersion = value.asMap?.get("version") != nil
-        try Self.fields(value, ["type", "name", "id"] + (hasPart ? ["part"] : []) + (hasVersion ? ["version"] : []))
+        let keyed = hasPart && value.asMap?.get("keyed") != nil
+        try Self.fields(value, ["type", "name", "id"] + (hasPart ? ["part"] : []) + (keyed ? ["keyed"] : []) + (hasVersion ? ["version"] : []))
         let name = try Self.string(Self.get(value, "name"))
         guard GesNames.type(name) else { throw GesJson.error() }
         let id = try Self.handleKey(decode(Self.get(value, "id"), depth + 1))
         let version = hasVersion ? try decode(Self.get(value, "version"), depth + 1) : .nothing
         do {
             let handle = try GesHandle(typeName: name, id: id, version: version)
-            return hasPart ? try GesHandle(typeName: name, root: handle, part: Self.handleKey(decode(Self.get(value, "part"), depth + 1))) : handle
+            if !hasPart { return handle }
+            let part = try Self.handleKey(decode(Self.get(value, "part"), depth + 1))
+            if !keyed { return try GesHandle(typeName: name, attachedTo: handle, part: part) }
+            let flag = try Self.get(value, "keyed")
+            guard flag.kind == .boolean, flag.asBoolean else { throw GesJson.error() }
+            return try GesHandle(typeName: name, keyedBy: handle, part: part, version: version)
         } catch is GesApiError {
             throw GesJson.error()
         }

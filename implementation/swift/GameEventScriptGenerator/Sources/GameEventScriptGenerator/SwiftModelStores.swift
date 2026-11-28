@@ -109,8 +109,8 @@ extension GesSwiftModelEmitter {
         code.close()
         code.blank()
         storeReadDocumentation(&code, dependencies.map { ($0.name, $0.label) }, files: false)
-        code.open("\(access)static func read(roots: [GesHandle], resolver: some GesHandleResolver\(parameters)) throws -> \(name) {")
-        code.line("try \(name)(GesStore.read(try \(set).handleType(\(literal)), roots: roots, resolver: resolver\(passed)))")
+        code.open("\(access)static func read(roots: [GesStoreSourceRoot], source: some GesStoreSource\(parameters)) throws -> \(name) {")
+        code.line("try \(name)(GesStore.read(try \(set).handleType(\(literal)), roots: roots, source: source\(passed)))")
         code.close()
         code.blank()
         code.line("/// Answers a read of an entry's state: its state, with its content hash for a type that declares one, or missing.")
@@ -144,22 +144,26 @@ extension GesSwiftModelEmitter {
     }
 
     private static func storeReadDocumentation(_ code: inout Code, _ dependencies: [(name: String, label: String)], files: Bool) {
-        code.line(files ? "/// Reads the store from named roots, whose files a source supplies." : "/// Reads the store from root handles, whose files a resolver answers.")
+        code.line(files ? "/// Reads the store from named roots, whose files a source supplies." : "/// Reads the store from versioned sources: root handles and the paths of their root files, whose files a source answers.")
         code.line("///")
         code.line("/// - Parameters:")
         code.line("///   - roots: The roots, read in this order.")
-        code.line(files ? "///   - files: The source of every file's text." : "///   - resolver: The resolver that answers the root files and their imports.")
+        code.line(files ? "///   - files: The source of every file's text." : "///   - source: The source that answers every file by root handle and path.")
         for dependency in dependencies {
             let label = dependency.label.filter { $0 != "`" }
             code.line("///   - \(label): The store of `@\(dependency.name)`, whose entries this store's entries may name or pin; none when nil.")
         }
         code.line("/// - Returns: The store.")
-        code.line("/// - Throws: `GesApiError.invalidArgument` when two roots share a name or a root is no store file of the type; `GesStoreError`")
+        code.line(
+            files
+                ? "/// - Throws: `GesApiError.invalidArgument` when two roots share a name; `GesStoreError`"
+                : "/// - Throws: `GesApiError.invalidArgument` when a root handle carries a part or two roots have equal handles; `GesStoreError`"
+        )
         if files {
             code.line("///   listing every error when the store has errors; `GesSchemaError` when the embedded schema sources no longer parse.")
         } else {
-            code.line("///   listing every error when the store has errors; `GesHandleError` when the resolver answers a file wrongly; `GesSchemaError`")
-            code.line("///   when the embedded schema sources no longer parse.")
+            code.line("///   listing every error when the store has errors; `GesHandleError` when the source answers an invalid or another version of a root;")
+            code.line("///   `GesSchemaError` when the embedded schema sources no longer parse.")
         }
     }
 }

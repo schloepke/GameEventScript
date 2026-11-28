@@ -118,7 +118,7 @@ public sealed class GameEventScriptDocumentCommandTests
     [TestMethod]
     public void CheckWithSchemasChecksEachDocumentAgainstItsHeader()
     {
-        Write("state.gess", "schema :Composition as { name: :Text max 32 }\nhandle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }\n");
+        Write("state.gess", "schema :Composition as { name: :Text max 32 }\nhandle @Unit of :Composition with id :Text max 64 versioned by hash(#ges)\n");
         Write("army.gess", "schema :Army as { parts: :List(@Unit) max 4 }\n");
         Write("pinned.gesd", ":Schema(:Army)\nparts: [@Unit:x~#live]\n");
         Write("army.gesd", ":Schema(:Army)\nparts: [@Unit:x, @Unit:y]\n");
@@ -163,9 +163,9 @@ public sealed class GameEventScriptDocumentCommandTests
     public void CheckWithStoresReadsTheStoresInOrder()
     {
         Write("units.gess", "schema :Hull as { armor: :Number integer between 0 and 100 }\n"
-            + "handle @Hull of :Hull as { id: :Text max 32, version: :ContentHash }\n"
+            + "handle @Hull of :Hull with id :Text max 32 versioned by hash(#ges)\n"
             + "schema :Composition as { name: :Text max 64, hull: @Hull~, escort: @Unit optional }\n"
-            + "handle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }\n");
+            + "handle @Unit of :Composition with id :Text max 16 versioned by hash(#ges)\n");
         Directory.CreateDirectory(Path.Combine(_directory, "content", "drones"));
         Write(Path.Combine("content", "hulls.gesd"), ":Store(@Hull)\nlight: [armor: 20]\nheavy: [armor: 80]\n");
         Write(Path.Combine("content", "units.gesd"), ":Store(@Unit)\nimport 'drones/all.gesd'\nscout: [name: 'Scout', hull: @Hull:light~]\n");

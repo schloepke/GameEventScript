@@ -765,20 +765,23 @@ clamped to that range. Equality compares the root values and schema references.
 > **Since: Unreleased**
 
 A [store](Documents.md#the-store-model) is one read API whatever its source: it is read from named roots through
-a host-provided file source, or from root handles through a resolver; Runtime does no file I/O.
+a host-provided file source, or from root handles through a versioned source; Runtime does no file I/O.
 
 | Concept | C# | Swift |
 | --- | --- | --- |
 | root | `sealed record GesStoreRoot(string Name, string Path)` | `struct GesStoreRoot` with `init(name:path:)` |
 | files | `interface IGesStoreFiles` with `string? Read(string root, string path)` | `protocol GesStoreFiles` with `read(root:path:) -> String?` |
 | read | `static GesStore GesStore.Read(GesHandleType type, IReadOnlyList<GesStoreRoot> roots, IGesStoreFiles files, IReadOnlyList<GesStore>? dependencies = null)` | `static func GesStore.read(_:roots:files:dependencies:) throws`, throwing `GesStoreError` |
-| read from handles | `static GesStore GesStore.Read(GesHandleType type, IReadOnlyList<GesHandle> roots, IGesHandleResolver resolver, IReadOnlyList<GesStore>? dependencies = null)` | `static func GesStore.read(_:roots:resolver:dependencies:) throws` |
+| source root | `sealed record GesStoreSourceRoot(GesHandle Handle, string Path)` | `struct GesStoreSourceRoot` with `init(handle:path:)` |
+| source file | `readonly struct GesStoreFile` with `GesStoreFile(string? text, GesValue version = default)`, `Text`, `Version`, `static Missing` | `struct GesStoreFile` with `init(text:version:)`, `text`, `version`, `static missing` |
+| source | `interface IGesStoreSource` with `GesStoreFile Read(GesHandle root, string path)` | `protocol GesStoreSource` with `read(root:path:) throws -> GesStoreFile` |
+| read from handles | `static GesStore GesStore.Read(GesHandleType type, IReadOnlyList<GesStoreSourceRoot> roots, IGesStoreSource source, IReadOnlyList<GesStore>? dependencies = null)` | `static func GesStore.read(_:roots:source:dependencies:) throws` |
 | store | `sealed class GesStore : IGesHandleResolver` with `Type`, `Sources`, `Entries`, `this[id]`, `Module(name)`, `Index(projection)` | `final class GesStore: GesHandleResolver` with `type`, `sources`, `entries`, `subscript(_:)`, `module(_:)`, `index(_:)` |
 | entry | `sealed class GesStoreEntry` with `Id`, `Handle`, `Value`, `Origin` | `struct GesStoreEntry` with `id`, `handle`, `value`, `origin` |
 | error | `GesStoreException` with `Diagnostics` and a constant per `store.*` code | `GesStoreError` with `diagnostics` and a static constant per code |
 | diagnostic | `sealed class GesStoreDiagnostic` with `Code`, `Message`, `Location`, `FieldPath`, `Other`, `Suggestion` | `struct GesStoreDiagnostic` with `code`, `message`, `location`, `fieldPath`, `other`, `suggestion` |
 
-The type must have Text ids and no parts, root names must be unique and dependencies
+The type must have a state, Text ids and no root, root names must be unique and dependencies
 must have distinct types other than the read type; otherwise C# throws
 `ArgumentException` and Swift `GesApiError.invalidArgument`. A dependency is a store
 read before; its entries are the targets of handles and pinned references of its type.
@@ -789,16 +792,15 @@ unknown id yields null (Swift nil), an unknown module an empty list. `Index(proj
 entries in id order, each carrying the projection and its version; a projection of another state schema throws
 `ArgumentException` (Swift `GesApiError.invalidArgument`).
 
-*Since: Unreleased* — reading from handles. The handle overload reads every root as
-[Documents](Documents.md#reading-from-handles) describes. Each root must be a composite
-handle of a store file type (`GesHandleType.StoreOf`, Swift `storeOf`, is the read
-type) whose part is Text, and root handles must be distinct; otherwise C# throws
-`ArgumentException` and Swift `GesApiError.invalidArgument`. Store errors throw
-`GesStoreException` (Swift `GesStoreError`); a resolver without an answer or with
-several, and a version that changes within a root, throw `GesHandleException` (Swift
-`GesHandleError`) with `runtime.handleResolveFailed` or `runtime.handleVersionMismatch`;
-errors the resolver throws propagate unchanged. `Sources` holds the root handles with the
-version each was read at.
+*Since: Unreleased* — reading from handles. The source overload reads every root as
+[Documents](Documents.md#reading-from-handles) describes: it asks the source for each file by the root
+handle and the file's root-relative path. A root handle names its source logically, carries no part and may
+carry a version or a ref; root handles must be distinct; otherwise C# throws `ArgumentException` and Swift
+`GesApiError.invalidArgument`. A root without a version is asked as given until its first answer, afterwards
+with that answer's version. Store errors throw `GesStoreException` (Swift `GesStoreError`); an answer with an
+invalid version, and a version that changes within a root, throw `GesHandleException` (Swift `GesHandleError`)
+with `runtime.handleResolveFailed` or `runtime.handleVersionMismatch`; errors the source throws propagate
+unchanged. `Sources` holds the root handles with the version each was read at.
 
 
 ### Schemas
@@ -1365,12 +1367,12 @@ receives the declarations, the host one resolver per type that reads state. Cont
 
 | Concept | C# | Swift |
 | --- | --- | --- |
-| handle value | `sealed class GesHandle` with `TypeName`, `Id`, `Version`, `Ref`, `Part`, `IsComposite`, `HasVersion`, `Projection` (the projection name or empty), `static Create(typeName, id)`, `Create(typeName, id, version)`, `CreateComposite(typeName, root, part)`, `WithVersion(version)`, `WithProjection(projection)`, `static Parse(text)`, `ToString()`; `IEquatable<GesHandle>`, `IComparable<GesHandle>` | `final class GesHandle` with `typeName`, `id`, `version`, `ref`, `part`, `isComposite`, `hasVersion`, `projection`, `init(typeName:id:version:)`, `init(typeName:root:part:)`, `withVersion(_:)`, `withProjection(_:)`, `init(parsing:) throws`, `description`; `Hashable`, `Comparable`, `Sendable` |
+| handle value | `sealed class GesHandle` with `TypeName`, `Id`, `Version`, `Ref`, `Part`, `HasPart`, `IsKeyed`, `HasVersion`, `Projection` (the projection name or empty), `static Create(typeName, id)`, `Create(typeName, id, version)`, `CreateAttached(typeName, root, part)`, `CreateKeyed(typeName, root, part, version)`, `WithVersion(version)`, `WithProjection(projection)`, `static Parse(text)`, `ToString()`; `IEquatable<GesHandle>`, `IComparable<GesHandle>` | `final class GesHandle` with `typeName`, `id`, `version`, `ref`, `part`, `hasPart`, `isKeyed`, `hasVersion`, `projection`, `init(typeName:id:version:)`, `init(typeName:attachedTo:part:)`, `init(typeName:keyedBy:part:version:)`, `withVersion(_:)`, `withProjection(_:)`, `init(parsing:) throws`, `description`; `Hashable`, `Comparable`, `Sendable` |
 | value | `GesValue.GesHandle(handle)`, `ValueKind == GesBytecodeTypeKind.Handle`, `Handle` (null for another kind) | `GesValue.handle(_:)`, `kind == .handle`, `handleValue` |
 | fixed hashes | `readonly struct GesHash20`, `GesHash32` with `static Parse(hex)`, `FromBytes(span)`, `CopyTo(span)`, `ToString()` (lowercase hex), equality and order by bytes | `struct GesHash20`, `GesHash32` with `init?(hex:)`, `init?(bytes:)`, `bytes`, `description`, `Hashable`, `Comparable`, `Sendable`, `Codable` |
-| handle type | `sealed class GesHandleType` with `Name`, `StateName`, `Id` and `Part` (`GesHandleKey` or null), `Version` (`GesHandleVersionKind`), `Root` (`GesHandleType` or null), `StoreOf` (`GesHandleType` or null), `Projections` (the [projections](Schemas.md#projections) of the state schema, `IReadOnlyList<GesSchema>` in name order), `Hash`, `LinkHash`, `CanonicalForm` | `final class GesHandleType` with `name`, `stateName`, `id`, `part`, `version`, `root`, `storeOf`, `projections`, `hash`, `linkHash`, `canonicalForm` |
+| handle type | `sealed class GesHandleType` with `Name`, `StateName`, `Id` and `Part` (`GesHandleKey` or null), `Version` (`GesHandleVersionKind`), `Root` (`GesHandleType` or null), `IsKeyed`, `HasState`, `Projections` (the [projections](Schemas.md#projections) of the state schema, `IReadOnlyList<GesSchema>` in name order), `Hash`, `LinkHash`, `CanonicalForm` | `final class GesHandleType` with `name`, `stateName`, `id`, `part`, `version`, `root`, `isKeyed`, `hasState`, `projections`, `hash`, `linkHash`, `canonicalForm` |
 | key description | `readonly struct GesHandleKey` with `IsText`, `Minimum`, `Maximum` (integer) or `MaxLength` (Text) | `struct GesHandleKey` with `isText`, `minimum`, `maximum`, `maxLength` |
-| version kinds | `enum GesHandleVersionKind { None, Revision, Sha1, Sha256, ContentHash }` | `enum GesHandleVersionKind` with the same cases |
+| version kinds | `enum GesHandleVersionKind { None, Revision, Sha1, Sha256, GesHash }` | `enum GesHandleVersionKind` with the same cases |
 | from schemas | `GesSchemaSet.HandleTypes`, `HandleType(name)` | `GesSchemaSet.handleTypes`, `handleType(_:)` |
 | compiler | `GesProgramBuilder.WithHandleTypes(types)` | `withHandleTypes(_:)` |
 | enumerable types | `GesProgramBuilder.WithEnumerableHandleTypes(names)`, `Warnings` (`IReadOnlyList<GesDiagnostic>`) *Since: Unreleased.* | `withEnumerableHandleTypes(_:)`, `warnings` |
@@ -1384,8 +1386,10 @@ receives the declarations, the host one resolver per type that reads state. Cont
 
 - `GesHandle` is immutable. `Id` and `Part` are an integer Number or a Text; `Version` is an integer Number for a
   revision, Bytes for a hash, and Nothing without one; `Ref` is a Tag or Text from a document, otherwise Nothing; a
-  handle carries at most one of version and ref. A composite's `Id`, `Version` and `Ref` are its root's and `Part` is
-  its part; `CreateComposite` takes them from a root handle. A handle names no root type, because its text form does
+  handle carries at most one of version and ref. An attached handle's `Id`, `Version` and `Ref` are its root's and `Part` is
+  its part; `CreateAttached` takes them from a root handle. A keyed handle's `Id` is its root's id, `Part` its
+  part (Nothing for a part-less keyed type) and `Version` its own; `CreateKeyed` takes the id from a root handle
+  and ignores the root's version. `IsKeyed` tells the two apart, `HasPart` is set for every handle with a root. A handle names no root type, because its text form does
   not: the compiler supplies the root type of `h.root` from the catalog. The factories check the text form's rules, that an integer id fits Int64,
   and that a version is an integer or 20 or 32 bytes; they do not consult a catalog. Equality, hashing and order
   follow [Language](Language.md#handles) and ignore version and ref.
@@ -1393,9 +1397,7 @@ receives the declarations, the host one resolver per type that reads state. Cont
   (Swift `GesApiError.invalidArgument`) for anything else; `ToString` writes the canonical form.
 - `GesHandleType` is the declarative description of one `handle` declaration of a schema set; `Hash` is its
   [canonical hash](Schemas.md#canonical-form) and `LinkHash` the link hash that also covers the state schema's hash.
-  A [store file type](Schemas.md#handles) has `StoreOf`, the handle type of its store, an empty `StateName`, and
-  its `Hash` as `LinkHash`; `HandleTypes` lists it, and `WithHandleTypes` passes it over, so a script that names it gets
-  `validate.unknownHandleType`.
+  A [stateless](Schemas.md#handles) type has `HasState` false, an empty `StateName` and its `Hash` as `LinkHash`.
   `WithHandleTypes` makes their names and state schemas known to the compiler; a name the compilation uses that none
   declares is `validate.unknownHandleType`. The Program keeps only the name and link hash.
 - `WithHandleResolver` registers one resolver per type and replaces an earlier one for the same name. Load links

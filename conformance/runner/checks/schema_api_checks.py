@@ -306,18 +306,14 @@ def revision(raw, label):
     return raw
 
 
-# Stores read in order from one file table; each depends on every store before it. A store reads named roots or root
-# handles; for handles, the table's root is the root handle's Text id, `refs` turns refs into revisions, a file answers with
-# its own `version` or else the root's, and `latest` is the revision of an answer for a root that carries none.
+# Stores read in order from one file table; each depends on every store before it. A store reads named roots or sources:
+# root handles with the paths of their root files; for sources, the table's root is the root handle's id, a file answers
+# with its own `version`, else the root handle's, else `latest`.
 def store_input(raw):
-    closed(raw, {'files', 'stores', 'refs', 'latest', 'index'}, 'store input')
+    closed(raw, {'files', 'stores', 'latest', 'index'}, 'store input')
     index = raw.get('index', [])
     if not isinstance(index, list) or any(not isinstance(name, str) or not name for name in index) or len(set(index)) != len(index):
         raise InvalidDocument('A store index names distinct projections')
-    refs = raw.get('refs', {})
-    if not isinstance(refs, dict) or any(not isinstance(name, str) for name in refs):
-        raise InvalidDocument('Store refs map names to revisions')
-    refs = {name: revision(number, 'A store ref') for name, number in refs.items()}
     latest = revision(raw['latest'], 'The latest store revision') if 'latest' in raw else None
     files = raw.get('files')
     if not isinstance(files, list):
@@ -336,23 +332,32 @@ def store_input(raw):
         raise InvalidDocument('A store input reads at least one store')
     read = []
     for store in stores:
-        closed(store, {'type', 'roots', 'handles'}, 'store')
+        closed(store, {'type', 'roots', 'sources'}, 'store')
         name = store.get('type')
         if not isinstance(name, str) or not STORE_NAME.fullmatch(name) or any(seen['type'] == name for seen in read):
             raise InvalidDocument('Each store reads a distinct handle type')
-        if ('roots' in store) == ('handles' in store):
-            raise InvalidDocument('A store reads either named roots or root handles')
-        if 'handles' in store:
-            handles = store['handles']
-            if not isinstance(handles, list) or any(not isinstance(handle, str) or not handle.startswith('@') for handle in handles):
-                raise InvalidDocument('A store has a list of root handles')
-            read.append({'type': name, 'roots': None, 'handles': list(handles)})
+        if ('roots' in store) == ('sources' in store):
+            raise InvalidDocument('A store reads either named roots or sources')
+        if 'sources' in store:
+            sources = store['sources']
+            if not isinstance(sources, list):
+                raise InvalidDocument('A store has a list of sources')
+            read.append({'type': name, 'roots': None, 'sources': [store_source(source) for source in sources]})
             continue
         roots = store.get('roots')
         if not isinstance(roots, list):
             raise InvalidDocument('A store has a list of roots')
-        read.append({'type': name, 'roots': [store_root(root, 'store root') for root in roots], 'handles': None})
-    return {'files': table, 'stores': read, 'refs': refs, 'latest': latest, 'index': index}
+        read.append({'type': name, 'roots': [store_root(root, 'store root') for root in roots], 'sources': None})
+    return {'files': table, 'stores': read, 'latest': latest, 'index': index}
+
+
+# A root handle with the path of its root file.
+def store_source(raw):
+    closed(raw, {'handle', 'path'}, 'store source')
+    handle = text(raw.get('handle'), 'store source handle')
+    if not handle.startswith('@'):
+        raise InvalidDocument('A store source has a root handle')
+    return {'handle': handle, 'path': text(raw.get('path'), 'store source path')}
 
 
 def store_location(raw, label, positioned_required):

@@ -10,9 +10,9 @@ namespace GameEventScript.Tests.Native.Tool;
 [TestClass]
 public sealed class GameEventScriptSchemaOptionTests
 {
-    private const string Schema = "schema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\n";
-    private const string Narrower = "schema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 255, version: :Nothing }\n";
-    private const string Other = "schema :Contact as { label: :Text max 16 }\nhandle @Other of :Contact as { id: :Number integer between 0 and 9, version: :Nothing }\n";
+    private const string Schema = "schema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact with id :Number integer between 0 and 65535\n";
+    private const string Narrower = "schema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact with id :Number integer between 0 and 255\n";
+    private const string Other = "schema :Contact as { label: :Text max 16 }\nhandle @Other of :Contact with id :Number integer between 0 and 9\n";
     private const string Passing = "module pass\non Main(args) { emit Seen(target: nothing) }\non Seen(target as @Target) { emit ConsoleOut(target is @Target) }\n";
     private const string Reading = "module reads\non Main(args) { emit ConsoleOut('must not run') }\non Seen(target as @Target) { emit ConsoleOut(target.label) }\n";
 

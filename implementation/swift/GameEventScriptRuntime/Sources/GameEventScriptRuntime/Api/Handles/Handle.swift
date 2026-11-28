@@ -3,43 +3,49 @@
 
 @_spi(Syntax) import GameEventScriptSyntax
 
-/// An immutable reference to an object outside the host: a handle type name, an id and, for a composite, a part,
-/// with an optional version or unresolved ref and the projection it reads through.
+/// An immutable reference to an object outside the host: a handle type name, an id and, for a type with a root and a
+/// part, a part, with an optional version or unresolved ref and the projection it reads through.
 ///
-/// Equality, hashing, order and the text form use the type name, the id, whether the handle is composite and the part;
-/// they ignore the version, the ref and the projection. The id and part are an integer Number or a Text; the version is an integer Number for a
-/// revision or 20 or 32 Bytes for a hash. A composite's id, version and ref are its root's.
+/// Equality, hashing, order and the text form use the type name, the id and the part; they ignore the version, the ref
+/// and the projection. The id and part are an integer Number or a Text; the version is an integer Number for a
+/// revision or 20 or 32 Bytes for a hash. A handle of a type with a root carries the root's id and its part, if the type
+/// has one; an attached handle carries its root's version and ref, a keyed handle its own version.
 public final class GesHandle: Hashable, Comparable, @unchecked Sendable, CustomStringConvertible {
     // Every stored value is an immutable integer, Text, Tag or Bytes value, so instances can cross isolation domains.
 
     /// The name of the handle type, without its `@`.
     public let typeName: String
-    /// The id: an integer Number or a Text.
+    /// The id: an integer Number or a Text; that of a handle of a type with a root is its root's.
     public let id: GesValue
-    /// The version: an integer Number, 20 or 32 Bytes, or Nothing.
+    /// The version: an integer Number, 20 or 32 Bytes, or Nothing; an attached handle's is its root's, a keyed handle's
+    /// its own.
     public let version: GesValue
     /// An unresolved ref that names a version: a Tag or a Text, or Nothing.
     public let ref: GesValue
-    /// A composite's part: an integer Number or a Text; Nothing for a plain handle.
+    /// The part of a handle of a type with a root and a part: an integer Number or a Text; Nothing for any other handle.
     public let part: GesValue
-    /// Whether the handle names a part of its root's object.
-    public let isComposite: Bool
+    /// Whether the handle is a keyed handle with a part, whose text form writes its own version after the part; equality
+    /// and order ignore it.
+    public let isKeyed: Bool
     /// The name of the [projection](https://gameeventscript.org/specs/Schemas.html#projections) the handle reads its
     /// state through, without the leading `:`; empty for the full view.
     public let projection: String
 
-    private init(typeName: String, id: GesValue, version: GesValue, ref: GesValue, part: GesValue, isComposite: Bool, projection: String = "") {
+    private init(typeName: String, id: GesValue, version: GesValue, ref: GesValue, part: GesValue, isKeyed: Bool, projection: String = "") {
         self.projection = projection
         self.typeName = typeName
         self.id = id
         self.version = version
         self.ref = ref
         self.part = part
-        self.isComposite = isComposite
+        self.isKeyed = isKeyed && !part.isNothing
     }
 
     /// Whether the handle carries a version.
     public var hasVersion: Bool { !version.isNothing }
+
+    /// Whether the handle carries a part.
+    public var hasPart: Bool { !part.isNothing }
 
     /// Creates a plain handle with an optional version.
     ///
@@ -47,32 +53,56 @@ public final class GesHandle: Hashable, Comparable, @unchecked Sendable, CustomS
     ///   integer Number without unit nor a Text, or a version that is neither Nothing, an integer Number without unit
     ///   nor 20 or 32 Bytes.
     public convenience init(typeName: String, id: GesValue, version: GesValue = .nothing) throws(GesApiError) {
-        self.init(typeName: try Self.checkTypeName(typeName), id: try Self.checkKey(id), version: try Self.checkVersion(version), ref: .nothing, part: .nothing, isComposite: false)
+        self.init(typeName: try Self.checkTypeName(typeName), id: try Self.checkKey(id), version: try Self.checkVersion(version), ref: .nothing, part: .nothing, isKeyed: false)
     }
 
-    /// Creates a composite handle that takes its id, version and ref from a plain root handle.
+    /// Creates an attached handle (specs/Schemas.md#handles): an object that belongs to the object of a root handle, with
+    /// the root's id, version and ref and optionally a part.
     ///
-    /// - Throws: `GesApiError.invalidArgument` for an invalid type name, a composite root or a part that is neither an
-    ///   integer Number without unit nor a Text.
-    public convenience init(typeName: String, root: GesHandle, part: GesValue) throws(GesApiError) {
-        guard !root.isComposite else { throw .invalidArgument("A composite's root is no composite.") }
-        self.init(typeName: try Self.checkTypeName(typeName), id: root.id, version: root.version, ref: root.ref, part: try Self.checkKey(part), isComposite: true)
+    /// - Parameters:
+    ///   - typeName: The attached handle type name, without the leading `@`.
+    ///   - root: The root handle, which carries no part.
+    ///   - part: The part, an integer Number or a Text; Nothing for a type without a part.
+    /// - Throws: `GesApiError.invalidArgument` for an invalid type name, a root that carries a part or a part that is
+    ///   neither Nothing, an integer Number without unit nor a Text.
+    public convenience init(typeName: String, attachedTo root: GesHandle, part: GesValue = .nothing) throws(GesApiError) {
+        guard !root.hasPart else { throw .invalidArgument("A root carries no part.") }
+        let name = try Self.checkTypeName(typeName)
+        let checkedPart = part.isNothing ? GesValue.nothing : try Self.checkKey(part)
+        self.init(typeName: name, id: root.id, version: root.version, ref: root.ref, part: checkedPart, isKeyed: false)
     }
 
-    /// Reads the text form `@Type:id[~version|~#tag|~'ref'][/part]`, refs included.
+    /// Creates a keyed handle (specs/Schemas.md#handles): an object of its own, identified by a root handle's id and
+    /// optionally a part, with its own version; the root's version and ref are not carried.
+    ///
+    /// - Parameters:
+    ///   - typeName: The keyed handle type name, without the leading `@`.
+    ///   - root: The root handle, which carries no part.
+    ///   - part: The part, an integer Number or a Text; Nothing for a type without a part.
+    ///   - version: An integer Number for a revision or 20 or 32 Bytes for a hash; Nothing for none.
+    /// - Throws: `GesApiError.invalidArgument` for an invalid type name, part or version or a root that carries a part.
+    public convenience init(typeName: String, keyedBy root: GesHandle, part: GesValue = .nothing, version: GesValue = .nothing) throws(GesApiError) {
+        guard !root.hasPart else { throw .invalidArgument("A root carries no part.") }
+        let name = try Self.checkTypeName(typeName)
+        let checkedPart = part.isNothing ? GesValue.nothing : try Self.checkKey(part)
+        self.init(typeName: name, id: root.id, version: try Self.checkVersion(version), ref: .nothing, part: checkedPart, isKeyed: true)
+    }
+
+    /// Reads the text form `@Type:id[~version|~#tag|~'ref'][/part]`, refs included, such as `@Drone:7~120`, the attached
+    /// `@UnitSlot:drone.gnabblo~3f2a…/1` or the keyed `@Stats:3/7~12`, whose version after the part marks it as keyed.
     ///
     /// - Throws: `GesApiError.invalidArgument` for text that is not a handle.
     public convenience init(parsing text: String) throws(GesApiError) {
         guard let handle = Self.read(text) else { throw .invalidArgument("'\(text)' is no handle.") }
-        self.init(typeName: handle.typeName, id: handle.id, version: handle.version, ref: handle.ref, part: handle.part, isComposite: handle.isComposite)
+        self.init(typeName: handle.typeName, id: handle.id, version: handle.version, ref: handle.ref, part: handle.part, isKeyed: handle.isKeyed)
     }
 
-    /// Returns the handle with another version and without a ref.
+    /// Returns the handle with another version and without a ref; an attached handle takes it as its root's.
     ///
     /// - Throws: `GesApiError.invalidArgument` for a version that is neither Nothing, an integer Number without unit
     ///   nor 20 or 32 Bytes.
     public func withVersion(_ version: GesValue) throws(GesApiError) -> GesHandle {
-        GesHandle(typeName: typeName, id: id, version: try Self.checkVersion(version), ref: .nothing, part: part, isComposite: isComposite, projection: projection)
+        GesHandle(typeName: typeName, id: id, version: try Self.checkVersion(version), ref: .nothing, part: part, isKeyed: isKeyed, projection: projection)
     }
 
     /// Returns the handle reading its state through a projection, or through the full view for an empty name.
@@ -82,31 +112,36 @@ public final class GesHandle: Hashable, Comparable, @unchecked Sendable, CustomS
     /// - Throws: `GesApiError.invalidArgument` for a name that is no type name.
     public func withProjection(_ projection: String) throws(GesApiError) -> GesHandle {
         if !projection.isEmpty && !GesNames.type(projection) { throw .invalidArgument("'\(projection)' is no projection name.") }
-        return projection.utf8.elementsEqual(self.projection.utf8) ? self : GesHandle(typeName: typeName, id: id, version: version, ref: ref, part: part, isComposite: isComposite, projection: projection)
+        return projection.utf8.elementsEqual(self.projection.utf8) ? self : GesHandle(typeName: typeName, id: id, version: version, ref: ref, part: part, isKeyed: isKeyed, projection: projection)
     }
 
     // A handle from wire parts that its schema already checked.
-    static func fromWire(typeName: String, id: GesValue, version: GesValue, part: GesValue, isComposite: Bool) -> GesHandle {
-        GesHandle(typeName: typeName, id: id, version: version, ref: .nothing, part: part, isComposite: isComposite)
+    static func fromWire(typeName: String, id: GesValue, version: GesValue, part: GesValue, isKeyed: Bool) -> GesHandle {
+        GesHandle(typeName: typeName, id: id, version: version, ref: .nothing, part: part, isKeyed: isKeyed)
     }
 
     func withoutVersion() -> GesHandle {
-        version.isNothing && ref.isNothing ? self : GesHandle(typeName: typeName, id: id, version: .nothing, ref: .nothing, part: part, isComposite: isComposite, projection: projection)
+        version.isNothing && ref.isNothing ? self : GesHandle(typeName: typeName, id: id, version: .nothing, ref: .nothing, part: part, isKeyed: isKeyed, projection: projection)
     }
 
     // A checked version and a projection name at once, as narrowing needs them.
     func withView(_ version: GesValue, _ projection: String) -> GesHandle {
-        GesHandle(typeName: typeName, id: id, version: version, ref: .nothing, part: part, isComposite: isComposite, projection: projection)
+        GesHandle(typeName: typeName, id: id, version: version, ref: .nothing, part: part, isKeyed: isKeyed, projection: projection)
     }
 
     static func withRef(_ handle: GesHandle, _ reference: GesValue) -> GesHandle {
-        GesHandle(typeName: handle.typeName, id: handle.id, version: .nothing, ref: reference, part: handle.part, isComposite: handle.isComposite, projection: handle.projection)
+        GesHandle(typeName: handle.typeName, id: handle.id, version: .nothing, ref: reference, part: handle.part, isKeyed: handle.isKeyed, projection: handle.projection)
     }
 
-    /// The canonical text form `@Type:id[~version|~#tag|~'ref'][/part]`.
+    /// The canonical text form `@Type:id[~version|~#tag|~'ref'][/part]`; a keyed handle with a part writes
+    /// `@Type:id/part[~version]`.
     public var description: String {
         var text = "@" + typeName + ":"
         Self.writeKey(id, isPart: false, to: &text)
+        if isKeyed {
+            text += "/"
+            Self.writeKey(part, isPart: true, to: &text)
+        }
         if !version.isNothing {
             text += "~"
             if version.valueKind == .integer { text += String(version.asInteger) } else { GesHashBytes.appendHex(version.bytesValue!, to: &text) }
@@ -114,17 +149,16 @@ public final class GesHandle: Hashable, Comparable, @unchecked Sendable, CustomS
             text += "~"
             if ref.valueKind == .tag { text += "#" + ref.textValue! } else { Self.appendQuoted(ref.textValue!, to: &text) }
         }
-        if isComposite {
+        if hasPart && !isKeyed {
             text += "/"
             Self.writeKey(part, isPart: true, to: &text)
         }
         return text
     }
 
-    /// Handles are equal with the same type name, id, composite flag and part; version and ref are ignored.
+    /// Handles are equal with the same type name, id and part; version, ref and projection are ignored.
     public static func == (left: GesHandle, right: GesHandle) -> Bool {
-        left === right
-            || GesText.scalarEqual(left.typeName, right.typeName) && left.isComposite == right.isComposite && keyEquals(left.id, right.id) && keyEquals(left.part, right.part)
+        left === right || GesText.scalarEqual(left.typeName, right.typeName) && keyEquals(left.id, right.id) && keyEquals(left.part, right.part)
     }
 
     /// Hashes the type name, id and part consistently with `==`.
@@ -134,7 +168,7 @@ public final class GesHandle: Hashable, Comparable, @unchecked Sendable, CustomS
         Self.hashKey(part, into: &hasher)
     }
 
-    /// Orders by type name in scalar order, then id (integers before Texts), then plain before composite, then part.
+    /// Orders by type name in scalar order, then id (integers before Texts), then part, none first.
     public static func < (left: GesHandle, right: GesHandle) -> Bool { compare(left, right) < 0 }
 
     static func compare(_ left: GesHandle, _ right: GesHandle) -> Int {
@@ -142,7 +176,6 @@ public final class GesHandle: Hashable, Comparable, @unchecked Sendable, CustomS
         if !GesText.scalarEqual(left.typeName, right.typeName) { return GesText.scalarLess(left.typeName, right.typeName) ? -1 : 1 }
         var comparison = compareKey(left.id, right.id)
         if comparison != 0 { return comparison }
-        if left.isComposite != right.isComposite { return left.isComposite ? 1 : -1 }
         comparison = compareKey(left.part, right.part)
         return comparison
     }
@@ -223,7 +256,7 @@ public final class GesHandle: Hashable, Comparable, @unchecked Sendable, CustomS
             version: version,
             ref: reference,
             part: parts.part.map(keyValue) ?? .nothing,
-            isComposite: parts.part != nil
+            isKeyed: parts.versionAfterPart
         )
     }
 

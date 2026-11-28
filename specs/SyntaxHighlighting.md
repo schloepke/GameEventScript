@@ -125,9 +125,9 @@ Number that runs up to whitespace, a line break, `,`, a parenthesis, a brace, `|
 one Number. A word of ASCII letters and digits is Keyword when it is one of `schema`, `message`, `messages`, `constant`,
 `parameter`, `as`, `be`, `between`, `and`, `wrapping`, `step`, `delta`, `within`, `integer`, `optional`, `key`, `max`, `exactly`,
 `depth`, `tags`, `wire`, `model`, `let`, `default`, `true`, `false`, `abstract`, `with`, `all`, `without`, `computed`,
-`by`, `when`, `otherwise`, `or`, `not`, `of`, `min`, `clamp`, `abs`, `has`, `handle`, `composite`, `owns`, `projection` and `sending`, or `state` directly after `sending`; otherwise a word that starts with an
+`by`, `when`, `otherwise`, `or`, `not`, `of`, `min`, `clamp`, `abs`, `has`, `handle`, `attached`, `keyed`, `versioned`, `owns`, `projection` and `sending`, or `state` directly after `sending`, `to` directly after `attached`, `id` or `part` directly after `with`, or `revision` or `hash` directly after `by`; otherwise a word that starts with an
 uppercase letter, joined like a Type, is Message, and any other word is Identifier. `@` before an uppercase letter
-starts a Type joined the same way, including a directly following `(:Name)` and `~`, as in `@Unit(:UnitDisplay)~`. *Since: Unreleased — handles, projections, `sending state`, `exactly`.*
+starts a Type joined the same way, including a directly following `(:Name)` and `~`, as in `@Unit(:UnitDisplay)~`. *Since: Unreleased — handles, projections, `sending state`, `exactly`, handle clauses.*
 
 The diagnostics hold the first error of reading the source, with the code and position [Schemas](Schemas.md) defines.
 Its range covers the scalar at the position, both UTF-16 units of one outside the BMP, or has length zero at the end

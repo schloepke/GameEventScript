@@ -213,14 +213,17 @@ internal sealed class GesMessageJsonCodec
         }
     }
 
-    // A handle object; a ref is never written. A composite carries its root's id and version and its part.
+    // A handle object; a ref is never written. A handle of a type with a root carries its root's id and its part, if any; a keyed
+    // handle with a part is marked, since it writes its own version after the part.
     private GesValue EncodeHandle(GameEventScript.Api.GesHandle handle, int depth)
     {
         if (!handle.Ref.IsNothing)
             throw Error();
         var fields = new List<(string, GesValue)> { ("name", Text(handle.TypeName)), ("id", Encode(handle.Id, depth + 1)) };
-        if (handle.IsComposite)
+        if (handle.HasPart)
             fields.Add(("part", Encode(handle.Part, depth + 1)));
+        if (handle.IsKeyed)
+            fields.Add(("keyed", GesValue.GesBoolean(true)));
         if (handle.HasVersion)
             fields.Add(("version", Encode(handle.Version, depth + 1)));
         return Typed("Handle", fields.ToArray());
@@ -230,9 +233,12 @@ internal sealed class GesMessageJsonCodec
     {
         var hasPart = value.AsMap()?.ContainsKey("part") == true;
         var hasVersion = value.AsMap()?.ContainsKey("version") == true;
+        var keyed = hasPart && value.AsMap()?.ContainsKey("keyed") == true;
         var names = new List<string> { "type", "name", "id" };
         if (hasPart)
             names.Add("part");
+        if (keyed)
+            names.Add("keyed");
         if (hasVersion)
             names.Add("version");
         Fields(value, names.ToArray());
@@ -244,7 +250,14 @@ internal sealed class GesMessageJsonCodec
         try
         {
             var handle = GameEventScript.Api.GesHandle.Create(name, id, version);
-            return hasPart ? GameEventScript.Api.GesHandle.CreateComposite(name, handle, HandleKey(Decode(Get(value, "part"), depth + 1))) : handle;
+            if (!hasPart)
+                return handle;
+            var part = HandleKey(Decode(Get(value, "part"), depth + 1));
+            if (!keyed)
+                return GameEventScript.Api.GesHandle.CreateAttached(name, handle, part);
+            if (Get(value, "keyed") is not { Kind: GesBytecodeTypeKind.Boolean } flag || !flag.AsBoolean())
+                throw Error();
+            return GameEventScript.Api.GesHandle.CreateKeyed(name, handle, part, version);
         }
         catch (ArgumentException)
         {

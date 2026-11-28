@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // The handle types of the split handle fixture, declared in a source of their own: split output by file puts each
 // generated `<Name>Handle` here, split output by schema into a file of its own.
-handle @Unit of :Composition as { id: :Text max 64, version: :ContentHash }
-handle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Nothing }
-handle @Repository of :Source as { id: :Text max 64, version: :Hash(#sha1) }
-handle @UnitFile of :Composition composite @Repository as { part: :Text max 256 }
+handle @Unit of :Composition with id :Text max 64 versioned by hash(#ges)
+handle @Drone of :DroneState with id :Number integer between 0 and 255
+handle @Repository of :Source with id :Text max 64 versioned by hash(#sha1)
+handle @UnitFile of :Composition attached to @Repository with part :Text max 256

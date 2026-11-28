@@ -94,10 +94,10 @@ internal static class GesHandleStates
         var projection = call.Projection;
         var text = answer == GesHandleResolveCall.AnswerKind.Document ? call.Text! : Print(type, projection, call.Record, symbol);
         var delivered = CheckedState(type, projection, text, symbol, out var state);
-        var view = projection?.Declaration ?? type.Resolved.State;
+        var view = projection?.Declaration ?? type.Resolved.State!;
         var projected = ReferenceEquals(delivered, view) ? state : Project(view, state, symbol);
         var full = ReferenceEquals(delivered, type.Resolved.State) && projection is not null ? state : default;
-        if (type.Version == GesHandleVersionKind.ContentHash)
+        if (type.Version == GesHandleVersionKind.GesHash)
         {
             var computed = Hash(type, delivered, state);
             if (!passed.IsNothing && !VersionEquals(passed, computed))
@@ -119,7 +119,7 @@ internal static class GesHandleStates
         if (wider.State.IsNothing) return new GesHandleState(default, wider.Version, wider.NotVisible);
         var symbol = handle.ToString();
         var projected = Project(projection.Declaration, wider.State, symbol);
-        if (type.Version != GesHandleVersionKind.ContentHash) return new GesHandleState(projected, wider.Version);
+        if (type.Version != GesHandleVersionKind.GesHash) return new GesHandleState(projected, wider.Version);
         var version = Hash(type, projection.Declaration, projected);
         if (handle.HasVersion && !VersionEquals(handle.Version, version))
             throw Fault(GesDiagnosticCodes.RuntimeHandleVersionMismatch, $"The content hash of {symbol} differs.", symbol);
@@ -189,7 +189,7 @@ internal static class GesHandleStates
     {
         GesHandleVersionKind.Revision => version.ValueKind == GesBytecodeTypeKind.Integer && version.Unit == GesQuantityUnit.UnitNone,
         GesHandleVersionKind.Sha1 => version.ValueKind == GesBytecodeTypeKind.Bytes && version.AsBytes().Length == GesHash20.Length,
-        GesHandleVersionKind.Sha256 or GesHandleVersionKind.ContentHash => version.ValueKind == GesBytecodeTypeKind.Bytes && version.AsBytes().Length == GesHash32.Length,
+        GesHandleVersionKind.Sha256 or GesHandleVersionKind.GesHash => version.ValueKind == GesBytecodeTypeKind.Bytes && version.AsBytes().Length == GesHash32.Length,
         _ => false,
     };
 

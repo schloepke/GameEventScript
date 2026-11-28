@@ -183,10 +183,10 @@ enum SchemaApiObservations {
         }
     }
 
-    // Reads the stores in order, each with every earlier one as a dependency, from named roots or from root handles: the
-    // entries of the last with its sources, the errors of the first that fails, or the code of a resolver failure.
+    // Reads the stores in order, each with every earlier one as a dependency, from named roots or from sources: the entries
+    // of the last with its sources, the errors of the first that fails, or the code of a source failure.
     private static func stores(_ set: GesSchemaSet, _ input: Input) throws -> [String: Any] {
-        try Validation.fields(input, ["files", "stores", "refs", "latest", "index"])
+        try Validation.fields(input, ["files", "stores", "latest", "index"])
         let read: [GesStore]
         do {
             read = try readStores(set, input)
@@ -210,15 +210,13 @@ enum SchemaApiObservations {
             StoreFile(root: try file.text("root"), path: try file.text("path"), text: try file.text("text"), version: try optionalInt64(file["version"]))
         }
         let files = StoreFiles(files: table)
-        var refs: [String: Int64] = [:]
-        for entry in input["refs"]?.objectValue ?? [] { refs[entry.key] = try optionalInt64(entry.value) }
-        let resolver = StoreResolver(files: table, refs: refs, latest: try optionalInt64(input["latest"]))
+        let source = StoreSource(files: table, latest: try optionalInt64(input["latest"]))
         var read: [GesStore] = []
         for store in input.values("stores") {
             let type = try set.handleType(try store.text("type"))
-            if let handles = store["handles"]?.arrayValue {
-                let roots = try handles.map { try GesHandle(parsing: $0.stringValue ?? "") }
-                read.append(try GesStore.read(type, roots: roots, resolver: resolver, dependencies: read))
+            if let sources = store["sources"]?.arrayValue {
+                let roots = try sources.map { GesStoreSourceRoot(handle: try GesHandle(parsing: try $0.text("handle")), path: try $0.text("path")) }
+                read.append(try GesStore.read(type, roots: roots, source: source, dependencies: read))
             } else {
                 let roots = try store.values("roots").map { GesStoreRoot(name: try $0.text("name"), path: try $0.text("path")) }
                 read.append(try GesStore.read(type, roots: roots, files: files, dependencies: read))
@@ -278,34 +276,18 @@ enum SchemaApiObservations {
         }
     }
 
-    // Answers a file handle from the table: its root is the root handle's Text id, its path the part. A present file
-    // answers with its own version, else the requested one, else the latest; refs name revisions by their text form.
-    private struct StoreResolver: GesHandleResolver {
+    // Answers a root file from the table: its root is the root handle's id. A present file answers with its own version,
+    // else the root handle's, else the latest.
+    private struct StoreSource: GesStoreSource {
         let files: [StoreFile]
-        let refs: [String: Int64]
         let latest: Int64?
 
-        func resolve(_ call: GesHandleResolveCall) throws {
-            let handle = call.handle
-            let root = handle.id.valueKind == .text ? handle.id.asText : String(handle.id.asInteger)
-            guard let file = StoreFiles.find(files, root, handle.part.asText) else {
-                try call.setMissing()
-                return
-            }
-            if let own = file.version {
-                try call.setDocument(file.text, version: .integer(own))
-            } else if handle.hasVersion {
-                try call.setDocument(file.text, version: handle.version)
-            } else if let latest {
-                try call.setDocument(file.text, version: .integer(latest))
-            } else {
-                try call.setDocument(file.text)
-            }
-        }
-
-        func resolveRef(_ handle: GesHandle) throws -> GesValue {
-            let name = handle.ref.valueKind == .tag ? "#" + handle.ref.asText : handle.ref.asText
-            return refs[name].map { .integer($0) } ?? .nothing
+        func read(root: GesHandle, path: String) -> GesStoreFile {
+            let name = root.id.valueKind == .text ? root.id.asText : String(root.id.asInteger)
+            guard let file = StoreFiles.find(files, name, path) else { return .missing }
+            if let own = file.version { return GesStoreFile(text: file.text, version: .integer(own)) }
+            if root.hasVersion { return GesStoreFile(text: file.text, version: root.version) }
+            return GesStoreFile(text: file.text, version: latest.map { .integer($0) } ?? .nothing)
         }
     }
 

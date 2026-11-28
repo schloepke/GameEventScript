@@ -3,8 +3,9 @@
 
 @_spi(Generator) import GameEventScriptRuntime
 
-// The Swift model type of a handle type: a struct `<Name>Handle` that holds the id, or a composite's root and part, and the
-// version where the type has one. Equality, hashing and order use the identity only, a Text id by its Unicode scalars rather
+// The Swift model type of a handle type: a struct `<Name>Handle` that holds the id, or the root and part of a type with a part,
+// and the version where the type has one: an attached type's is its root's, a keyed type holds its root without a version and
+// its own. Equality, hashing and order use the identity only, a Text id by its Unicode scalars rather
 // than by String's canonical equivalence. Like the C# struct, the public initializers throw GesApiError for an id or part
 // outside the declared range or length and for a runtime handle of another form, and none creates a default handle; the
 // generated code builds handles it already checked through internal unchecked initializers. It converts to and from
@@ -12,39 +13,48 @@
 // Dictionary already compare and hash entries independent of order, so models need no counterpart of the C# MapEquals and
 // MapHash helpers.
 extension GesSwiftModelEmitter {
-    // Also the wire code's handle type, which needs only the Runtime; `handles` holds the composite's root.
+    // Also the wire code's handle type, which needs only the Runtime; `handles` holds the root of a type with a part.
     static func handle(_ code: inout Code, _ handles: [GesModelHandle], _ handle: GesModelHandle, _ access: String) {
         let name = GesModelPlanner.handleName(handle.name)
         let typeName = GesSchemaPlanner.literal(handle.name, swift: true)
-        let root = handle.isComposite ? handles.first { $0.name == handle.root }! : nil
+        let withPart = handle.hasPart
+        let keyed = handle.isKeyed
+        // A version of its own: every type except one attached to a root with a part, which carries its root's.
+        let own = !withPart || keyed
+        let root = withPart ? handles.first { $0.name == handle.root }! : nil
         let rootName = root.map { GesModelPlanner.handleName($0.name) } ?? ""
         let version = versionType(handle.version)
         let describe =
             switch handle.version {
             case .revision: ", with its revision"
-            case .contentHash: ", with its content hash"
+            case .gesHash: ", with its content hash"
             case .sha1: ", with its SHA-1 version"
             case .sha256: ", with its SHA-256 version"
             case .none: ""
             }
         let key = handle.key
         let keyType = key.isText ? "String" : "Int64"
-        let keyName = handle.isComposite ? "part" : "id"
-        code.line(
-            "/// A handle `@\(handle.name)`: the identity of an object of `:\(handle.state)` outside the host\(handle.isComposite ? ", a part of a `@" + handle.root! + "`" : "")\(describe)."
-        )
+        let keyName = withPart ? "part" : "id"
+        let of = handle.state.isEmpty ? "an object without state outside the host" : "an object of `:\(handle.state)` outside the host"
+        let rooted = !withPart ? "" : keyed ? ", keyed by a `@" + handle.root! + "`" : ", a part of a `@" + handle.root! + "`"
+        code.line("/// A handle `@\(handle.name)`: the identity of \(of)\(rooted)\(describe).")
         code.line("/// Equality, hashing and order use the identity and ignore the version\(key.isText ? "; a Text compares by Unicode scalars" : "").")
         code.open("\(access)struct \(name): Hashable, Comparable, Sendable, Codable, CustomStringConvertible {")
-        if handle.isComposite {
-            code.line("/// The root, whose version is the handle's.")
+        if withPart {
+            code.line(keyed ? "/// The root, without a version." : "/// The root, whose version is the handle's.")
             code.line("\(access)let root: \(rootName)")
             code.blank()
-            code.line("/// The part of the root's object.")
+            code.line(keyed ? "/// The part, which with the root's id names the object." : "/// The part of the root's object.")
             code.line("\(access)let part: \(keyType)")
             if let version {
                 code.blank()
-                code.line("/// The version: the root's, or nil for none.")
-                code.line("\(access)var version: \(version)? { root.version }")
+                if keyed {
+                    code.line("/// The version of its own, or nil for none.")
+                    code.line("\(access)let version: \(version)?")
+                } else {
+                    code.line("/// The version: the root's, or nil for none.")
+                    code.line("\(access)var version: \(version)? { root.version }")
+                }
             }
         } else {
             code.line("/// The id.")
@@ -60,12 +70,13 @@ extension GesSwiftModelEmitter {
         code.line("/// Creates a handle.")
         code.line("///")
         code.line("/// - Parameters:")
-        if handle.isComposite { code.line("///   - root: The root, whose version is the handle's.") }
+        if withPart { code.line(keyed ? "///   - root: The root, whose version the handle drops." : "///   - root: The root, whose version is the handle's.") }
         code.line("///   - \(keyName): The \(keyName), \(keyDescription(key)).")
-        if version != nil && !handle.isComposite { code.line("///   - version: The version, or nil for none.") }
+        if version != nil && own { code.line("///   - version: The version, or nil for none.") }
         code.line("/// - Throws: `GesApiError.invalidArgument` when the \(keyName) is out of its declared \(key.isText ? "length" : "range").")
+        let keyedVersion = keyed && version != nil
         let parameters =
-            if handle.isComposite { "root: \(rootName), part: \(keyType)" } else if let version { "id: \(keyType), version: \(version)? = nil" } else { "id: \(keyType)" }
+            if withPart { "root: \(rootName), part: \(keyType)" + (keyedVersion ? ", version: \(version!)? = nil" : "") } else if let version { "id: \(keyType), version: \(version)? = nil" } else { "id: \(keyType)" }
         code.open("\(access)init(\(parameters)) throws(GesApiError) {")
         let bound = GesSchemaPlanner.literal("The \(keyName) of a @\(handle.name) is out of its declared \(key.isText ? "length" : "range").", swift: true)
         code.line(
@@ -73,34 +84,35 @@ extension GesSwiftModelEmitter {
                 ? "guard \(keyName).utf8.count <= \(number(key.maxLength)) else { throw .invalidArgument(\(bound)) }"
                 : "guard \(keyName) >= \(number(key.minimum)) && \(keyName) <= \(number(key.maximum)) else { throw .invalidArgument(\(bound)) }"
         )
-        code.line(handle.isComposite ? "self.init(uncheckedRoot: root, part: part)" : version == nil ? "self.init(uncheckedId: id)" : "self.init(uncheckedId: id, version: version)")
+        let keyedRoot = keyed && root!.version != .none ? "root.withoutVersion()" : "root"
+        code.line(withPart ? "self.init(uncheckedRoot: \(keyedRoot), part: part\(keyedVersion ? ", version: version" : ""))" : version == nil ? "self.init(uncheckedId: id)" : "self.init(uncheckedId: id, version: version)")
         code.close()
         code.blank()
         code.line("// A handle whose \(keyName) the generated code already checked.")
         let uncheckedParameters =
-            if handle.isComposite {
-                "uncheckedRoot root: \(rootName), part: \(keyType)"
+            if withPart {
+                "uncheckedRoot root: \(rootName), part: \(keyType)" + (keyedVersion ? ", version: \(version!)? = nil" : "")
             } else if let version { "uncheckedId id: \(keyType), version: \(version)? = nil" } else { "uncheckedId id: \(keyType)" }
         code.open("init(\(uncheckedParameters)) {")
-        if handle.isComposite { code.line("self.root = root") }
+        if withPart { code.line("self.root = root") }
         code.line("self.\(keyName) = \(keyName)")
-        if version != nil && !handle.isComposite { code.line("self.version = version") }
+        if version != nil && own { code.line("self.version = version") }
         code.close()
         if version != nil {
             code.blank()
             code.line("/// Returns the handle with the same identity and no version.")
-            code.line("\(access)func withoutVersion() -> \(name) { \(name)(\(handle.isComposite ? "uncheckedRoot: root.withoutVersion(), part: part" : "uncheckedId: id")) }")
+            code.line("\(access)func withoutVersion() -> \(name) { \(name)(\(!withPart ? "uncheckedId: id" : keyed ? "uncheckedRoot: root, part: part" : "uncheckedRoot: root.withoutVersion(), part: part")) }")
         }
 
         let equal = key.isText ? "left.\(keyName).utf8.elementsEqual(right.\(keyName).utf8)" : "left.\(keyName) == right.\(keyName)"
         let less = key.isText ? "left.\(keyName).utf8.lexicographicallyPrecedes(right.\(keyName).utf8)" : "left.\(keyName) < right.\(keyName)"
         code.blank()
         code.line("/// Compares the identity: whether both handles name the same object.")
-        code.line("\(access)static func == (left: \(name), right: \(name)) -> Bool { \(handle.isComposite ? "left.root == right.root && " : "")\(equal) }")
+        code.line("\(access)static func == (left: \(name), right: \(name)) -> Bool { \(withPart ? "left.root == right.root && " : "")\(equal) }")
         code.blank()
         code.line("/// Hashes the identity.")
         code.open("\(access)func hash(into hasher: inout Hasher) {")
-        if handle.isComposite { code.line("hasher.combine(root)") }
+        if withPart { code.line("hasher.combine(root)") }
         if key.isText {
             code.line("for byte in \(keyName).utf8 { hasher.combine(byte) }")
             code.line("// No UTF-8 byte is 0xFF, so it ends the text.")
@@ -110,9 +122,9 @@ extension GesSwiftModelEmitter {
         }
         code.close()
         code.blank()
-        code.line(handle.isComposite ? "/// Orders by identity: the root, then the part, a Text by Unicode scalars." : "/// Orders by identity: the id, a Text by Unicode scalars.")
+        code.line(withPart ? "/// Orders by identity: the root, then the part, a Text by Unicode scalars." : "/// Orders by identity: the id, a Text by Unicode scalars.")
         code.line(
-            handle.isComposite
+            withPart
                 ? "\(access)static func < (left: \(name), right: \(name)) -> Bool { left.root != right.root ? left.root < right.root : \(less) }"
                 : "\(access)static func < (left: \(name), right: \(name)) -> Bool { \(less) }"
         )
@@ -122,8 +134,12 @@ extension GesSwiftModelEmitter {
         code.blank()
         code.line("// Cannot throw: the type name is valid and the id, part and version have valid kinds.")
         code.line("/// Converts to a runtime handle.")
-        if handle.isComposite {
-            code.line("\(access)func toHandle() -> GesHandle { try! GesHandle(typeName: \(typeName), root: root.toHandle(), part: \(keyValue(key, "part"))) }")
+        if withPart && keyed {
+            code.line(
+                "\(access)func toHandle() -> GesHandle { try! GesHandle(typeName: \(typeName), keyedBy: root.toHandle(), part: \(keyValue(key, "part"))\(version == nil ? "" : ", version: " + versionValue(handle.version))) }"
+            )
+        } else if withPart {
+            code.line("\(access)func toHandle() -> GesHandle { try! GesHandle(typeName: \(typeName), attachedTo: root.toHandle(), part: \(keyValue(key, "part"))) }")
         } else if version == nil {
             code.line("\(access)func toHandle() -> GesHandle { try! GesHandle(typeName: \(typeName), id: \(keyValue(key, "id"))) }")
         } else {
@@ -140,15 +156,20 @@ extension GesSwiftModelEmitter {
         code.blank()
         code.line("// A runtime handle of this type, or nil for a handle of another type or out of its declared form.")
         code.open("init?(matching handle: GesHandle) {")
-        code.line("guard handle.typeName == \(typeName), \(handle.isComposite ? "" : "!")handle.isComposite else { return nil }")
+        code.line("guard handle.typeName == \(typeName), \(withPart ? "" : "!")handle.hasPart\(withPart ? ", \(keyed ? "" : "!")handle.isKeyed" : "") else { return nil }")
         if let root {
             let rootHandle =
-                root.version == .none
+                root.version == .none || keyed
                 ? "GesHandle(typeName: \(GesSchemaPlanner.literal(root.name, swift: true)), id: handle.id)"
                 : "GesHandle(typeName: \(GesSchemaPlanner.literal(root.name, swift: true)), id: handle.id, version: handle.version)"
             code.line("guard let rootHandle = try? \(rootHandle), let root = \(rootName)(matching: rootHandle) else { return nil }")
             keyRead(&code, key, "handle.part", "part")
-            code.line("self.init(uncheckedRoot: root, part: part)")
+            if keyedVersion {
+                versionRead(&code, handle.version)
+                code.line("self.init(uncheckedRoot: root, part: part, version: version)")
+            } else {
+                code.line("self.init(uncheckedRoot: root, part: part)")
+            }
         } else {
             keyRead(&code, key, "handle.id", "id")
             if version == nil {
@@ -200,7 +221,7 @@ extension GesSwiftModelEmitter {
         switch kind {
         case .revision: "Int64"
         case .sha1: "GesHash20"
-        case .sha256, .contentHash: "GesHash32"
+        case .sha256, .gesHash: "GesHash32"
         case .none: nil
         }
     }
@@ -240,10 +261,11 @@ extension GesSwiftModelEmitter {
     // A text form for the documentation, such as `@Drone:7~120`.
     private static func example(_ handle: GesModelHandle, _ root: GesModelHandle?) -> String {
         let owner = root ?? handle
-        var text = "@" + handle.name + ":" + (owner.id!.isText ? "north" : "7")
-        if owner.version == .revision { text += "~120" }
-        if handle.isComposite { text += "/" + (handle.part!.isText ? "hangar" : "2") }
-        return text
+        let text = "@" + handle.name + ":" + (owner.id!.isText ? "north" : "7")
+        let revision = handle.version == .revision ? "~120" : ""
+        if !handle.hasPart { return text + revision }
+        let part = "/" + (handle.part!.isText ? "hangar" : "2")
+        return handle.isKeyed ? text + part + revision : text + revision + part
     }
 
     // The support helpers of maps with handle keys.

@@ -164,7 +164,7 @@ extension GesSwiftEmitter {
     // The UTF-8 storage of a Text in `owner`, "self" or another record.
     private static func bytes(_ value: GesPlanValue, _ owner: String) -> String { storage(value, owner) }
 
-    // The wire parts of a handle in node order, with their members in a and b: a composite's id is its root's, and a field
+    // The wire parts of a handle in node order, with their members in a and b: the id of a type with a part is its root's, and a field
     // without a version transmits none. A text id compares by its UTF-8 bytes, which String's equality would not.
     private static func handleMembers(_ value: GesPlanValue, _ a: String, _ b: String) -> [(part: GesPlanValue, a: String, b: String)] {
         let (id, version, part) = GesCSharpEmitter.handleParts(value)
@@ -236,11 +236,7 @@ extension GesSwiftEmitter {
             )
             code.close()
         }
-        let arguments = "uncheckedId: id" + (members.contains { $0.part.base == "Version" } ? ", version: version" : "")
-        code.line(
-            value.handleRoot != nil
-                ? "\(a) = \(value.handleType)(uncheckedRoot: \(GesCSharpEmitter.handleRootType(value))(\(arguments)), part: part)" : "\(a) = \(value.handleType)(\(arguments))"
-        )
+        code.line("\(a) = \(GesCSharpEmitter.handleConstruction(value, versioned: members.contains { $0.part.base == "Version" }, swift: true))")
         code.close()
     }
 

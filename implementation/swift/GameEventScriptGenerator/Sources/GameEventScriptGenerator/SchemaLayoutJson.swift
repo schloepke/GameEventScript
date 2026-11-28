@@ -32,8 +32,9 @@ enum GesSchemaLayoutJson {
                 json.beginObject()
                 json.string("name", handle.name)
                 json.string("hash", hex(handle.hash))
-                json.string("state", handle.state)
-                if handle.isComposite {
+                if !handle.state.isEmpty { json.string("state", handle.state) }
+                if handle.hasPart || !handle.partlessRoot.isEmpty { json.string("form", handle.keyed ? "keyed" : "attached") }
+                if handle.hasPart {
                     json.string("root", handle.root)
                     json.key("part")
                     encoding(&json, handle.part!)
@@ -41,6 +42,8 @@ enum GesSchemaLayoutJson {
                     if !handle.partlessRoot.isEmpty { json.string("root", handle.partlessRoot) }
                     json.key("id")
                     encoding(&json, handle.id!)
+                }
+                if !handle.hasPart || handle.keyed {
                     json.key("version")
                     json.beginValueObject()
                     json.string("kind", GesLayoutHandle.versionName(handle.version))

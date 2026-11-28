@@ -7,8 +7,9 @@ using GameEventScript.Api;
 
 namespace GameEventScript.Generator;
 
-// The Swift model type of a handle type: a struct `<Name>Handle` that holds the id, or a composite's root and part, and the
-// version where the type has one. Equality, hashing and order use the identity only, a Text id by its Unicode scalars rather
+// The Swift model type of a handle type: a struct `<Name>Handle` that holds the id, or the root and part of a type with a part,
+// and the version where the type has one: an attached type's is its root's, a keyed type holds its root without a version and
+// its own. Equality, hashing and order use the identity only, a Text id by its Unicode scalars rather
 // than by String's canonical equivalence. Like the C# struct, the public initializers throw GesApiError for an id or part
 // outside the declared range or length and for a runtime handle of another form, and none creates a default handle; the
 // generated code builds handles it already checked through internal unchecked initializers. It converts to and from
@@ -17,40 +18,54 @@ namespace GameEventScript.Generator;
 // MapHash helpers.
 internal static partial class GesSwiftModelEmitter
 {
-    // Also the wire code's handle type, which needs only the Runtime; `handles` holds the composite's root.
+    // Also the wire code's handle type, which needs only the Runtime; `handles` holds the root of a type with a part.
     internal static void Handle(GesSchemaPlanner.Code code, List<GesModelHandle> handles, GesModelHandle handle, string access)
     {
         var name = GesModelPlanner.HandleName(handle.Name);
         var typeName = GesSchemaPlanner.Literal(handle.Name, true);
-        var root = handle.IsComposite ? handles.Find(candidate => candidate.Name == handle.Root)! : null;
+        var withPart = handle.HasPart;
+        var keyed = handle.IsKeyed;
+        // A version of its own: every type except one attached to a root with a part, which carries its root's.
+        var own = !withPart || keyed;
+        var root = withPart ? handles.Find(candidate => candidate.Name == handle.Root)! : null;
         var rootName = root is null ? "" : GesModelPlanner.HandleName(root.Name);
         var version = VersionType(handle.Version);
         var describe = handle.Version switch
         {
             GesHandleVersionKind.Revision => ", with its revision",
-            GesHandleVersionKind.ContentHash => ", with its content hash",
+            GesHandleVersionKind.GesHash => ", with its content hash",
             GesHandleVersionKind.Sha1 => ", with its SHA-1 version",
             GesHandleVersionKind.Sha256 => ", with its SHA-256 version",
             _ => ""
         };
         var key = handle.Key;
         var keyType = key.IsText ? "String" : "Int64";
-        var keyName = handle.IsComposite ? "part" : "id";
-        code.Line($"/// A handle `@{handle.Name}`: the identity of an object of `:{handle.State}` outside the host{(handle.IsComposite ? ", a part of a `@" + handle.Root + "`" : "")}{describe}.");
+        var keyName = withPart ? "part" : "id";
+        var of = handle.State.Length > 0 ? $"an object of `:{handle.State}` outside the host" : "an object without state outside the host";
+        var rooted = !withPart ? "" : keyed ? ", keyed by a `@" + handle.Root + "`" : ", a part of a `@" + handle.Root + "`";
+        code.Line($"/// A handle `@{handle.Name}`: the identity of {of}{rooted}{describe}.");
         code.Line($"/// Equality, hashing and order use the identity and ignore the version{(key.IsText ? "; a Text compares by Unicode scalars" : "")}.");
         code.Open($"{access}struct {name}: Hashable, Comparable, Sendable, Codable, CustomStringConvertible {{");
-        if (handle.IsComposite)
+        if (withPart)
         {
-            code.Line("/// The root, whose version is the handle's.");
+            code.Line(keyed ? "/// The root, without a version." : "/// The root, whose version is the handle's.");
             code.Line($"{access}let root: {rootName}");
             code.Blank();
-            code.Line("/// The part of the root's object.");
+            code.Line(keyed ? "/// The part, which with the root's id names the object." : "/// The part of the root's object.");
             code.Line($"{access}let part: {keyType}");
             if (version is not null)
             {
                 code.Blank();
-                code.Line("/// The version: the root's, or nil for none.");
-                code.Line($"{access}var version: {version}? {{ root.version }}");
+                if (keyed)
+                {
+                    code.Line("/// The version of its own, or nil for none.");
+                    code.Line($"{access}let version: {version}?");
+                }
+                else
+                {
+                    code.Line("/// The version: the root's, or nil for none.");
+                    code.Line($"{access}var version: {version}? {{ root.version }}");
+                }
             }
         }
         else
@@ -69,42 +84,44 @@ internal static partial class GesSwiftModelEmitter
         code.Line("/// Creates a handle.");
         code.Line("///");
         code.Line("/// - Parameters:");
-        if (handle.IsComposite) code.Line("///   - root: The root, whose version is the handle's.");
+        if (withPart) code.Line(keyed ? "///   - root: The root, whose version the handle drops." : "///   - root: The root, whose version is the handle's.");
         code.Line($"///   - {keyName}: The {keyName}, {KeyDescription(key)}.");
-        if (version is not null && !handle.IsComposite) code.Line("///   - version: The version, or nil for none.");
+        if (version is not null && own) code.Line("///   - version: The version, or nil for none.");
         code.Line($"/// - Throws: `GesApiError.invalidArgument` when the {keyName} is out of its declared {(key.IsText ? "length" : "range")}.");
-        var parameters = handle.IsComposite ? $"root: {rootName}, part: {keyType}" : version is null ? $"id: {keyType}" : $"id: {keyType}, version: {version}? = nil";
+        var keyedVersion = keyed && version is not null;
+        var parameters = withPart ? $"root: {rootName}, part: {keyType}" + (keyedVersion ? $", version: {version}? = nil" : "") : version is null ? $"id: {keyType}" : $"id: {keyType}, version: {version}? = nil";
         code.Open($"{access}init({parameters}) throws(GesApiError) {{");
         var bound = GesSchemaPlanner.Literal($"The {keyName} of a @{handle.Name} is out of its declared {(key.IsText ? "length" : "range")}.", true);
         code.Line(key.IsText
             ? $"guard {keyName}.utf8.count <= {Number(key.MaxLength)} else {{ throw .invalidArgument({bound}) }}"
             : $"guard {keyName} >= {Number(key.Minimum)} && {keyName} <= {Number(key.Maximum)} else {{ throw .invalidArgument({bound}) }}");
-        code.Line(handle.IsComposite ? "self.init(uncheckedRoot: root, part: part)" : version is null ? "self.init(uncheckedId: id)" : "self.init(uncheckedId: id, version: version)");
+        var keyedRoot = keyed && root!.Version != GesHandleVersionKind.None ? "root.withoutVersion()" : "root";
+        code.Line(withPart ? $"self.init(uncheckedRoot: {keyedRoot}, part: part{(keyedVersion ? ", version: version" : "")})" : version is null ? "self.init(uncheckedId: id)" : "self.init(uncheckedId: id, version: version)");
         code.Close();
         code.Blank();
         code.Line($"// A handle whose {keyName} the generated code already checked.");
-        var uncheckedParameters = handle.IsComposite ? $"uncheckedRoot root: {rootName}, part: {keyType}" : version is null ? $"uncheckedId id: {keyType}" : $"uncheckedId id: {keyType}, version: {version}? = nil";
+        var uncheckedParameters = withPart ? $"uncheckedRoot root: {rootName}, part: {keyType}" + (keyedVersion ? $", version: {version}? = nil" : "") : version is null ? $"uncheckedId id: {keyType}" : $"uncheckedId id: {keyType}, version: {version}? = nil";
         code.Open($"init({uncheckedParameters}) {{");
-        if (handle.IsComposite) code.Line("self.root = root");
+        if (withPart) code.Line("self.root = root");
         code.Line($"self.{keyName} = {keyName}");
-        if (version is not null && !handle.IsComposite) code.Line("self.version = version");
+        if (version is not null && own) code.Line("self.version = version");
         code.Close();
         if (version is not null)
         {
             code.Blank();
             code.Line("/// Returns the handle with the same identity and no version.");
-            code.Line($"{access}func withoutVersion() -> {name} {{ {name}({(handle.IsComposite ? "uncheckedRoot: root.withoutVersion(), part: part" : "uncheckedId: id")}) }}");
+            code.Line($"{access}func withoutVersion() -> {name} {{ {name}({(!withPart ? "uncheckedId: id" : keyed ? "uncheckedRoot: root, part: part" : "uncheckedRoot: root.withoutVersion(), part: part")}) }}");
         }
 
         var equal = key.IsText ? $"left.{keyName}.utf8.elementsEqual(right.{keyName}.utf8)" : $"left.{keyName} == right.{keyName}";
         var less = key.IsText ? $"left.{keyName}.utf8.lexicographicallyPrecedes(right.{keyName}.utf8)" : $"left.{keyName} < right.{keyName}";
         code.Blank();
         code.Line("/// Compares the identity: whether both handles name the same object.");
-        code.Line($"{access}static func == (left: {name}, right: {name}) -> Bool {{ {(handle.IsComposite ? "left.root == right.root && " : "")}{equal} }}");
+        code.Line($"{access}static func == (left: {name}, right: {name}) -> Bool {{ {(withPart ? "left.root == right.root && " : "")}{equal} }}");
         code.Blank();
         code.Line("/// Hashes the identity.");
         code.Open($"{access}func hash(into hasher: inout Hasher) {{");
-        if (handle.IsComposite) code.Line("hasher.combine(root)");
+        if (withPart) code.Line("hasher.combine(root)");
         if (key.IsText)
         {
             code.Line($"for byte in {keyName}.utf8 {{ hasher.combine(byte) }}");
@@ -114,8 +131,8 @@ internal static partial class GesSwiftModelEmitter
         else code.Line($"hasher.combine({keyName})");
         code.Close();
         code.Blank();
-        code.Line(handle.IsComposite ? "/// Orders by identity: the root, then the part, a Text by Unicode scalars." : "/// Orders by identity: the id, a Text by Unicode scalars.");
-        code.Line(handle.IsComposite
+        code.Line(withPart ? "/// Orders by identity: the root, then the part, a Text by Unicode scalars." : "/// Orders by identity: the id, a Text by Unicode scalars.");
+        code.Line(withPart
             ? $"{access}static func < (left: {name}, right: {name}) -> Bool {{ left.root != right.root ? left.root < right.root : {less} }}"
             : $"{access}static func < (left: {name}, right: {name}) -> Bool {{ {less} }}");
         code.Blank();
@@ -124,7 +141,8 @@ internal static partial class GesSwiftModelEmitter
         code.Blank();
         code.Line("// Cannot throw: the type name is valid and the id, part and version have valid kinds.");
         code.Line("/// Converts to a runtime handle.");
-        if (handle.IsComposite) code.Line($"{access}func toHandle() -> GesHandle {{ try! GesHandle(typeName: {typeName}, root: root.toHandle(), part: {KeyValue(key, "part")}) }}");
+        if (withPart && keyed) code.Line($"{access}func toHandle() -> GesHandle {{ try! GesHandle(typeName: {typeName}, keyedBy: root.toHandle(), part: {KeyValue(key, "part")}{(version is null ? "" : ", version: " + VersionValue(handle.Version))}) }}");
+        else if (withPart) code.Line($"{access}func toHandle() -> GesHandle {{ try! GesHandle(typeName: {typeName}, attachedTo: root.toHandle(), part: {KeyValue(key, "part")}) }}");
         else if (version is null) code.Line($"{access}func toHandle() -> GesHandle {{ try! GesHandle(typeName: {typeName}, id: {KeyValue(key, "id")}) }}");
         else code.Line($"{access}func toHandle() -> GesHandle {{ try! GesHandle(typeName: {typeName}, id: {KeyValue(key, "id")}, version: {VersionValue(handle.Version)}) }}");
         code.Blank();
@@ -138,15 +156,20 @@ internal static partial class GesSwiftModelEmitter
         code.Blank();
         code.Line("// A runtime handle of this type, or nil for a handle of another type or out of its declared form.");
         code.Open("init?(matching handle: GesHandle) {");
-        code.Line($"guard handle.typeName == {typeName}, {(handle.IsComposite ? "" : "!")}handle.isComposite else {{ return nil }}");
-        if (handle.IsComposite)
+        code.Line($"guard handle.typeName == {typeName}, {(withPart ? "" : "!")}handle.hasPart{(withPart ? $", {(keyed ? "" : "!")}handle.isKeyed" : "")} else {{ return nil }}");
+        if (withPart)
         {
-            var rootHandle = root!.Version == GesHandleVersionKind.None
+            var rootHandle = root!.Version == GesHandleVersionKind.None || keyed
                 ? $"GesHandle(typeName: {GesSchemaPlanner.Literal(root.Name, true)}, id: handle.id)"
                 : $"GesHandle(typeName: {GesSchemaPlanner.Literal(root.Name, true)}, id: handle.id, version: handle.version)";
             code.Line($"guard let rootHandle = try? {rootHandle}, let root = {rootName}(matching: rootHandle) else {{ return nil }}");
             KeyRead(code, key, "handle.part", "part");
-            code.Line("self.init(uncheckedRoot: root, part: part)");
+            if (keyedVersion)
+            {
+                VersionRead(code, handle.Version);
+                code.Line("self.init(uncheckedRoot: root, part: part, version: version)");
+            }
+            else code.Line("self.init(uncheckedRoot: root, part: part)");
         }
         else
         {
@@ -198,7 +221,7 @@ internal static partial class GesSwiftModelEmitter
     {
         GesHandleVersionKind.Revision => "Int64",
         GesHandleVersionKind.Sha1 => "GesHash20",
-        GesHandleVersionKind.Sha256 or GesHandleVersionKind.ContentHash => "GesHash32",
+        GesHandleVersionKind.Sha256 or GesHandleVersionKind.GesHash => "GesHash32",
         _ => null
     };
 
@@ -237,9 +260,10 @@ internal static partial class GesSwiftModelEmitter
     {
         var owner = root ?? handle;
         var text = "@" + handle.Name + ":" + (owner.Id.IsText ? "north" : "7");
-        if (owner.Version == GesHandleVersionKind.Revision) text += "~120";
-        if (handle.IsComposite) text += "/" + (handle.Part.IsText ? "hangar" : "2");
-        return text;
+        var revision = handle.Version == GesHandleVersionKind.Revision ? "~120" : "";
+        if (!handle.HasPart) return text + revision;
+        var part = "/" + (handle.Part.IsText ? "hangar" : "2");
+        return handle.IsKeyed ? text + part + revision : text + revision + part;
     }
 
     // The support helpers of maps with handle keys.

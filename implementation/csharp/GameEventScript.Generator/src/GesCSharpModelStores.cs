@@ -125,8 +125,8 @@ internal static partial class GesCSharpModelEmitter
         code.Line($"    => new {name}(GesStore.Read(__HandleType, roots, files, {passed}));");
         code.Blank();
         ReadDocumentation(code, dependencies.ConvertAll(dependency => (dependency.Name, dependency.Parameter)), files: false);
-        code.Line($"public static {name} Read(IReadOnlyList<GesHandle> roots, IGesHandleResolver resolver{parameters})");
-        code.Line($"    => new {name}(GesStore.Read(__HandleType, roots, resolver, {passed}));");
+        code.Line($"public static {name} Read(IReadOnlyList<GesStoreSourceRoot> roots, IGesStoreSource source{parameters})");
+        code.Line($"    => new {name}(GesStore.Read(__HandleType, roots, source, {passed}));");
         code.Blank();
         code.Line("/// <summary>Answers a read of an entry's state: its state, with its content hash for a type that declares one, or missing.</summary>");
         code.Line("/// <param name=\"call\">The call holding the handle and receiving the answer.</param>");
@@ -185,15 +185,15 @@ internal static partial class GesCSharpModelEmitter
 
     private static void ReadDocumentation(GesSchemaPlanner.Code code, List<(string Name, string Parameter)> dependencies, bool files)
     {
-        code.Line(files ? "/// <summary>Reads the store from named roots, whose files a source supplies.</summary>" : "/// <summary>Reads the store from root handles, whose files a resolver answers.</summary>");
+        code.Line(files ? "/// <summary>Reads the store from named roots, whose files a source supplies.</summary>" : "/// <summary>Reads the store from versioned sources: root handles and the paths of their root files, whose files a source answers.</summary>");
         code.Line("/// <param name=\"roots\">The roots, read in this order.</param>");
-        code.Line(files ? "/// <param name=\"files\">The source of every file's text.</param>" : "/// <param name=\"resolver\">The resolver that answers the root files and their imports.</param>");
+        code.Line(files ? "/// <param name=\"files\">The source of every file's text.</param>" : "/// <param name=\"source\">The source that answers every file by root handle and path.</param>");
         foreach (var dependency in dependencies)
             code.Line($"/// <param name=\"{dependency.Parameter.TrimStart('@')}\">The store of <c>@{dependency.Name}</c>, whose entries this store's entries may name or pin; none when null.</param>");
         code.Line("/// <returns>The store.</returns>");
-        code.Line("/// <exception cref=\"ArgumentNullException\">Thrown when the roots, a root or the " + (files ? "files" : "resolver") + " are null.</exception>");
-        code.Line("/// <exception cref=\"ArgumentException\">Thrown when two roots share a name or a root is no store file of the type.</exception>");
+        code.Line("/// <exception cref=\"ArgumentNullException\">Thrown when the roots, a root or the " + (files ? "files" : "source") + " are null.</exception>");
+        code.Line((files ? "/// <exception cref=\"ArgumentException\">Thrown when two roots share a name.</exception>" : "/// <exception cref=\"ArgumentException\">Thrown when a root handle carries a part or two roots have equal handles.</exception>"));
         code.Line("/// <exception cref=\"GesStoreException\">Thrown when the store has errors; the exception lists every one.</exception>");
-        if (!files) code.Line("/// <exception cref=\"GesHandleException\">Thrown when the resolver answers a file wrongly.</exception>");
+        if (!files) code.Line("/// <exception cref=\"GesHandleException\">Thrown when the source answers an invalid or another version of a root.</exception>");
     }
 }

@@ -1059,8 +1059,7 @@ internal static partial class GesSwiftEmitter
         }
 
         if (part is not null) ReadHandleKey(code, part, "part", target + ".part");
-        var arguments = "uncheckedId: id" + (version is not null ? ", version: version" : "");
-        code.Line(value.HandleRoot is not null ? $"{target} = {value.HandleType}(uncheckedRoot: {GesCSharpEmitter.HandleRootType(value)}({arguments}), part: part)" : $"{target} = {value.HandleType}({arguments})");
+        code.Line($"{target} = {GesCSharpEmitter.HandleConstruction(value, version is not null, swift: true)}");
         code.Close();
     }
 

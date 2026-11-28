@@ -595,7 +595,7 @@ internal static class GesAstValidator
         CallableResults callableResults)
     {
         var target = ClassifyExpression(memberAccess.Target, callables, typeDefinitions, declaredTypes, callableResults);
-        // `h.root` of composites with one root type is a handle of that root type.
+        // `h.root` of attached or keyed types with one root type is a handle of that root type.
         if (memberAccess.Member == "root" && GesHandleTypeNames.IsHandleType(target.TypeName))
             return GesHandleTypeNames.CommonRoot(target.TypeName!, callables.HandleTypes) is { } root ? StaticExpressionInfo.Other("@" + root.Name) : StaticExpressionInfo.Unknown;
 
@@ -958,15 +958,20 @@ internal static class GesAstValidator
                     if (GesHandleTypeNames.IsHandleType(typeCast.TypeName))
                         errors.Add(parsedScriptContext, $"'as {typeCast.TypeName}' is only a parameter or field type; use 'is {typeCast.TypeName}' to test a value.", typeCast.TypeName, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidHandleUse, typeCast);
                     else if (ClassifyExpression(typeCast.Value, callables, typeDefinitions, declaredTypes ?? new Dictionary<string, string>(StringComparer.Ordinal), new CallableResults()).TypeName is { } castSource &&
-                             GesHandleTypeNames.IsHandleType(castSource) && GesHandleTypeNames.HasProjection(castSource))
-                        ValidateProjectedStateCast(parsedScriptContext, typeCast, castSource, callables.HandleTypes, errors);
+                             GesHandleTypeNames.IsHandleType(castSource))
+                    {
+                        if (!IsBuiltinConstructorType(typeCast.TypeName) && StatelessAlternative(castSource, callables.HandleTypes) is { } stateless)
+                            errors.Add(parsedScriptContext, $"'@{stateless.Name}' has no state, so 'as :{typeCast.TypeName}' reads nothing; declare it with 'of :State' to read state.", typeCast.TypeName, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidHandleUse, typeCast);
+                        else if (GesHandleTypeNames.HasProjection(castSource))
+                            ValidateProjectedStateCast(parsedScriptContext, typeCast, castSource, callables.HandleTypes, errors);
+                    }
                     expression = typeCast.Value;
                     continue;
 
                 case GesMemberAccessExpressionNode memberAccess:
                     if (ClassifyExpression(memberAccess.Target, callables, typeDefinitions, declaredTypes ?? new Dictionary<string, string>(StringComparer.Ordinal), new CallableResults()).TypeName is { } targetType && GesHandleTypeNames.IsHandleType(targetType))
                     {
-                        if (memberAccess.Member is "version" or "root") ValidateHandleMember(parsedScriptContext, memberAccess, targetType, callables.HandleTypes, errors);
+                        if (memberAccess.Member is "version" or "root" || StatelessAlternative(targetType, callables.HandleTypes) is not null) ValidateHandleMember(parsedScriptContext, memberAccess, targetType, callables.HandleTypes, errors);
                         else if (memberAccess.Member != "id" && GesHandleTypeNames.HasProjection(targetType)) ValidateProjectedMember(parsedScriptContext, memberAccess, targetType, callables.HandleTypes, errors);
                     }
 
@@ -1341,6 +1346,8 @@ internal static class GesAstValidator
             errors.Add(parsedScriptContext, $"Handle type '{typeName}' is not declared.", typeName, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateUnknownHandleType, storeRead);
         else if (storeRead.Root is not null && type.Part is null)
             errors.Add(parsedScriptContext, $"'{typeName}(root)' lists the parts of one root; '{typeName}' has no part.", typeName, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidHandleUse, storeRead);
+        else if (!type.HasState && storeRead.Selector is GesStoreSelector.Values or GesStoreSelector.Entries)
+            errors.Add(parsedScriptContext, $"'{typeName}' has no state, so its store has no values; declare it with 'of :State' to read them.", typeName, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidHandleUse, storeRead);
         else if (callables.EnumerableHandleTypes is { } enumerable && !enumerable.Contains(name))
             errors.AddWarning(parsedScriptContext, $"The host does not enumerate '{typeName}', so this store reads as nothing.", typeName, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateHandleTypeNotEnumerable, storeRead);
     }
@@ -1365,7 +1372,9 @@ internal static class GesAstValidator
             else if (versioned && type.Version == GesHandleVersionKind.None)
                 errors.Add(parsedScriptContext, $"'@{name}~' needs a handle type with versions.", alternative, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidHandleUse, node);
             else if (projection.Length > 0 && type.Root is not null)
-                errors.Add(parsedScriptContext, $"'@{name}' is composite; a projection reads a handle type that is not.", alternative, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidProjection, node);
+                errors.Add(parsedScriptContext, $"'@{name}' has a root; a projection reads a handle type without one.", alternative, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidProjection, node);
+            else if (projection.Length > 0 && !type.HasState)
+                errors.Add(parsedScriptContext, $"'@{name}' has no state, which a projection could read.", alternative, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidProjection, node);
             else if (projection.Length > 0 && type.FindProjection(projection) is null)
                 errors.Add(parsedScriptContext, $"':{projection}' is no projection of '@{name}', whose state is ':{type.StateName}'.", alternative, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidProjection, node);
             else
@@ -1462,34 +1471,46 @@ internal static class GesAstValidator
         return false;
     }
 
-    // `h.version` needs a type with versions and `h.root` composites of one root type; other alternatives are not
-    // declared and already reported.
+    // `h.version` needs a type with versions, `h.root` types with one root type and any state member types with state;
+    // other alternatives are not declared and already reported.
     private static void ValidateHandleMember(GesParsedScript parsedScriptContext, GesMemberAccessExpressionNode memberAccess, string typeName, IReadOnlyDictionary<string, GesHandleType> handleTypes, GesValidationErrors errors)
     {
         var known = false;
         var versioned = false;
+        GesHandleType? stateless = null;
         foreach (var alternative in typeName.Split('|'))
         {
             if (!handleTypes.TryGetValue(GesHandleTypeNames.Split(alternative).Name, out var type)) return;
             known = true;
             versioned |= type.Version != GesHandleVersionKind.None;
+            if (!type.HasState) stateless ??= type;
         }
 
         if (!known) return;
-        if (memberAccess.Member == "version" && !versioned)
+        if (stateless is not null && memberAccess.Member is not ("id" or "version" or "root"))
+            errors.Add(parsedScriptContext, $"'@{stateless.Name}' has no state, so '{memberAccess.Member}' reads nothing; declare it with 'of :State' to read state.", memberAccess.Member, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidHandleUse, memberAccess);
+        else if (memberAccess.Member == "version" && !versioned)
             errors.Add(parsedScriptContext, $"'{typeName}' has no versions.", typeName, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidHandleUse, memberAccess);
         else if (memberAccess.Member == "root" && typeName.Contains('|') && GesHandleTypeNames.CommonRoot(typeName, handleTypes) is null)
             errors.Add(parsedScriptContext, NoCommonRoot(typeName, handleTypes), typeName, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidHandleUse, memberAccess);
     }
 
-    // Names the two alternatives whose roots differ, or the first one that is no composite.
+    // The first declared alternative of a handle type or union without state, whose members other than the identity read nothing.
+    private static GesHandleType? StatelessAlternative(string typeName, IReadOnlyDictionary<string, GesHandleType> handleTypes)
+    {
+        foreach (var alternative in typeName.Split('|'))
+            if (handleTypes.TryGetValue(GesHandleTypeNames.Split(alternative).Name, out var type) && !type.HasState) return type;
+        return null;
+    }
+
+    // Names the two alternatives whose roots differ, or the first one without a root.
     private static string NoCommonRoot(string typeName, IReadOnlyDictionary<string, GesHandleType> handleTypes)
     {
         (string Name, GesHandleType Root)? first = null;
         foreach (var alternative in typeName.Split('|'))
         {
             var name = GesHandleTypeNames.Split(alternative).Name;
-            if (handleTypes[name].Root is not { } root) return $"'@{name}' is no composite, so '{typeName}' has no common root type.";
+            if (handleTypes[name].Root is not { } root) return $"'@{name}' has no root, so '{typeName}' has no common root type.";
             if (first is null) first = (name, root);
             else if (!string.Equals(first.Value.Root.Name, root.Name, StringComparison.Ordinal))
                 return $"The root of '@{first.Value.Name}' is '@{first.Value.Root.Name}' and the root of '@{name}' is '@{root.Name}', so '{typeName}' has no common root type.";

@@ -126,7 +126,7 @@ final class GesPlanValue {
     // How an emitter spells the type of a Tag of a named tag set, which is declared once beside the records.
     var tagType = ""
 
-    // A handle: its type and, for a composite, its root's type; an emitter spells the type `<Name>Handle` with handleType.
+    // A handle: its type and, for a type with a part, its root's type; an emitter spells the type `<Name>Handle` with handleType.
     var handle: GesLayoutHandle?
     var handleRoot: GesLayoutHandle?
     var handleType = ""
@@ -317,7 +317,7 @@ enum GesSchemaPlanner {
             let handle = context.layout.handle(encoding.handle)
             value.handle = handle
             value.handleType = handle.name + "Handle"
-            if handle.isComposite { value.handleRoot = context.layout.handle(handle.root) }
+            if handle.hasPart { value.handleRoot = context.layout.handle(handle.root) }
         case .handleMap:
             // The List node, each entry's group, the key and its nodes, then the value; an entry's fields count from its group.
             let list = GesLayoutEncoding()
@@ -438,7 +438,7 @@ enum GesSchemaPlanner {
             return encoding.corners.count + 1 + encoding.corners[0].encoding.axes.count
         case .handle:
             let handle = layout.handle(encoding.handle)
-            return 2 + (encoding.versioned ? 1 : 0) + (handle.isComposite ? 1 : 0)
+            return 2 + (encoding.versioned ? 1 : 0) + (handle.hasPart ? 1 : 0)
         case .handleMap:
             let key = GesLayoutEncoding()
             key.kind = .handle
@@ -517,7 +517,7 @@ enum GesSchemaPlanner {
         case .handle:
             paths.append(path + ".id")
             if encoding.versioned { paths.append(path + ".version") }
-            if layout.handle(encoding.handle).isComposite { paths.append(path + ".part") }
+            if layout.handle(encoding.handle).hasPart { paths.append(path + ".part") }
         case .handleMap:
             let element = encoding.element!
             let entryPath = String(element.path.dropLast(".value".count))

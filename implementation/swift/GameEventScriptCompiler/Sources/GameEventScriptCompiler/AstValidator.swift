@@ -177,9 +177,13 @@ final class GesAstValidator {
     // A parameter hint names a type a value can be converted to, as in C#: a built-in constructor type, a quantity with
     // a known unit, a script record or a catalog type; `:Record` and the numeric helpers are no conversion targets.
     func parameterType(_ type: String) -> Bool {
+        Self.builtinConstructorType(type) || records[type] != nil || catalog?.types.contains { $0.name == type } == true
+    }
+
+    // A built-in constructor type or a quantity with a known unit.
+    static func builtinConstructorType(_ type: String) -> Bool {
         ["nothing", "tag", "text", "percentage", "vector", "point", "boolean", "number", "numeric", "series", "list", "range", "message", "handler", "map", "dice", "bytes"].contains(type)
             || type.hasPrefix("quantity:") && GesCompilerSupport.quantityUnit(String(type.dropFirst(9))) != nil
-            || records[type] != nil || catalog?.types.contains { $0.name == type } == true
     }
 
     func knownType(_ type: String) -> Bool {
@@ -271,14 +275,14 @@ final class GesAstValidator {
         case .store(let typeName, let root):
             report("validate.invalidHandleUse", e.location, symbol: typeName, kind: .type, message: "'\(typeName)' reads a store only with '[:count]', '[:keys]', '[:values]' or '[:entries]'.")
             if let root { expression(root, types) }
-        case .storeRead(let typeName, let root, _):
-            storeName(typeName, hasRoot: root != nil, e.location)
+        case .storeRead(let typeName, let root, let selector):
+            storeName(typeName, hasRoot: root != nil, selector: selector, e.location)
             if let root { expression(root, types) }
         default: preconditionFailure()
         }
     }
 
-    private func storeName(_ typeName: String, hasRoot: Bool, _ location: GesSourceLocation) {
+    private func storeName(_ typeName: String, hasRoot: Bool, selector: GesStoreSelector, _ location: GesSourceLocation) {
         if typeName.utf8.contains(UInt8(ascii: "~")) || GesHandleTypeNames.hasProjection(typeName) {
             report("validate.invalidHandleUse", location, symbol: typeName, kind: .type, message: "A store is named by its handle type alone, not '\(typeName)'.")
             return
@@ -287,6 +291,9 @@ final class GesAstValidator {
         if let type = handleTypes[name] {
             if hasRoot && type.part == nil {
                 report("validate.invalidHandleUse", location, symbol: typeName, kind: .type, message: "'\(typeName)(root)' lists the parts of one root; '\(typeName)' has no part.")
+            } else if !type.hasState && (selector == .values || selector == .entries) {
+                let message = "'\(typeName)' has no state, so its store has no values; declare it with 'of :State' to read them."
+                report("validate.invalidHandleUse", location, symbol: typeName, kind: .type, message: message)
             } else if let enumerableHandleTypes, !enumerableHandleTypes.contains(name) {
                 let message = "The host does not enumerate '\(typeName)', so this store reads as nothing."
                 warnings += compileError("validate.handleTypeNotEnumerable", location, symbol: typeName, kind: .type, message: message).diagnostics
@@ -327,7 +334,7 @@ final class GesAstValidator {
         case .name, .handler: break
         case .member(let target, let member):
             if case let type = infer(target, types), GesHandleTypeNames.isHandleType(type) {
-                if member == "version" || member == "root" {
+                if member == "version" || member == "root" || statelessAlternative(type) != nil {
                     handleMember(e, member, type)
                 } else if member != "id" && GesHandleTypeNames.hasProjection(type) {
                     projectedMember(e, member, type)
@@ -390,8 +397,13 @@ final class GesAstValidator {
             // A handle has no constructor and no cast; only parameter and field types check handles (specs/Language.md#handles).
             if GesHandleTypeNames.isHandleType(type) {
                 report("validate.invalidHandleUse", e.location, symbol: type, kind: .type, message: "'as \(type)' is only a parameter or field type; use 'is \(type)' to test a value.")
-            } else if case let source = infer(value, types), GesHandleTypeNames.isHandleType(source), GesHandleTypeNames.hasProjection(source) {
-                projectedStateCast(e, type, source)
+            } else if case let source = infer(value, types), GesHandleTypeNames.isHandleType(source) {
+                if !Self.builtinConstructorType(type), let stateless = statelessAlternative(source) {
+                    let message = "'@\(stateless.name)' has no state, so 'as :\(type)' reads nothing; declare it with 'of :State' to read state."
+                    report("validate.invalidHandleUse", e.location, symbol: type, kind: .type, message: message)
+                } else if GesHandleTypeNames.hasProjection(source) {
+                    projectedStateCast(e, type, source)
+                }
             }
             expression(value, types)
         default: preconditionFailure()
@@ -439,7 +451,7 @@ final class GesAstValidator {
     }
 
     // Each alternative of a handle type or union is a declared `@Name`, `@Name~` names a type with versions and
-    // `@Name(:P)` a projection of a type that is not composite, at most once per type in a union.
+    // `@Name(:P)` a projection of a type with state and without a root, at most once per type in a union.
     private func handleTypeName(_ typeName: String, _ location: GesSourceLocation) {
         let alternatives = GesHandleTypeNames.alternatives(typeName)
         for (index, alternative) in alternatives.enumerated() {
@@ -457,7 +469,9 @@ final class GesAstValidator {
             if versioned && type.version == .none {
                 report("validate.invalidHandleUse", location, symbol: alternative, kind: .type, message: "'@\(name)~' needs a handle type with versions.")
             } else if !projection.isEmpty && type.root != nil {
-                report("validate.invalidProjection", location, symbol: alternative, kind: .type, message: "'@\(name)' is composite; a projection reads a handle type that is not.")
+                report("validate.invalidProjection", location, symbol: alternative, kind: .type, message: "'@\(name)' has a root; a projection reads a handle type without one.")
+            } else if !projection.isEmpty && !type.hasState {
+                report("validate.invalidProjection", location, symbol: alternative, kind: .type, message: "'@\(name)' has no state, which a projection could read.")
             } else if !projection.isEmpty && type.findProjection(projection) == nil {
                 report("validate.invalidProjection", location, symbol: alternative, kind: .type, message: "':\(projection)' is no projection of '@\(name)', whose state is ':\(type.stateName)'.")
             } else if alternatives[..<index].contains(where: { other in
@@ -519,27 +533,40 @@ final class GesAstValidator {
         }
     }
 
-    // `h.version` needs a type with versions and `h.root` composites of one root type; other alternatives are not
-    // declared and already reported.
+    // `h.version` needs a type with versions, `h.root` types with one root type and any state member types with state;
+    // other alternatives are not declared and already reported.
     private func handleMember(_ e: GesExpression, _ member: String, _ typeName: String) {
         var versioned = false
+        var stateless: GesHandleType?
         for alternative in GesHandleTypeNames.alternatives(typeName) {
             guard let type = handleTypes[GesHandleTypeNames.split(alternative).name] else { return }
             versioned = versioned || type.version != .none
+            if !type.hasState && stateless == nil { stateless = type }
         }
-        if member == "version" && !versioned {
+        if let stateless, member != "id" && member != "version" && member != "root" {
+            let message = "'@\(stateless.name)' has no state, so '\(member)' reads nothing; declare it with 'of :State' to read state."
+            report("validate.invalidHandleUse", e.location, symbol: member, kind: .type, message: message)
+        } else if member == "version" && !versioned {
             report("validate.invalidHandleUse", e.location, symbol: typeName, kind: .type, message: "'\(typeName)' has no versions.")
         } else if member == "root" && typeName.unicodeScalars.contains("|") && GesHandleTypeNames.commonRoot(typeName, handleTypes) == nil {
             report("validate.invalidHandleUse", e.location, symbol: typeName, kind: .type, message: noCommonRoot(typeName))
         }
     }
 
-    // Names the two alternatives whose roots differ, or the first one that is no composite.
+    // The first declared alternative of a handle type or union without state, whose members other than the identity read nothing.
+    private func statelessAlternative(_ typeName: String) -> GesHandleType? {
+        for alternative in GesHandleTypeNames.alternatives(typeName) {
+            if let type = handleTypes[GesHandleTypeNames.split(alternative).name], !type.hasState { return type }
+        }
+        return nil
+    }
+
+    // Names the two alternatives whose roots differ, or the first one without a root.
     private func noCommonRoot(_ typeName: String) -> String {
         var first: (name: String, root: GesHandleType)?
         for alternative in GesHandleTypeNames.alternatives(typeName) {
             let name = GesHandleTypeNames.split(alternative).name
-            guard let root = handleTypes[name]?.root else { return "'@\(name)' is no composite, so '\(typeName)' has no common root type." }
+            guard let root = handleTypes[name]?.root else { return "'@\(name)' has no root, so '\(typeName)' has no common root type." }
             if let first {
                 if first.root.name != root.name {
                     return "The root of '@\(first.name)' is '@\(first.root.name)' and the root of '@\(name)' is '@\(root.name)', so '\(typeName)' has no common root type."

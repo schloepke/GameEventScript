@@ -217,11 +217,11 @@ internal static class SchemaApiObservations
         }
     }
 
-    // Reads the stores in order, each with every earlier one as a dependency, from named roots or from root handles: the
-    // entries of the last with its sources, the errors of the first that fails, or the code of a resolver failure.
+    // Reads the stores in order, each with every earlier one as a dependency, from named roots or from sources: the entries
+    // of the last with its sources, the errors of the first that fails, or the code of a source failure.
     private static object Stores(GesSchemaSet set, JsonElement input)
     {
-        RuntimeValues.Fields(input, "files", "stores", "refs", "latest", "index");
+        RuntimeValues.Fields(input, "files", "stores", "latest", "index");
         List<GesStore> read;
         try
         {
@@ -257,16 +257,16 @@ internal static class SchemaApiObservations
             .Select(file => new StoreFile(file.GetProperty("root").GetString()!, file.GetProperty("path").GetString()!, file.GetProperty("text").GetString()!,
                 file.GetProperty("version").ValueKind == JsonValueKind.Null ? null : file.GetProperty("version").GetInt64())).ToArray();
         var files = new StoreFiles(table);
-        var resolver = new StoreResolver(table, input.GetProperty("refs").EnumerateObject().ToDictionary(entry => entry.Name, entry => entry.Value.GetInt64(), StringComparer.Ordinal),
-            input.GetProperty("latest").ValueKind == JsonValueKind.Null ? null : input.GetProperty("latest").GetInt64());
+        var source = new StoreSource(table, input.GetProperty("latest").ValueKind == JsonValueKind.Null ? null : input.GetProperty("latest").GetInt64());
         var read = new List<GesStore>();
         foreach (var store in input.GetProperty("stores").EnumerateArray())
         {
             var type = set.HandleType(store.GetProperty("type").GetString()!);
-            if (store.GetProperty("handles").ValueKind == JsonValueKind.Array)
+            if (store.GetProperty("sources").ValueKind == JsonValueKind.Array)
             {
-                var handles = store.GetProperty("handles").EnumerateArray().Select(handle => GesHandle.Parse(handle.GetString()!)).ToArray();
-                read.Add(GesStore.Read(type, handles, resolver, read.ToArray()));
+                var roots = store.GetProperty("sources").EnumerateArray()
+                    .Select(root => new GesStoreSourceRoot(GesHandle.Parse(root.GetProperty("handle").GetString()!), root.GetProperty("path").GetString()!)).ToArray();
+                read.Add(GesStore.Read(type, roots, source, read.ToArray()));
             }
             else
             {
@@ -325,30 +325,17 @@ internal static class SchemaApiObservations
         }
     }
 
-    // Answers a file handle from the table: its root is the root handle's Text id, its path the part. A present file
-    // answers with its own version, else the requested one, else the latest; refs name revisions by their text form.
-    private sealed class StoreResolver(StoreFile[] files, Dictionary<string, long> refs, long? latest) : IGesHandleResolver
+    // Answers a root file from the table: its root is the root handle's id. A present file answers with its own version,
+    // else the root handle's, else the latest.
+    private sealed class StoreSource(StoreFile[] files, long? latest) : IGesStoreSource
     {
-        public void Resolve(GesHandleResolveCall call)
+        public GesStoreFile Read(GesHandle root, string path)
         {
-            var handle = call.Handle;
-            var root = handle.Id.ValueKind == GesBytecodeTypeKind.Text ? handle.Id.AsText() : handle.Id.AsInteger().ToString(CultureInfo.InvariantCulture);
-            if (StoreFiles.Find(files, root, handle.Part.AsText()) is not { } file)
-            {
-                call.SetMissing();
-                return;
-            }
-
-            if (file.Version is { } own) call.SetDocument(file.Text, GesValue.GesInteger(own));
-            else if (handle.HasVersion) call.SetDocument(file.Text, handle.Version);
-            else if (latest is { } number) call.SetDocument(file.Text, GesValue.GesInteger(number));
-            else call.SetDocument(file.Text);
-        }
-
-        public GesValue ResolveRef(GesHandle handle)
-        {
-            var name = handle.Ref.ValueKind == GesBytecodeTypeKind.Tag ? "#" + handle.Ref.AsText() : handle.Ref.AsText();
-            return refs.TryGetValue(name, out var number) ? GesValue.GesInteger(number) : GesValue.GesNothing();
+            var name = root.Id.ValueKind == GesBytecodeTypeKind.Text ? root.Id.AsText() : root.Id.AsInteger().ToString(CultureInfo.InvariantCulture);
+            if (StoreFiles.Find(files, name, path) is not { } file) return GesStoreFile.Missing;
+            if (file.Version is { } own) return new GesStoreFile(file.Text, GesValue.GesInteger(own));
+            if (root.HasVersion) return new GesStoreFile(file.Text, root.Version);
+            return latest is { } number ? new GesStoreFile(file.Text, GesValue.GesInteger(number)) : new GesStoreFile(file.Text);
         }
     }
 

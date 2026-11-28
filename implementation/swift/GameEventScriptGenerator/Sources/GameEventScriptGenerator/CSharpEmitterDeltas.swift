@@ -173,7 +173,7 @@ extension GesCSharpEmitter {
         return String(target[...dot])
     }
 
-    // The wire parts of a handle in node order, with their members in a and b: a composite's id is its root's, and a field
+    // The wire parts of a handle in node order, with their members in a and b: the id of a type with a part is its root's, and a field
     // without a version transmits none. A text id compares as a string, the same as its UTF-8 bytes apart from lone surrogates.
     private static func handleMembers(_ value: GesPlanValue, _ a: String, _ b: String) -> [(part: GesPlanValue, a: String, b: String)] {
         let (id, version, part) = handleParts(value)
@@ -251,8 +251,7 @@ extension GesCSharpEmitter {
             code.line(part.encoding.kind == .text ? "if (string.Equals(\(local), \(second), StringComparison.Ordinal)) \(fail("InvalidDelta", part))" : "if (\(local) == \(second)) \(fail("InvalidDelta", part))")
             code.close()
         }
-        let arguments = "id" + (members.contains { $0.part.base == "Version" } ? ", version" : "")
-        code.line(value.handleRoot != nil ? "\(a) = new \(value.handleType)(new \(handleRootType(value))(\(arguments)), part);" : "\(a) = new \(value.handleType)(\(arguments));")
+        code.line("\(a) = \(handleConstruction(value, versioned: members.contains { $0.part.base == "Version" }, swift: false));")
         code.close()
     }
 

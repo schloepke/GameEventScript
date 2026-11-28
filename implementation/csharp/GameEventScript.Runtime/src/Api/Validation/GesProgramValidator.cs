@@ -192,7 +192,7 @@ internal static class GesProgramValidator
     private static bool? IsHandleTypeOperand(GameEventScriptProgram program, ushort stringIndex, HashSet<string>? handleTypeNames)
     {
         var text = program.StringConstants.Resolve(stringIndex);
-        // `@id` is the identity member of a part-less composite's root, not a handle type name.
+        // `@id` is the identity member of the root of a type without a part, not a handle type name.
         if (text.Length == 0 || text[0] != '@' || text == "@id") return null;
         var name = text.EndsWith("~", StringComparison.Ordinal) ? text[1..^1] : text[1..];
         var open = name.IndexOf('(');
@@ -320,7 +320,7 @@ internal static class GesProgramValidator
                     continue;
                 }
 
-                // `h.root` of a composite names its root type as the member `@Root`, which needs a handle type binding.
+                // `h.root` of a type with a root names its root type as the member `@Root`, which needs a handle type binding.
                 if (operand == GesOpcodePrinter.OperandPart.MemberName && instruction.OpCode == GesBytecodeOpCode.MemberAccess
                     && IsHandleTypeOperand(program, stringIndex, handleTypeNames) is { } knownRoot)
                 {

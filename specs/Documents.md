@@ -392,7 +392,7 @@ offers the same reads:
 - use as the [resolver](#stores-as-resolvers) of its type.
 
 Every entry has exactly one version, the one its handle carries: the content hash of its state for a
-`:ContentHash` type; an entry of a type with another version form carries none. A host holds at most one store per
+type `versioned by hash(#ges)`; an entry of a type with another version form carries none. A host holds at most one store per
 handle type, the one it registers as that type's resolver.
 
 A store has one owner, which is the only party that answers index and resolve requests for its entries; every other
@@ -416,8 +416,8 @@ key        = 1*( ASCII letter | digit | "_" | "-" )
 ```
 
 - A store file starts with its header, which names the handle type of every entry;
-  comments and blank lines may precede it. The type is a handle type whose id is Text
-  and that is not composite. A store file contains no other header.
+  comments and blank lines may precede it. The type is a handle type with a state,
+  a Text id and no root. A store file contains no other header.
 - Items follow the separator rules of root entries: a comma or a line break separates
   them. A `module` block is one item; a line break directly after its `{` and before its
   `}` is trivia, and its entries follow the same separator rules.
@@ -471,7 +471,7 @@ pinned     = handle-without-version "~"
 - A reference reads as the handle of the named entry, `@Unit:hull.light`, without a
   version. With a trailing `~`, a reference or a complete handle of an entry is pinned:
   it carries the content hash of the named entry as its version. Pinning needs a type
-  whose version is `:ContentHash`, otherwise it is `store.invalidPin`, and the named
+  `versioned by hash(#ges)`, otherwise it is `store.invalidPin`, and the named
   entry's store: the own one or a dependency. Pinned references must not form a cycle,
   which is `store.dependencyCycle`; unpinned references may, because the game resolves
   them.
@@ -508,7 +508,7 @@ import.
 
 The result holds the type and every entry, sorted by id in ordinal order. An entry has
 its id, its handle, its state and its origin. The handle carries the id, and for a type
-whose version is `:ContentHash` the content hash of the state. The state is a Record of
+`versioned by hash(#ges)` the content hash of the state. The state is a Record of
 the state type with the schema's defaults applied, exactly as a resolver's state. The
 origin names the root, the root-relative path of the file and the line and column of
 the entry's key. The entries of one module are those whose id starts with the module
@@ -548,33 +548,33 @@ further limits; the host decides which files it passes.
 
 > **Since: Unreleased**
 
-A store may also be read from versioned sources, such as a repository at a commit,
-through a [store file type](Schemas.md#handles) `handle @UnitFiles of :Store(@Unit)
-composite @Repository as { part: :Text max 256 }`. Each root is then a handle of that
-type, whose root names the source and whose part is the path of the root file within
-it: `@UnitFiles:content~#main/Units.gesd`. Every other file of that
-root is requested as the composite handle with the same root and the file's
-root-relative path as part, through the resolver the host passes:
+A store may also be read from versioned sources, such as a repository at a commit. Each
+root is then a *root handle* with the path of its root file: a handle of a type without a
+root, such as `@Repository:content~#main` of `handle @Repository with id :Text max 64
+versioned by hash(#sha1)`. Its id is a logical name of the source, which only the host
+interprets; GES reads neither the id nor the files. The root handle's type needs no state.
+Every file of that root, the root file included, is requested from the host's *source* by
+the root handle and the file's root-relative path:
 
-- a document answer gives the file's text;
-- a *missing* answer is `store.importMissing`, as is a path longer than the part's
-  `max`; a state answer is `store.importKind`, both at the import's path;
-- no answer or several answers fail the read with `runtime.handleResolveFailed`, and
-  an error the resolver throws ends the read unchanged.
+- the source answers the file's text, or *missing*, which is `store.importMissing` at the
+  import's path, and for the root file without line and column;
+- a path longer than 256 UTF-8 bytes is `store.importMissing` without asking the source;
+- an error the source throws ends the read unchanged.
 
-A root handle that carries a ref is first resolved through the resolver's ref
-resolution; an unknown ref is `store.importMissing` for the root file. A root without
-a version is pinned by the version the first answer of that root passes, so every file
-of a root comes from one version; a later answer with another version fails the read
-with `runtime.handleVersionMismatch`. A root's name, which origins and errors name, is
-the [text form](Language.md#handle-text-form) of the root handle as given. The
-store's *sources* are the root handles with the version they were read at, in the
-given order; a store read from named roots has none.
+An answer may carry the version of the root it comes from. A root without a version is
+asked as given, a ref included, until an answer passes a version; afterwards it is asked
+with that version, so every file of a root comes from one version. A later answer with
+another version fails the read with `runtime.handleVersionMismatch`, an answer whose
+version is no integer or 20 or 32 bytes with `runtime.handleResolveFailed`. A source
+answers an unknown ref as *missing*. A root's name, which origins and errors name, is the
+[text form](Language.md#handle-text-form) of the root handle as given, and two roots with
+equal text forms are not allowed. The store's *sources* are the root handles with the
+version they were read at, in the given order; a store read from named roots has none.
 
 ### Stores as resolvers
 
 A store is a [handle resolver](HostRuntime.md#handles) of its type: a host that
 registers it lets scripts read the states of its entries. It answers a handle of a
-known id with the entry's state and, for a `:ContentHash` type, its content hash, and
+known id with the entry's state and, for a type `versioned by hash(#ges)`, its content hash, and
 every other handle as *missing*. A handle that carries another version is checked by
 the host as for every resolver and fails with `runtime.handleVersionMismatch`.

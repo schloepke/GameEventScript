@@ -36,7 +36,7 @@ extension GesAstValidator {
         case .check, .predicate, .between: return "boolean"
         case .member(let value, let name):
             let target = child(value)
-            // `h.root` of composites with one root type is a handle of that root type.
+            // `h.root` of attached or keyed types with one root type is a handle of that root type.
             if name == "root" && GesHandleTypeNames.isHandleType(target) { return GesHandleTypeNames.commonRoot(target, handleTypes).map { "@" + $0.name } ?? "unknown" }
             return records[target]?.fields.first { $0.name == name }?.type ?? "unknown"
         case .selector(_, let selection): return ["any", "all", "contains"].contains(selection.operation) ? "boolean" : "unknown"

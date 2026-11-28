@@ -147,7 +147,7 @@ internal sealed class GesPlanValue
     // How an emitter spells the type of a Tag of a named tag set, which is declared once beside the records.
     internal string TagType = "";
 
-    // A handle: its type and, for a composite, its root's type; an emitter spells the type `<Name>Handle` with HandleType.
+    // A handle: its type and, for a type with a part, its root's type; an emitter spells the type `<Name>Handle` with HandleType.
     internal GesLayoutHandle? Handle;
     internal GesLayoutHandle? HandleRoot;
     internal string HandleType = "";
@@ -439,7 +439,7 @@ internal static class GesSchemaPlanner
             case GesLayoutKind.Handle:
                 value.Handle = context.Layout.Handle(encoding.Handle);
                 value.HandleType = value.Handle.Name + "Handle";
-                if (value.Handle.IsComposite) value.HandleRoot = context.Layout.Handle(value.Handle.Root);
+                if (value.Handle.HasPart) value.HandleRoot = context.Layout.Handle(value.Handle.Root);
                 break;
             case GesLayoutKind.HandleMap:
                 // The List node, each entry's group, the key and its nodes, then the value; an entry's fields count from its group.
@@ -551,7 +551,7 @@ internal static class GesSchemaPlanner
                 return encoding.Corners.Count + 1 + encoding.Corners[0].Encoding.Axes.Count;
             case GesLayoutKind.Handle:
                 var handle = layout.Handle(encoding.Handle);
-                return 2 + (encoding.Versioned ? 1 : 0) + (handle.IsComposite ? 1 : 0);
+                return 2 + (encoding.Versioned ? 1 : 0) + (handle.HasPart ? 1 : 0);
             case GesLayoutKind.HandleMap:
                 return 2 + Count(layout, new GesLayoutEncoding { Kind = GesLayoutKind.Handle, Handle = encoding.Handle }, counts) + Count(layout, encoding.Element!.Encoding, counts);
             case GesLayoutKind.Union:
@@ -647,7 +647,7 @@ internal static class GesSchemaPlanner
             case GesLayoutKind.Handle:
                 paths.Add(path + ".id");
                 if (encoding.Versioned) paths.Add(path + ".version");
-                if (layout.Handle(encoding.Handle).IsComposite) paths.Add(path + ".part");
+                if (layout.Handle(encoding.Handle).HasPart) paths.Add(path + ".part");
                 break;
             case GesLayoutKind.HandleMap:
                 paths.Add(encoding.Element!.Path.Substring(0, encoding.Element.Path.Length - ".value".Length));

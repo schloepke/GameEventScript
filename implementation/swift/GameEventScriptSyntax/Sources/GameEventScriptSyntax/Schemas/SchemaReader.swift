@@ -321,8 +321,9 @@
         return result
     }
 
-    /// `handle @Name of :State as { id: ..., version: ... }` or `handle @Name of :State composite @Root as { part: ... }`, where
-    /// `:Store(@Type)` may stand for the state; a composite without `as { part: ... }` is part-less.
+    /// `handle @Name [of :State] (with id <type> | attached to @Root | keyed by @Root) [with part <type>] [versioned by <kind>]`;
+    /// a clause may follow a line break. The removed block, `composite`, `:Store(@Type)` and the old version types name the
+    /// new form.
     private mutating func handle(_ offset: Int) throws -> GesSchemaDeclarationSyntax {
         var result = GesSchemaDeclarationSyntax()
         result.kind = .handle
@@ -330,110 +331,141 @@
         skipSpaces()
         result.name = try handleName()
         skipSpaces()
-        try expectWord("of")
-        skipSpaces()
-        result.stateOffset = position
-        result.state = try typeName()
-        if result.state == "Store" && position < bytes.count && bytes[position] == 40 {
-            // `:Store(@Unit)` declares a store file type; its state stays empty.
-            position += 1
-            skipSpaces()
-            result.storeOffset = position
-            result.store = try handleName()
-            skipSpaces()
-            try expect(41)
-            result.state = ""
-        } else if position < bytes.count && bytes[position] == 40 {
-            // Only `:Store` takes a handle type here; any other name with an argument names no type.
-            throw Failure(offset: result.stateOffset, message: "Type ':\(result.state)(...)' is not declared.", code: Code.unknownName)
-        }
-        skipSpaces()
-        if atWord("composite") {
+        if atWord("of") {
             _ = word()
+            skipSpaces()
+            result.stateOffset = position
+            if atWord("nothing") { throw Failure(offset: result.stateOffset, message: "A handle type without state omits 'of'.") }
+            result.state = try typeName()
+            if result.state == "Nothing" { throw Failure(offset: result.stateOffset, message: "A handle type without state omits 'of'.") }
+            if position < bytes.count && bytes[position] == 40 {
+                if result.state == "Store" {
+                    throw Failure(offset: result.stateOffset, message: "Store file types are removed: a store is read from root handles and the path of each root file.")
+                }
+                throw Failure(offset: result.stateOffset, message: "Type ':\(result.state)(...)' is not declared.", code: Code.unknownName)
+            }
+            skipSpaces()
+        }
+
+        if atWord("as") {
+            throw Failure(offset: position, message: "A handle type is declared with clauses, such as 'with id :Text max 64 versioned by revision'.")
+        }
+        if atWord("composite") { throw Failure(offset: position, message: "'composite @Root' is written 'attached to @Root'.") }
+        if atClause("with") {
+            let clauseOffset = position
+            _ = word()
+            skipSpaces()
+            if atWord("part") {
+                throw Failure(offset: clauseOffset, message: "Only a type attached to or keyed by a root has 'with part'; any other has 'with id'.")
+            }
+            try expectWord("id")
+            skipSpaces()
+            result.id = try handleKey("id")
+            if atClause("attached") || atClause("keyed") {
+                throw Failure(offset: position, message: "A type attached to or keyed by a root has no 'with id'; its identity is the root's id and its part.")
+            }
+        } else if atClause("attached") || atClause("keyed") {
+            result.form = atWord("attached") ? .attached : .keyed
+            _ = word()
+            skipSpaces()
+            try expectWord(result.form == .attached ? "to" : "by")
             skipSpaces()
             result.rootOffset = position
             result.root = try handleName()
             skipSpaces()
-            // Without `as { part: ... }` the composite is part-less: one per root, keyed by the root's id alone.
-            if !atWord("as") { return result }
-        }
-        try expectWord("as")
-        skipTrivia()
-        try expect(123)
-        skipSeparators()
-        if !result.root.isEmpty {
-            result.id = try handleField("part")
-        } else {
-            result.id = try handleField("id")
-            try endEntry(125)
-            skipSeparators()
-            result.versionOffset = position
-            if word() != "version" {
-                throw Failure(offset: result.versionOffset, message: "A handle type has exactly the fields id and version.", code: Code.invalidHandle)
-            }
-            skipSpaces()
-            try expect(58)
-            skipSpaces()
-            result.versionOffset = position
-            try expect(58)
-            let typeName = try name(GesNames.type, "version type")
-            skipSpaces()
-            switch typeName {
-            case "Nothing":
-                break
-            case "ContentHash":
-                result.version = .contentHash
-            case "Hash":
-                let algorithmOffset = position
-                let algorithms = try tagSet()
-                if algorithms == ["sha256"] {
-                    result.version = .sha256
-                } else if algorithms == ["sha1"] {
-                    result.version = .sha1
-                } else {
-                    throw Failure(offset: algorithmOffset, message: "A hash version is :Hash(#sha256) or :Hash(#sha1).", code: Code.invalidHandle)
-                }
+            if atClause("with") {
+                let withOffset = position
+                _ = word()
                 skipSpaces()
-            case "Number":
-                result.version = .revision
-                var revision = GesSchemaTypeSyntax()
-                revision.kind = .number
-                revision.offset = result.versionOffset
-                revision.constraints = try constraints()
-                let constraints = revision.constraints
-                if !constraints.integer || constraints.wrapping || constraints.step != nil || constraints.delta != nil || !(constraints.lower?.name.isEmpty ?? true)
-                    || !(constraints.upper?.name.isEmpty ?? true)
-                {
-                    throw Failure(offset: result.versionOffset, message: "A revision is :Number integer with an optional range.", code: Code.invalidHandle)
+                if atWord("id") {
+                    throw Failure(offset: withOffset, message: "A type attached to or keyed by a root has no 'with id'; its identity is the root's id and its part.")
                 }
-                result.revision = revision
-            default:
-                throw Failure(
-                    offset: result.versionOffset,
-                    message: "A version is :Nothing, :Number integer, :Hash(#sha256), :Hash(#sha1) or :ContentHash.",
-                    code: Code.invalidHandle
-                )
+                try expectWord("part")
+                skipSpaces()
+                result.id = try handleKey("part")
             }
+        } else {
+            throw Failure(offset: position, message: "A handle type has 'with id <type>', 'attached to @Root' or 'keyed by @Root'.")
         }
-        try endEntry(125)
-        skipSeparators()
-        if !consume(125) {
-            let message = result.root.isEmpty ? "A handle type has exactly the fields id and version." : "A composite handle type has exactly the field part."
-            throw Failure(offset: position, message: message, code: Code.invalidHandle)
+
+        if atClause("versioned") {
+            if result.form == .attached {
+                throw Failure(offset: position, message: "A type attached to a root has its root's version and no 'versioned by'.")
+            }
+            _ = word()
+            skipSpaces()
+            try expectWord("by")
+            skipSpaces()
+            result.versionOffset = position
+            (result.version, result.revision) = try versionKind(result.versionOffset)
         }
         return result
     }
 
-    /// `id: :Number integer between a and b` or `id: :Text max n`, and `part` alike; the bounds' values are checked on loading.
-    private mutating func handleField(_ expected: String) throws -> GesSchemaTypeSyntax {
-        let offset = position
-        if word() != expected {
-            let message = expected == "part" ? "A composite handle type has exactly the field part." : "A handle type has exactly the fields id and version."
-            throw Failure(offset: offset, message: message, code: Code.invalidHandle)
+    /// `revision`, `revision max n`, `hash(#ges)`, `hash(#sha1)` or `hash(#sha256)`; the old version types name their new
+    /// spelling.
+    private mutating func versionKind(_ offset: Int) throws -> (GesHandleVersionKind, GesSchemaTypeSyntax?) {
+        if position < bytes.count && bytes[position] == 58 {
+            let type = try typeName()
+            let spelling =
+                switch type {
+                case "ContentHash": "'hash(#ges)'"
+                case "Hash": "'hash(#sha256)' or 'hash(#sha1)'"
+                case "Number": "'revision' or 'revision max n'"
+                case "Nothing": "no 'versioned by' clause"
+                default: "'revision', 'revision max n', 'hash(#ges)', 'hash(#sha256)' or 'hash(#sha1)'"
+                }
+            throw Failure(offset: offset, message: "A version kind ':\(type)' is written \(spelling).")
         }
-        skipSpaces()
-        try expect(58)
-        skipSpaces()
+        switch word() {
+        case "revision":
+            skipSpaces()
+            var constraints = GesSchemaConstraintsSyntax()
+            constraints.integer = true
+            if atWord("max") {
+                _ = word()
+                skipSpaces()
+                let upper = try value()
+                if !upper.name.isEmpty { throw Failure(offset: upper.offset, message: "A revision's maximum is a literal or a constant.", code: Code.invalidHandle) }
+                skipSpaces()
+                var zero = GesSchemaValueSyntax()
+                zero.text = "0"
+                zero.offset = offset
+                constraints.lower = zero
+                constraints.upper = upper
+            }
+            var revision = GesSchemaTypeSyntax()
+            revision.kind = .number
+            revision.offset = offset
+            revision.constraints = constraints
+            return (.revision, revision)
+        case "hash":
+            let algorithmOffset = position
+            let algorithms = position < bytes.count && bytes[position] == 40 ? try tagSet() : []
+            skipSpaces()
+            switch algorithms {
+            case ["ges"]: return (.gesHash, nil)
+            case ["sha256"]: return (.sha256, nil)
+            case ["sha1"]: return (.sha1, nil)
+            default: throw Failure(offset: algorithmOffset, message: "A hash version is hash(#ges), hash(#sha256) or hash(#sha1).", code: Code.invalidHandle)
+            }
+        default:
+            throw Failure(offset: offset, message: "A version kind is 'revision', 'revision max n', 'hash(#ges)', 'hash(#sha256)' or 'hash(#sha1)'.")
+        }
+    }
+
+    /// Whether a clause keyword follows, on this line or after line breaks and comments; the reader stays before it when it
+    /// does.
+    private mutating func atClause(_ written: String) -> Bool {
+        let start = position
+        skipTrivia()
+        if atWord(written) { return true }
+        position = start
+        return false
+    }
+
+    /// An id or part: `:Number integer between a and b` or `:Text max n`; the bounds' values are checked on loading.
+    private mutating func handleKey(_ role: String) throws -> GesSchemaTypeSyntax {
         let start = position
         if position >= bytes.count || bytes[position] != 58 { throw failure("Expected ':'.") }
         let type = try type()
@@ -450,10 +482,11 @@
         if !valid {
             throw Failure(
                 offset: start,
-                message: "An \(expected) is :Number integer between two literals or constants, or :Text max with a number.",
+                message: "An \(role) is :Number integer between two literals or constants, or :Text max with a number.",
                 code: Code.invalidHandle
             )
         }
+        skipSpaces()
         return type
     }
 

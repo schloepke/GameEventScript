@@ -11,12 +11,12 @@ import XCTest
 final class StoreTests: XCTestCase {
     private static let schemas = """
         schema :Hull as { armor: :Number integer between 0 and 100 }
-        handle @Hull of :Hull as { id: :Text max 32, version: :ContentHash }
+        handle @Hull of :Hull with id :Text max 32 versioned by hash(#ges)
         schema :Composition as { name: :Text max 64, hull: @Hull~, escort: @Unit optional }
-        handle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }
+        handle @Unit of :Composition with id :Text max 16 versioned by hash(#ges)
         schema :Contact as { label: :Text max 16 }
-        handle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }
-        handle @Slot of :Contact composite @Unit as { part: :Number integer between 0 and 15 }
+        handle @Target of :Contact with id :Number integer between 0 and 65535
+        handle @Slot of :Contact attached to @Unit with part :Number integer between 0 and 15
 
         """
 
@@ -131,52 +131,47 @@ final class StoreTests: XCTestCase {
         XCTAssertNil(GesStore.combine("", ".."))
     }
 
-    private static let fileSchemas = """
+    private static let sourceSchemas = """
         schema :Composition as { name: :Text max 16 }
-        handle @Unit of :Composition as { id: :Text max 16, version: :ContentHash }
-        schema :Source as { text: :Text }
-        handle @Repository of :Source as { id: :Text max 16, version: :Number integer between 0 and 1000 }
-        handle @UnitFiles of :Store(@Unit) composite @Repository as { part: :Text max 64 }
-        handle @Other of :Source composite @Repository as { part: :Text max 64 }
+        handle @Unit of :Composition with id :Text max 16 versioned by hash(#ges)
+        handle @Repository with id :Text max 16 versioned by revision max 1000
+        handle @File attached to @Repository with part :Text max 64
+        handle @Stateless with id :Text max 16
 
         """
 
-    private struct Resolver: GesHandleResolver {
-        let answer: (GesHandleResolveCall) throws -> Void
+    private struct Source: GesStoreSource {
+        let answer: (GesHandle, String) throws -> GesStoreFile
 
-        func resolve(_ call: GesHandleResolveCall) throws { try answer(call) }
+        func read(root: GesHandle, path: String) throws -> GesStoreFile { try answer(root, path) }
     }
 
     private struct Offline: Error {}
 
-    private func fileType(_ name: String) throws -> GesHandleType { try GesSchemaSet(sources: [GesSchemaSource(name: "files.gess", text: Self.fileSchemas)]).handleType(name) }
-
-    private func readUnits(_ answer: @escaping (GesHandleResolveCall) throws -> Void) throws -> GesStore {
-        try GesStore.read(fileType("Unit"), roots: [GesHandle(parsing: "@UnitFiles:content/units.gesd")], resolver: Resolver(answer: answer))
+    private func sourceType(_ name: String) throws -> GesHandleType {
+        try GesSchemaSet(sources: [GesSchemaSource(name: "sources.gess", text: Self.sourceSchemas)]).handleType(name)
     }
 
-    private func assertHandleError(_ code: String, _ answer: @escaping (GesHandleResolveCall) throws -> Void, line: UInt = #line) {
-        XCTAssertThrowsError(try readUnits(answer), line: line) { error in
-            XCTAssertEqual((error as? GesHandleError)?.code, code, "\(error)", line: line)
-        }
+    private func content() throws -> GesHandle { try GesHandle(parsing: "@Repository:content") }
+
+    private func readUnits(_ answer: @escaping (GesHandle, String) throws -> GesStoreFile) throws -> GesStore {
+        try GesStore.read(sourceType("Unit"), roots: [GesStoreSourceRoot(handle: content(), path: "units.gesd")], source: Source(answer: answer))
     }
 
-    func testReadsThroughHandlesAndAnswersTheStatesOfItsEntries() throws {
+    func testReadsFromRootHandlesAndPinsTheVersionOfTheFirstAnswer() throws {
         var requested: [String] = []
-        let store = try readUnits { call in
-            requested.append(call.handle.description)
-            if call.handle.part.asText == "units.gesd" {
-                try call.setDocument(":Store(@Unit)\nimport 'more.gesd'\nscout: [name: 'Scout']\n", version: .integer(9))
-            } else {
-                try call.setDocument(":Store(@Unit)\none: [name: 'One']\n")
-            }
+        let store = try readUnits { root, path in
+            requested.append("\(root) \(path)")
+            return path == "units.gesd"
+                ? GesStoreFile(text: ":Store(@Unit)\nimport 'more.gesd'\nscout: [name: 'Scout']\n", version: .integer(9))
+                : GesStoreFile(text: ":Store(@Unit)\none: [name: 'One']\n")
         }
 
-        XCTAssertEqual(requested, ["@UnitFiles:content/units.gesd", "@UnitFiles:content~9/more.gesd"])
-        XCTAssertEqual(store.sources.map(\.description), ["@UnitFiles:content~9/units.gesd"])
-        XCTAssertEqual(store["one"]?.origin.moduleName, "@UnitFiles:content/units.gesd")
+        XCTAssertEqual(requested, ["@Repository:content units.gesd", "@Repository:content~9 more.gesd"])
+        XCTAssertEqual(store.sources.map(\.description), ["@Repository:content~9"])
+        XCTAssertEqual(store["one"]?.origin.moduleName, "@Repository:content")
 
-        let unit = try fileType("Unit")
+        let unit = try sourceType("Unit")
         let call = GesHandleResolveCall()
         let scout = try XCTUnwrap(store["scout"])
         call.begin(try GesHandle(typeName: "Unit", id: .text("scout")), unit, nil, 0)
@@ -190,42 +185,39 @@ final class StoreTests: XCTestCase {
         call.end()
     }
 
-    func testReportsAStateAnswerAsTheWrongKindOfFile() {
-        XCTAssertThrowsError(try readUnits { try $0.setState(.nothing) }) { error in
-            XCTAssertEqual((error as? GesStoreError)?.diagnostics.first?.code, GesStoreError.importKind)
+    func testFailsOnInvalidOrChangingVersionsAndPassesSourceErrorsOn() {
+        XCTAssertThrowsError(try readUnits { _, _ in .missing }) { error in
+            XCTAssertEqual((error as? GesStoreError)?.diagnostics.first?.code, GesStoreError.importMissing, "\(error)")
         }
+        XCTAssertThrowsError(try readUnits { _, _ in GesStoreFile(text: ":Store(@Unit)\n", version: .bytes([1])) }) { error in
+            XCTAssertEqual((error as? GesHandleError)?.code, GesDiagnosticCodes.runtimeHandleResolveFailed, "\(error)")
+        }
+        var version: Int64 = 1
+        XCTAssertThrowsError(
+            try readUnits { _, path in
+                defer { version += 1 }
+                return GesStoreFile(text: path == "units.gesd" ? ":Store(@Unit)\nimport 'more.gesd'\n" : ":Store(@Unit)\n", version: .integer(version))
+            }
+        ) { error in
+            XCTAssertEqual((error as? GesHandleError)?.code, GesDiagnosticCodes.runtimeHandleVersionMismatch, "\(error)")
+        }
+        XCTAssertThrowsError(try readUnits { _, _ in throw Offline() }) { error in XCTAssertTrue(error is Offline, "\(error)") }
     }
 
-    func testFailsOnMissingSeveralOrInvalidAnswersAndPassesResolverErrorsOn() {
-        assertHandleError(GesDiagnosticCodes.runtimeHandleResolveFailed) { _ in }
-        assertHandleError(GesDiagnosticCodes.runtimeHandleResolveFailed) { call in
-            try call.setMissing()
-            try call.setMissing()
-        }
-        assertHandleError(GesDiagnosticCodes.runtimeHandleResolveFailed) { try $0.setDocument(":Store(@Unit)\n", version: .bytes([1])) }
-        XCTAssertThrowsError(try readUnits { _ in throw Offline() }) { error in XCTAssertTrue(error is Offline, "\(error)") }
-    }
-
-    func testRejectsRootsThatAreNoStoreFiles() throws {
-        let resolver = Resolver { try $0.setMissing() }
-        let unit = try fileType("Unit")
-        let content = try GesHandle(parsing: "@UnitFiles:content/units.gesd")
+    func testRejectsRootHandlesWithAPartTwiceGivenRootsAndTypesWithoutAStore() throws {
+        let source = Source { _, _ in .missing }
+        let unit = try sourceType("Unit")
+        let content = try content()
         for (type, roots) in [
-            (unit, [try GesHandle(parsing: "@Repository:content")]),
-            (unit, [try GesHandle(parsing: "@Other:content/units.gesd")]),
-            (unit, [content, try GesHandle(parsing: "@UnitFiles:content/units.gesd")]),
-            (try fileType("Other"), []),
+            (unit, [GesStoreSourceRoot(handle: try GesHandle(parsing: "@File:content/units.gesd"), path: "units.gesd")]),
+            (unit, [GesStoreSourceRoot(handle: content, path: "a.gesd"), GesStoreSourceRoot(handle: content, path: "b.gesd")]),
+            (try sourceType("Stateless"), []),
+            (try sourceType("File"), []),
         ] {
-            XCTAssertThrowsError(try GesStore.read(type, roots: roots, resolver: resolver)) { error in
+            XCTAssertThrowsError(try GesStore.read(type, roots: roots, source: source)) { error in
                 guard case GesApiError.invalidArgument = error else { return XCTFail("\(error)") }
             }
         }
-        XCTAssertTrue(try GesStore.read(unit, roots: [], resolver: resolver).sources.isEmpty)
-    }
-
-    func testLeavesStoreFileTypesOutOfScripts() throws {
-        let types = try GesSchemaSet(sources: [GesSchemaSource(name: "files.gess", text: Self.fileSchemas)]).handleTypes
-        _ = try GesProgramBuilder().withHandleTypes(types).addScript("on Seen(unit as @Unit) { }").compile()
-        XCTAssertThrowsError(try GesProgramBuilder().withHandleTypes(types).addScript("on Seen(file as @UnitFiles) { }").compile())
+        XCTAssertTrue(try GesStore.read(unit, roots: [], source: source).sources.isEmpty)
     }
 }

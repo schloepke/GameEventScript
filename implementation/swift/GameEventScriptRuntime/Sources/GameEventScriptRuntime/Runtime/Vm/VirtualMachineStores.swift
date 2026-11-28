@@ -34,7 +34,7 @@ extension GesVirtualMachine {
 
     func readStoreParts(_ destination: Int, _ typeText: String, _ rootValue: GesValue, _ selector: StoreSelector) throws {
         // Only a handle of the root type names a root; any other value, like a type without a resolver, reads nothing.
-        guard let binding = storeBinding(typeText), binding.type.part != nil, let rootType = binding.type.root, let given = rootValue.handleValue, !given.isComposite,
+        guard let binding = storeBinding(typeText), binding.type.part != nil, let rootType = binding.type.root, let given = rootValue.handleValue, !given.hasPart,
             given.typeName.utf8.elementsEqual(rootType.name.utf8)
         else {
             setNothing(destination)
@@ -88,14 +88,14 @@ extension GesVirtualMachine {
         if let cached = storeHandles[key] { return cached }
         var handles: [GesHandle]?
         if let listed = try GesHandleStates.handles(binding, root) {
-            let composite = type.part != nil
+            let hasPart = type.part != nil
             var checked: [GesHandle] = []
             checked.reserveCapacity(listed.count)
             for handle in listed {
-                if !handle.typeName.utf8.elementsEqual(type.name.utf8) || handle.isComposite != composite {
+                if !handle.typeName.utf8.elementsEqual(type.name.utf8) || handle.hasPart != hasPart {
                     throw GesHandleStates.invalidHandles(type, "the handle \(handle) of another type")
                 }
-                if let root, GesHandle.fromWire(typeName: root.typeName, id: handle.id, version: .nothing, part: .nothing, isComposite: false) != root {
+                if let root, GesHandle.fromWire(typeName: root.typeName, id: handle.id, version: .nothing, part: .nothing, isKeyed: false) != root {
                     throw GesHandleStates.invalidHandles(type, "the handle \(handle) of another root")
                 }
                 checked.append(handle.withView(.nothing, ""))

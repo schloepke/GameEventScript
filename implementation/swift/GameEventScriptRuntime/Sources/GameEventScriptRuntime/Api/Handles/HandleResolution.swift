@@ -37,7 +37,7 @@ public protocol GesHandleResolver {
     /// root and handler invocation and sorts the result into key order. The default implementation is for types that do
     /// not enumerate: it returns nil, and the store reads as Nothing.
     ///
-    /// - Parameter root: The root handle of a composite type with a part, whose parts to list; nil for every object of
+    /// - Parameter root: The root handle of a type with a part, whose parts to list; nil for every object of
     ///   the type.
     /// - Returns: The handles, or nil when the type does not enumerate.
     /// - Throws: Any error, which ends the read with `runtime.handleResolveFailed`, as does a handle of another type or

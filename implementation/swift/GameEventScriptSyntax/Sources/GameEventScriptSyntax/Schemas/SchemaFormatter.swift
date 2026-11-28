@@ -108,28 +108,27 @@
                 }
                 output += "}\n"
             case .handle:
-                output += "handle @\(declaration.name) of :\(declaration.state)"
-                if !declaration.root.isEmpty {
-                    output += " composite @\(declaration.root)"
-                    if let part = declaration.id {
-                        output += " as { part: "
-                        type(part, &output, "")
-                        output += " }"
-                    }
-                    output += "\n"
-                    break
+                output += "handle @\(declaration.name)"
+                if !declaration.state.isEmpty { output += " of :\(declaration.state)" }
+                switch declaration.form {
+                case .attached: output += " attached to @\(declaration.root)"
+                case .keyed: output += " keyed by @\(declaration.root)"
+                case .plain: break
                 }
-                output += " as { id: "
-                type(declaration.id!, &output, "")
-                output += ", version: "
+                if let key = declaration.id {
+                    output += declaration.form == .plain ? " with id " : " with part "
+                    type(key, &output, "")
+                }
                 switch declaration.version {
-                case .none: output += ":Nothing"
-                case .contentHash: output += ":ContentHash"
-                case .sha1: output += ":Hash(#sha1)"
-                case .sha256: output += ":Hash(#sha256)"
-                case .revision: type(declaration.revision!, &output, "")
+                case .gesHash: output += " versioned by hash(#ges)"
+                case .sha1: output += " versioned by hash(#sha1)"
+                case .sha256: output += " versioned by hash(#sha256)"
+                case .revision:
+                    output += " versioned by revision"
+                    if let upper = declaration.revision!.constraints.upper { output += " max " + value(upper) }
+                case .none: break
                 }
-                output += " }\n"
+                output += "\n"
             }
         }
         return output

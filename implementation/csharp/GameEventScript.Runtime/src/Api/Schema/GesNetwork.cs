@@ -92,7 +92,7 @@ public sealed class GesNetworkOwner
     /// <summary>Gets the side that owns the objects and can resolve their handles.</summary>
     public GesNetworkSide Side { get; }
 
-    /// <summary>Gets the owned handle type, which is never composite.</summary>
+    /// <summary>Gets the owned handle type, which is never attached to a root.</summary>
     public GesHandleType Handle { get; }
 
     /// <summary>Gets the projection of <c>owns @Unit as :UnitPublic</c>, the only view of the state the other side reads;
@@ -181,7 +181,7 @@ public sealed class GesBoundNetwork
                 .Append(owner.Side == GesNetworkSide.Client ? "client" : "server").Append(' ')
                 .Append(owner.Handle.Name).Append(' ')
                 .Append(GesSchemaCanonical.Hex(owner.Handle.Hash)).Append(' ')
-                .Append(GesSchemaCanonical.Hex(owner.Handle.Resolved.State.Public.Hash));
+                .Append(owner.Handle.Resolved.State is { } state ? GesSchemaCanonical.Hex(state.Public.Hash) : "none");
             if (owner.Projection is { } projection) text.Append(" as ").Append(projection.Name).Append(' ').Append(GesSchemaCanonical.Hex(projection.Hash));
             if (owner.SendsState) text.Append(" sending");
             text.Append('\n');
@@ -217,8 +217,10 @@ internal sealed partial class GesFileScope
                 if (route.Owns)
                 {
                     var handle = Handle(route.Root, route.RootOffset);
-                    if (handle.Root is not null)
-                        throw Error(Code.InvalidHandle, route.RootOffset, $"'@{route.Root}' is composite; its root's owner owns it.");
+                    if (handle.Attached)
+                        throw Error(Code.InvalidHandle, route.RootOffset, $"'@{route.Root}' is attached to '@{handle.Root!.Name}'; its root's owner owns it.");
+                    if (route.SendingState && handle.State is null)
+                        throw Error(Code.InvalidHandle, route.RootOffset, $"'@{route.Root}' has no state to send.");
                     if (owners.Exists(owner => owner.Handle.Name == route.Root))
                         throw Error(Code.DuplicateRoute, route.Offset, $"The network names '@{route.Root}' in two owns routes.");
                     GesResolvedDeclaration? projection = null;

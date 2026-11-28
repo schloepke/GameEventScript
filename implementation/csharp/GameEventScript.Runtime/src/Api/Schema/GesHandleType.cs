@@ -7,7 +7,7 @@ using GameEventScript.Syntax;
 
 namespace GameEventScript.Api;
 
-/// <summary>The form of a handle type's id or a composite's part: an integer with a closed range or a Text with a maximum.</summary>
+/// <summary>The form of a handle type's id or part: an integer with a closed range or a Text with a maximum.</summary>
 public readonly struct GesHandleKey
 {
     internal GesHandleKey(bool isText, long minimum, long maximum, long maxLength)
@@ -46,6 +46,7 @@ public sealed class GesHandleType
         _declarations = declarations;
         Name = handle.Name;
         StateName = handle.State?.Name ?? "";
+        IsKeyed = handle.IsKeyed;
         var key = Key(handle.Id);
         if (handle.HasPart) Part = key;
         else Id = key;
@@ -57,38 +58,41 @@ public sealed class GesHandleType
     /// <summary>Gets the name, without the leading <c>@</c>.</summary>
     public string Name { get; }
 
-    /// <summary>Gets the name of the state schema, without the leading <c>:</c>; empty for a store file type.</summary>
+    /// <summary>Gets the name of the state schema, without the leading <c>:</c>; empty for a type without state.</summary>
     public string StateName { get; }
 
+    /// <summary>Gets whether the type has a state schema; a type without one only names objects and their versions.</summary>
+    public bool HasState => StateName.Length > 0;
+
     /// <summary>
-    /// Gets the form of the id; for a part-less composite its root's, since its identity is the root's id; null for a
-    /// composite with a part, whose identity is its root's id and its part.
+    /// Gets the form of the id; for a type with a root and without a part its root's, since its identity is the root's id; null
+    /// for a type with a part, whose identity is its root's id and its part.
     /// </summary>
     public GesHandleKey? Id { get; }
 
-    /// <summary>Gets the form of a composite's part; null for a part-less composite and any other type.</summary>
+    /// <summary>Gets the form of the part of a type attached to or keyed by a root; null when it has none.</summary>
     public GesHandleKey? Part { get; }
 
-    /// <summary>Gets the kind of version; a composite has its root's.</summary>
+    /// <summary>Gets the kind of version: a type attached to a root has its root's, a keyed type its own.</summary>
     public GesHandleVersionKind Version { get; }
 
-    /// <summary>Gets the root type of a composite, with or without a part; null for any other type.</summary>
+    /// <summary>Gets the root a type is attached to or keyed by; null for a type without a root.</summary>
     public GesHandleType? Root => _handle.Root?.Public;
 
     /// <summary>
-    /// Gets the handle type of the store whose files this store file type names, <c>:Store(@Type)</c>; null for any other
-    /// type (specs/Schemas.md#handles).
+    /// Gets whether the type is keyed by its root (<c>keyed by @Root</c>): its objects have their own version, lifetime and source;
+    /// otherwise a type with a root is attached to it (specs/Schemas.md#handles).
     /// </summary>
-    public GesHandleType? StoreOf => _handle.Store?.Public;
+    public bool IsKeyed { get; }
 
     /// <summary>Gets the projections of the state schema in the schema set, the projections a handle of this type can read
-    /// through, in ascending name order; empty for a store file type (specs/Schemas.md#projections).</summary>
+    /// through, in ascending name order; empty for a type without state (specs/Schemas.md#projections).</summary>
     public IReadOnlyList<GesSchema> Projections { get; private set; } = [];
 
     /// <summary>Gets the handle hash: FNV-1a 64 over the canonical form.</summary>
     public ulong Hash { get; }
 
-    /// <summary>Gets the canonical form, which the hash runs over: the declaration and, for a composite, its root's.</summary>
+    /// <summary>Gets the canonical form, which the hash runs over: the declaration and, for a type with a root, its root's.</summary>
     public string CanonicalForm { get; }
 
     /// <summary>
@@ -99,16 +103,8 @@ public sealed class GesHandleType
 
     internal GesResolvedHandle Resolved => _handle;
 
-    // The store file type of this type's store with a name, or null when none of that name names it.
-    internal GesHandleType? FileType(string name)
-    {
-        foreach (var file in _handle.Files)
-            if (file.Name == name) return file.Public;
-        return null;
-    }
-
     // Called once the state schema has its hash, after every schema of the set is complete.
-    // A store file type has no state, so its link hash is its handle hash.
+    // A type without state has its handle hash as its link hash.
     // Each projection of the state adds its name and schema hash, so a Program and a host agree on what it reads.
     internal void CompleteLinkHash()
     {
@@ -164,19 +160,13 @@ internal sealed class GesResolvedHandle
 
     internal GesSchemaDeclarationSyntax Syntax { get; init; } = null!;
 
-    // The state schema; null for a store file type, which has none.
-    internal GesResolvedDeclaration State { get; set; } = null!;
+    // The state schema; null for a type without state.
+    internal GesResolvedDeclaration? State { get; set; }
 
-    // The handle type of the store whose files a store file type names; null for any other type.
-    internal GesResolvedHandle? Store { get; set; }
-
-    // The store file types that name this type's store, in declaration order.
-    internal List<GesResolvedHandle> Files { get; } = [];
-
-    // The root of a composite, which is not composite itself.
+    // The root a type is attached to or keyed by, which has no root itself.
     internal GesResolvedHandle? Root { get; set; }
 
-    // The id, or a composite's part; a part-less composite has its root's id.
+    // The id, or the part of a type with a root; a type with a root and without a part has its root's id.
     internal GesResolvedType Id
     {
         get => _id ?? Root!.Id;
@@ -185,11 +175,18 @@ internal sealed class GesResolvedHandle
 
     private GesResolvedType? _id;
 
-    // Whether a composite names a part of its root; a part-less composite is one per root and keyed by the root's id.
+    // Whether a type with a root names a part of it; one without a part is one per root and keyed by the root's id.
     internal bool HasPart => Root is not null && Syntax.Id is not null;
 
-    // The declared version, or for a composite its root's.
-    internal GesHandleVersionKind VersionKind => Root?.VersionKind ?? Syntax.Version;
+    internal bool IsKeyed => Syntax.Form == GesSchemaHandleForm.Keyed;
+
+    internal bool Attached => Syntax.Form == GesSchemaHandleForm.Attached;
+
+    // The declared version, or for a type attached to a root its root's.
+    internal GesHandleVersionKind VersionKind => Syntax.Form == GesSchemaHandleForm.Attached ? Root!.VersionKind : Syntax.Version;
+
+    // The type whose version a handle carries: an attached type's root, otherwise the type itself.
+    internal GesResolvedHandle VersionOwner => Syntax.Form == GesSchemaHandleForm.Attached ? Root! : this;
 
     internal bool Versioned => VersionKind != GesHandleVersionKind.None;
 
@@ -198,38 +195,48 @@ internal sealed class GesResolvedHandle
 
     internal GesHandleType Public { get; set; } = null!;
 
+    // `handle X` with its form and root, the id or part, the version of a type that is not attached and `stateless` for a type
+    // without state; the state's own hash joins only the link hash.
     internal void WriteCanonical(StringBuilder builder)
     {
         builder.Append("handle ").Append(Name);
-        if (Root is { } root)
+        switch (Syntax.Form)
         {
-            builder.Append(" composite ").Append(root.Name).Append('\n');
-            if (!HasPart) return;
-            if (Store is { } store) builder.Append("store ").Append(store.Name).Append('\n');
-            builder.Append("part ");
-            GesSchemaCanonical.WriteHandleType(Id, builder);
-            builder.Append('\n');
-            return;
+            case GesSchemaHandleForm.Attached:
+                builder.Append(" attached ").Append(Root!.Name);
+                break;
+            case GesSchemaHandleForm.Keyed:
+                builder.Append(" keyed ").Append(Root!.Name);
+                break;
         }
 
-        builder.Append('\n').Append("id ");
-        GesSchemaCanonical.WriteHandleType(Id, builder);
-        builder.Append('\n').Append("version ");
+        builder.Append('\n');
+        if (State is null) builder.Append("stateless\n");
+        if (Root is null || HasPart)
+        {
+            builder.Append(Root is null ? "id " : "part ");
+            GesSchemaCanonical.WriteHandleType(Id, builder);
+            builder.Append('\n');
+        }
+
+        if (Syntax.Form == GesSchemaHandleForm.Attached) return;
+        builder.Append("version ");
         switch (Syntax.Version)
         {
             case GesHandleVersionKind.None:
-                builder.Append("Nothing");
+                builder.Append("none");
                 break;
-            case GesHandleVersionKind.ContentHash:
-                builder.Append("ContentHash");
+            case GesHandleVersionKind.GesHash:
+                builder.Append("hash(#ges)");
                 break;
             case GesHandleVersionKind.Sha1:
-                builder.Append("Hash(#sha1)");
+                builder.Append("hash(#sha1)");
                 break;
             case GesHandleVersionKind.Sha256:
-                builder.Append("Hash(#sha256)");
+                builder.Append("hash(#sha256)");
                 break;
             default:
+                builder.Append("revision ");
                 GesSchemaCanonical.WriteHandleType(Revision!, builder);
                 break;
         }

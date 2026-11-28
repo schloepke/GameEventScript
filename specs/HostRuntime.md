@@ -321,10 +321,10 @@ without a result fail with `runtime.invalidHandleState`. A resolver that throws 
 `runtime.handleResolveFailed`. Both stop the handler like an extension fault. A resolver failure is classified like an
 [extension failure](PublicApi.md#diagnostics-and-failure-transport): a fatal runtime failure (C#
 `GesFatalRuntimeException`, Swift `GesFatalRuntimeError`), such as an `ExtensionFaultException` with its own code,
-propagates unchanged, and every other one becomes `runtime.handleResolveFailed`; the same holds for `ResolveRef`. A composite is resolved by its own type's resolver alone; when the
-handle carries no root version, the resolver may pass the root's version it delivered.
+propagates unchanged, and every other one becomes `runtime.handleResolveFailed`; the same holds for `ResolveRef`. An attached or keyed handle is resolved by its own type's resolver alone; when an
+attached handle carries no root version, the resolver may pass the root's version it delivered.
 
-**Versions.** For a `:ContentHash` type GES computes the [content hash](Schemas.md#content-hash) of the resolved
+**Versions.** For a type `versioned by hash(#ges)` GES computes the [content hash](Schemas.md#content-hash) of the resolved
 state; a resolver need not pass one. For every other versioned type the resolver passes the version it delivered;
 when it passes none for a state, the version the handle carries applies, because the resolver answered for it, and a
 handle that carries none fails with `runtime.invalidHandleState`, because no receiver could cache the state. A
@@ -338,7 +338,7 @@ reporting the version the value itself carries.
 [projection](Schemas.md#projections) `P`; reading its state passes `P` to the resolver (C# `call.Projection`, Swift
 `call.projection`, absent for the full view). The resolver answers with the state of the whole object, which the host
 converts to `P`, or with a Record or document of `P` itself; the host checks the answer against the schema it names and
-then against `P`, so a resolver that knows the projection may deliver less. For a `:ContentHash` type the version is the
+then against `P`, so a resolver that knows the projection may deliver less. For a type `versioned by hash(#ges)` the version is the
 content hash of the projected Record; a revision or owner's hash is the object's. A passed version is compared with the
 version of what the resolver delivered: the full state's hash for a full state, the projection's for a projected one.
 Narrowing to a pinned projection computes that projection's version in the same way when a parameter binds, and
@@ -374,7 +374,7 @@ Pausing resolvers are not part of this version; a later version may let resoluti
 **Refs.** A handle read from a document may carry a ref instead of a version. `ResolveRef` (Swift `resolveRef`)
 asks the type's resolver to turn it into a version and returns the handle with that version; a handle without a ref
 returns unchanged. A resolver that answers Nothing knows no such ref, and `ResolveRef` returns no handle (C# null,
-Swift nil). A composite's ref is its root's and resolves through the composite type's resolver. A resolver of a type
+Swift nil). An attached handle's ref is its root's and resolves through the attached type's resolver; a keyed handle's ref is its own. A resolver of a type
 without refs need not implement `ResolveRef`: the default reports an API error, which the host reports as
 `runtime.handleResolveFailed`. A ref never reaches the VM: `Receive`, `Emit`, `Publish`, extension results and external field
 values reject a value that contains one with `wire.unresolvedRef`, before anything is enqueued.
@@ -394,7 +394,7 @@ resolver answers in any order, and the host checks the answer and sorts it into 
 - **Not enumerable.** The default answer, no list (C# null, Swift nil), means the type does not enumerate, and the read
   gives `nothing`. A type without a resolver, and a root value that is no handle of the root type, give `nothing`
   without a call.
-- **Checks.** Every handle must be of the read type, composite exactly when the type is, and of the given root; none
+- **Checks.** Every handle must be of the read type, with a part exactly when the type has one, and of the given root; none
   may appear twice. A failed check or a throwing resolver fails the handler with `runtime.handleResolveFailed`, naming
   the type. Versions and projections of the listed handles are dropped.
 - **Stores read from files.** A [store](Documents.md#stores) the host registers as a resolver lists every entry; its

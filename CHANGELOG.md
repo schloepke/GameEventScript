@@ -11,10 +11,13 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 ## Unreleased
 
 ### Added
-- Handles refer to objects outside the host: `handle @Drone of :DroneState as { id: :Number integer between 0 and 255,
-  version: :Number integer }` in a schema source declares a handle type with a bounded id, an optional version
-  (revision, `:Hash(#sha1)`, `:Hash(#sha256)` or `:ContentHash`, which GES computes) and the schema of its state;
-  `composite @Unit as { part: ... }` adds one level of parts (specs/Schemas.md#handles). Scripts name them `@Drone`
+- Handles refer to objects outside the host: `handle @Drone of :DroneState with id :Number integer between 0 and 255
+  versioned by revision` in a schema source declares a handle type with a bounded id, an optional version
+  (`revision [max n]`, `hash(#sha1)`, `hash(#sha256)` or `hash(#ges)`, which GES computes) and the schema of its state.
+  `attached to @Unit [with part ...]` declares objects that belong to a root and share its version, `keyed by @Unit
+  [with part ...] [versioned by ...]` objects identified by a root and a part with their own version, owner and
+  source; a root that has a root is `schema.invalidHandle`. A type without `of` is stateless: a state read is a
+  compile error naming the missing `of` (specs/Schemas.md#handles). Scripts name them `@Drone`
   and `@Drone~`, read `h.id`, `h.version`, `h.root` and the state's fields, which a host resolver delivers lazily per
   handler, compare them by type and identity, test them with `is`, and use them as Map keys and timer names
   (specs/Language.md#handles, specs/HostRuntime.md#handles). Text form `@Drone:7~120`, document literals with refs
@@ -29,10 +32,11 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `GesStore.read`) reads one through a host file source and returns entries with handle, value and origin, sorted by
   id (specs/PublicApi.md#stores). `document check --schema ... --store @Unit <path>` checks stores in both CLIs;
   highlighting and the editor grammars know store files and references.
-- Stores can be read from versioned sources: `handle @UnitFiles of :Store(@Unit) composite @Repository as { part:
-  :Text max 256 }` declares the files of a store within a repository, and `GesStore.Read(type, roots, resolver)`
-  (Swift `read(_:roots:resolver:)`) requests every file through that type's resolver, pins each root to the version of
-  its first answer and reports the roots read as `Sources` (specs/Documents.md#reading-from-handles). A store is the
+- Stores can be read from versioned sources: the host passes root handles, such as `@Repository:content` of a
+  stateless `handle @Repository with id :Text max 64 versioned by hash(#sha1)`, each with a path, and
+  `GesStore.Read(type, roots, source)` (Swift `read(_:roots:source:)`) asks an `IGesStoreSource` (Swift
+  `GesStoreSource`) for the text of every file per root and path, pins each root to the version of its first answer
+  and reports the roots read as `Sources` (specs/Documents.md#reading-from-handles). A store is the
   handle resolver of its type, so a host can register it for scripts. `generate --model --stores` writes a typed
   `<Name>Store` for every model root that is a Text-id handle type's state, with typed entries, `module`, `index` and
   its dependencies as parameters (specs/Schemas.md#model-stores).
@@ -45,7 +49,7 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   (specs/Schemas.md#projections). Scripts declare `@Unit(:UnitDisplay)` and `@Unit(:UnitDisplay)~`, read only the
   projection's fields, convert to narrower projections and never widen, also not with `as`
   (`validate.invalidProjection`, `validate.handleWidening`); `c as :UnitDisplay` projects plain data too
-  (specs/Language.md#projections). A `:ContentHash` version hashes the projection. Resolvers see the asking
+  (specs/Language.md#projections). A `hash(#ges)` version hashes the projection. Resolvers see the asking
   `Projection` and `Party`, may answer `SetNotVisible()` (`runtime.handleNotVisible` for the observer) and resolve the
   handles of a List at once with `ResolveMany`; the cache keys by projection (specs/HostRuntime.md#handles). Generated
   projection models convert from their sources (`UnitDisplay(composition)`, C# `UnitDisplay.From`), and generated
@@ -82,7 +86,7 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `GesApiError.invalidArgument` for an id or part out of range, and `init(_ handle: GesHandle)` throws for another
   type or form, like C# `FromHandle`. Split output (`-d`) puts each generated `<Name>Handle` into a file of its own
   (`--split schema`) or into the file of the source that declares the handle type (`--split file`). A model field of a
-  handle type reaches only its `<Name>Handle` and, for a composite, the root's handle type, never the state schema, which
+  handle type reaches only its `<Name>Handle` and, for a type with a root, the root's handle type, never the state schema, which
   the handle names in documentation only; a state model is generated only when it is selected or reached otherwise. Markdown Conformance scripts ref answers, `ResolveRef` results and input
   rejections such as `wire.unresolvedRef` (specs/Conformance/MarkdownFormat.md#handle-setup).
 - Named timers and heartbeats: `emit after 30s named 'timeout' GiveUp()` names a delayed send so that a later send
@@ -138,10 +142,11 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - Record fields take defaults: `bearing: :Number clamped between 0 and 360 default 0` gives the field its default when
   a constructor call, a Map cast or `parse` leaves it out or passes `nothing`; the default is cast and clamped like an
   argument (specs/Language.md#records-and-custom-types).
-- A composite may omit its part: `handle @Enemy of :EnemyState composite @Bot` declares one object per root, keyed by
-  the root's id alone. Its handles write `@Enemy:3` and the root's version, equal no handle of the root, order by type
-  and root id, and read `h.root` without a version, `h.id.root` and `h.id.part` as `nothing`; it is sent like its root
-  and generates `EnemyHandle` with the root's id and version (specs/Schemas.md#handles).
+- A type with a root may omit its part: `handle @Enemy of :EnemyState keyed by @Bot` declares one object per root,
+  identified by the root's id alone. Handles of different types are never equal; handles order by type, root and part.
+  `h.root` is the root without its version, `h.id.root` and `h.id.part` read the identity. Keyed handles write
+  `@Enemy:3`, `@Stats:3/7`, `@Enemy:3~12` and `@Stats:3/7~12`, a Text part containing `~` quoted; generated keyed
+  handles hold the root's id, the part and their own version (specs/Schemas.md#handles).
 - Scripts read stores: `@Hull[:count]`, `[:keys]`, `[:values]` and `[:entries]` list every object of a handle type in
   key order, `@Ship(fleet)[:keys]` the parts of one root. A resolver lists its objects through the new
   `IGesHandleResolver.Handles` (Swift `handles(root:)`), which `GesStore` implements; a type whose resolver does not

@@ -350,10 +350,13 @@ internal sealed class GesSchemaDocumentCheck
     private void Handle(GesResolvedHandle type, bool versioned, string text, int start)
     {
         var handle = GesHandle.Parse(text);
-        if (handle.TypeName != type.Name || handle.IsComposite != type.HasPart) throw Fail(FieldType, start);
-        var identity = type.Root ?? type;
-        HandleKey(identity.Id, handle, false, start);
-        if (handle.IsComposite) HandleKey(type.Id, handle, true, start);
+        if (handle.TypeName != type.Name || handle.HasPart != type.HasPart) throw Fail(FieldType, start);
+
+        // A keyed handle writes its version after the part, an attached handle its root's before it.
+        if (handle.HasPart && (handle.HasVersion || !handle.Ref.IsNothing) && handle.IsKeyed != type.IsKeyed) throw Fail(FieldType, start);
+        HandleKey((type.Root ?? type).Id, handle, false, start);
+        if (handle.HasPart) HandleKey(type.Id, handle, true, start);
+        var identity = type.VersionOwner;
         if (handle.HasVersion || !handle.Ref.IsNothing)
         {
             // Only an `@Name~` field holds a version or a ref; a type without versions takes neither.

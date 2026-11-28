@@ -331,123 +331,95 @@ internal sealed partial class GesSchemaSourceReader
         }
     }
 
-    // `handle @Name of :State as { id: ..., version: ... }` or `handle @Name of :State composite @Root as { part: ... }`, where
-    // `:Store(@Type)` may stand for the state; a composite without `as { part: ... }` is part-less.
+    // `handle @Name [of :State] (with id <type> | attached to @Root | keyed by @Root) [with part <type>] [versioned by <kind>]`;
+    // a clause may follow a line break. The removed block, `composite`, `:Store(@Type)` and the old version types name the new form.
     private GesSchemaDeclarationSyntax ReadHandle(int offset)
     {
         SkipSpaces();
         var name = ReadHandleName();
         SkipSpaces();
-        ExpectWord("of");
-        SkipSpaces();
-        var stateOffset = _position;
-        var state = ReadTypeName();
-        var store = "";
-        var storeOffset = 0;
-        if (state == "Store" && _position < _text.Length && _text[_position] == '(')
-        {
-            // `:Store(@Unit)` declares a store file type; its state stays empty.
-            _position++;
-            SkipSpaces();
-            storeOffset = _position;
-            store = ReadHandleName();
-            SkipSpaces();
-            Expect(')');
-            state = "";
-        }
-        else if (_position < _text.Length && _text[_position] == '(')
-        {
-            // Only `:Store` takes a handle type here; any other name with an argument names no type.
-            throw new SyntaxFailure(stateOffset, $"Type ':{state}(...)' is not declared.", Code.UnknownName);
-        }
-
-        SkipSpaces();
-        var root = "";
-        var rootOffset = 0;
-        if (AtWord("composite"))
+        var state = "";
+        var stateOffset = 0;
+        if (AtWord("of"))
         {
             ReadWord();
+            SkipSpaces();
+            stateOffset = _position;
+            if (AtWord("nothing")) throw new SyntaxFailure(stateOffset, "A handle type without state omits 'of'.");
+            state = ReadTypeName();
+            if (state == "Nothing") throw new SyntaxFailure(stateOffset, "A handle type without state omits 'of'.");
+            if (_position < _text.Length && _text[_position] == '(')
+            {
+                if (state == "Store")
+                    throw new SyntaxFailure(stateOffset, "Store file types are removed: a store is read from root handles and the path of each root file.");
+                throw new SyntaxFailure(stateOffset, $"Type ':{state}(...)' is not declared.", Code.UnknownName);
+            }
+
+            SkipSpaces();
+        }
+
+        if (AtWord("as"))
+            throw new SyntaxFailure(_position, "A handle type is declared with clauses, such as 'with id :Text max 64 versioned by revision'.");
+        if (AtWord("composite")) throw new SyntaxFailure(_position, "'composite @Root' is written 'attached to @Root'.");
+        var form = GesSchemaHandleForm.Plain;
+        var root = "";
+        var rootOffset = 0;
+        GesSchemaTypeSyntax? id = null;
+        var clauseOffset = _position;
+        if (AtClause("with"))
+        {
+            clauseOffset = _position;
+            ReadWord();
+            SkipSpaces();
+            if (AtWord("part")) throw new SyntaxFailure(clauseOffset, "Only a type attached to or keyed by a root has 'with part'; any other has 'with id'.");
+            ExpectWord("id");
+            SkipSpaces();
+            id = ReadHandleKey("id");
+            if (AtClause("attached") || AtClause("keyed"))
+                throw new SyntaxFailure(_position, "A type attached to or keyed by a root has no 'with id'; its identity is the root's id and its part.");
+        }
+        else if (AtClause("attached") || AtClause("keyed"))
+        {
+            clauseOffset = _position;
+            form = AtWord("attached") ? GesSchemaHandleForm.Attached : GesSchemaHandleForm.Keyed;
+            ReadWord();
+            SkipSpaces();
+            ExpectWord(form == GesSchemaHandleForm.Attached ? "to" : "by");
             SkipSpaces();
             rootOffset = _position;
             root = ReadHandleName();
             SkipSpaces();
-            // Without `as { part: ... }` the composite is part-less: one per root, keyed by the root's id alone.
-            if (!AtWord("as"))
+            if (AtClause("with"))
             {
-                return new GesSchemaDeclarationSyntax
-                {
-                    Kind = GesSchemaDeclarationKind.Handle,
-                    Name = name,
-                    Offset = offset,
-                    State = state,
-                    StateOffset = stateOffset,
-                    Store = store,
-                    StoreOffset = storeOffset,
-                    Root = root,
-                    RootOffset = rootOffset
-                };
+                var withOffset = _position;
+                ReadWord();
+                SkipSpaces();
+                if (AtWord("id")) throw new SyntaxFailure(withOffset, "A type attached to or keyed by a root has no 'with id'; its identity is the root's id and its part.");
+                ExpectWord("part");
+                SkipSpaces();
+                id = ReadHandleKey("part");
             }
-        }
-
-        ExpectWord("as");
-        SkipTrivia();
-        Expect('{');
-        SkipSeparators();
-        GesSchemaTypeSyntax id;
-        var version = GesHandleVersionKind.None;
-        GesSchemaTypeSyntax? revision = null;
-        var versionOffset = 0;
-        if (root.Length > 0)
-        {
-            id = ReadHandleField("part");
         }
         else
         {
-            id = ReadHandleField("id");
-            EndEntry('}');
-            SkipSeparators();
-            versionOffset = _position;
-            var field = ReadWord();
-            if (field != "version") throw new SyntaxFailure(versionOffset, "A handle type has exactly the fields id and version.", Code.InvalidHandle);
-            SkipSpaces();
-            Expect(':');
-            SkipSpaces();
-            versionOffset = _position;
-            Expect(':');
-            var typeName = ReadName(GesText.IsTypeName, "version type");
-            SkipSpaces();
-            switch (typeName)
-            {
-                case "Nothing":
-                    break;
-                case "ContentHash":
-                    version = GesHandleVersionKind.ContentHash;
-                    break;
-                case "Hash":
-                {
-                    var algorithmOffset = _position;
-                    var algorithms = ReadTagSet();
-                    version = algorithms is ["sha256"] ? GesHandleVersionKind.Sha256 : algorithms is ["sha1"] ? GesHandleVersionKind.Sha1
-                        : throw new SyntaxFailure(algorithmOffset, "A hash version is :Hash(#sha256) or :Hash(#sha1).", Code.InvalidHandle);
-                    SkipSpaces();
-                    break;
-                }
-                case "Number":
-                    version = GesHandleVersionKind.Revision;
-                    revision = new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Number, Offset = versionOffset, Constraints = ReadConstraints() };
-                    var constraints = revision.Constraints;
-                    if (!constraints.Integer || constraints.Wrapping || constraints.Step is not null || constraints.Delta is not null || constraints.Lower?.Name.Length > 0 || constraints.Upper?.Name.Length > 0)
-                        throw new SyntaxFailure(versionOffset, "A revision is :Number integer with an optional range.", Code.InvalidHandle);
-                    break;
-                default:
-                    throw new SyntaxFailure(versionOffset, "A version is :Nothing, :Number integer, :Hash(#sha256), :Hash(#sha1) or :ContentHash.", Code.InvalidHandle);
-            }
+            throw new SyntaxFailure(_position, "A handle type has 'with id <type>', 'attached to @Root' or 'keyed by @Root'.");
         }
 
-        EndEntry('}');
-        SkipSeparators();
-        if (!Consume('}'))
-            throw new SyntaxFailure(_position, root.Length > 0 ? "A composite handle type has exactly the field part." : "A handle type has exactly the fields id and version.", Code.InvalidHandle);
+        var version = GesHandleVersionKind.None;
+        GesSchemaTypeSyntax? revision = null;
+        var versionOffset = 0;
+        if (AtClause("versioned"))
+        {
+            if (form == GesSchemaHandleForm.Attached)
+                throw new SyntaxFailure(_position, "A type attached to a root has its root's version and no 'versioned by'.");
+            ReadWord();
+            SkipSpaces();
+            ExpectWord("by");
+            SkipSpaces();
+            versionOffset = _position;
+            (version, revision) = ReadVersionKind(versionOffset);
+        }
+
         return new GesSchemaDeclarationSyntax
         {
             Kind = GesSchemaDeclarationKind.Handle,
@@ -455,8 +427,7 @@ internal sealed partial class GesSchemaSourceReader
             Offset = offset,
             State = state,
             StateOffset = stateOffset,
-            Store = store,
-            StoreOffset = storeOffset,
+            Form = form,
             Root = root,
             RootOffset = rootOffset,
             Id = id,
@@ -466,16 +437,74 @@ internal sealed partial class GesSchemaSourceReader
         };
     }
 
-    // `id: :Number integer between a and b` or `id: :Text max n`, and `part` alike; the bounds' values are checked on loading.
-    private GesSchemaTypeSyntax ReadHandleField(string expected)
+    // `revision`, `revision max n`, `hash(#ges)`, `hash(#sha1)` or `hash(#sha256)`; the old version types name their new spelling.
+    private (GesHandleVersionKind Kind, GesSchemaTypeSyntax? Revision) ReadVersionKind(int offset)
     {
-        var offset = _position;
-        var field = ReadWord();
-        if (field != expected)
-            throw new SyntaxFailure(offset, expected == "part" ? "A composite handle type has exactly the field part." : "A handle type has exactly the fields id and version.", Code.InvalidHandle);
-        SkipSpaces();
-        Expect(':');
-        SkipSpaces();
+        if (_position < _text.Length && _text[_position] == ':')
+        {
+            var type = ReadTypeName();
+            var spelling = type switch
+            {
+                "ContentHash" => "'hash(#ges)'",
+                "Hash" => "'hash(#sha256)' or 'hash(#sha1)'",
+                "Number" => "'revision' or 'revision max n'",
+                "Nothing" => "no 'versioned by' clause",
+                _ => "'revision', 'revision max n', 'hash(#ges)', 'hash(#sha256)' or 'hash(#sha1)'"
+            };
+            throw new SyntaxFailure(offset, $"A version kind ':{type}' is written {spelling}.");
+        }
+
+        var word = ReadWord();
+        switch (word)
+        {
+            case "revision":
+            {
+                SkipSpaces();
+                var constraints = new GesSchemaConstraintsSyntax { Integer = true };
+                if (AtWord("max"))
+                {
+                    ReadWord();
+                    SkipSpaces();
+                    var upper = ReadValue();
+                    if (upper.Name.Length > 0) throw new SyntaxFailure(upper.Offset, "A revision's maximum is a literal or a constant.", Code.InvalidHandle);
+                    SkipSpaces();
+                    var zero = new GesSchemaValueSyntax { Value = new GesSchemaDecimal(0, 0), Text = "0", Offset = offset };
+                    constraints = new GesSchemaConstraintsSyntax { Integer = true, Lower = zero, Upper = upper };
+                }
+
+                return (GesHandleVersionKind.Revision, new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Number, Offset = offset, Constraints = constraints });
+            }
+            case "hash":
+            {
+                var algorithmOffset = _position;
+                var algorithms = _position < _text.Length && _text[_position] == '(' ? ReadTagSet() : [];
+                SkipSpaces();
+                return algorithms switch
+                {
+                    ["ges"] => (GesHandleVersionKind.GesHash, null),
+                    ["sha256"] => (GesHandleVersionKind.Sha256, null),
+                    ["sha1"] => (GesHandleVersionKind.Sha1, null),
+                    _ => throw new SyntaxFailure(algorithmOffset, "A hash version is hash(#ges), hash(#sha256) or hash(#sha1).", Code.InvalidHandle)
+                };
+            }
+            default:
+                throw new SyntaxFailure(offset, "A version kind is 'revision', 'revision max n', 'hash(#ges)', 'hash(#sha256)' or 'hash(#sha1)'.");
+        }
+    }
+
+    // Whether a clause keyword follows, on this line or after line breaks and comments; the reader stays before it when it does.
+    private bool AtClause(string word)
+    {
+        var start = _position;
+        SkipTrivia();
+        if (AtWord(word)) return true;
+        _position = start;
+        return false;
+    }
+
+    // An id or part: `:Number integer between a and b` or `:Text max n`; the bounds' values are checked on loading.
+    private GesSchemaTypeSyntax ReadHandleKey(string role)
+    {
         var start = _position;
         if (_position >= _text.Length || _text[_position] != ':') throw Failure("Expected ':'.");
         var type = ReadType();
@@ -486,7 +515,8 @@ internal sealed partial class GesSchemaSourceReader
             GesSchemaTypeKind.Text => type.Max is not null,
             _ => false
         };
-        if (!valid) throw new SyntaxFailure(start, $"An {expected} is :Number integer between two literals or constants, or :Text max with a number.", Code.InvalidHandle);
+        if (!valid) throw new SyntaxFailure(start, $"An {role} is :Number integer between two literals or constants, or :Text max with a number.", Code.InvalidHandle);
+        SkipSpaces();
         return type;
     }
 

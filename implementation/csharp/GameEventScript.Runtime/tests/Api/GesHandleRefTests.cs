@@ -14,7 +14,7 @@ namespace GameEventScript.Tests.Native.Api;
 public sealed class GesHandleRefTests
 {
     private const string Schemas = "schema :DroneState as { altitude: :Number integer between 0 and 1000 }\n"
-        + "handle @Drone of :DroneState as { id: :Number integer between 0 and 255, version: :Number integer between 0 and 1000 }\n";
+        + "handle @Drone of :DroneState with id :Number integer between 0 and 255 versioned by revision max 1000\n";
 
     private static readonly GesHandle Live = GesHandle.Parse("@Drone:7~#live");
 

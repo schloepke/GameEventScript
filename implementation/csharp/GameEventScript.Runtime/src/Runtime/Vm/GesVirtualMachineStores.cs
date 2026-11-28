@@ -48,7 +48,7 @@ internal partial class GesVirtualMachine
         var typeName = text.Substring(1);
         // Only a handle of the root type names a root; any other value, like a type without a resolver, reads nothing.
         if (StoreBinding(typeName) is not { } binding || binding.Type.Part is null || binding.Type.Root is not { } rootType ||
-            rootValue.ObjectValue is not GesHandle given || given.IsComposite || !string.Equals(given.TypeName, rootType.Name, StringComparison.Ordinal))
+            rootValue.ObjectValue is not GesHandle given || given.HasPart || !string.Equals(given.TypeName, rootType.Name, StringComparison.Ordinal))
         {
             SetNothing(destinationRegister);
             return;
@@ -113,13 +113,13 @@ internal partial class GesVirtualMachine
         if (listed is not null)
         {
             var type = binding.Type;
-            var composite = type.Part is not null;
+            var hasPart = type.Part is not null;
             handles = new GesHandle[listed.Count];
             for (var index = 0; index < handles.Length; index++)
             {
                 var handle = listed[index];
                 if (handle is null) throw GesHandleStates.InvalidHandles(type, "a missing handle");
-                if (!string.Equals(handle.TypeName, type.Name, StringComparison.Ordinal) || handle.IsComposite != composite)
+                if (!string.Equals(handle.TypeName, type.Name, StringComparison.Ordinal) || handle.HasPart != hasPart)
                     throw GesHandleStates.InvalidHandles(type, $"the handle {handle} of another type");
                 if (root is not null && !GesHandle.FromWire(root.TypeName, handle.Id, default, default, false).Equals(root))
                     throw GesHandleStates.InvalidHandles(type, $"the handle {handle} of another root");

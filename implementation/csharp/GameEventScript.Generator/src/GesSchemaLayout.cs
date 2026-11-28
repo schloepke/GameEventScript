@@ -37,7 +37,7 @@ internal sealed class GesSchemaLayout
 
     internal List<GesLayoutType> Types { get; }
 
-    // The handle types the roots reach, composite roots and network owners included, ordered by name.
+    // The handle types the roots reach, the roots of types with a root and network owners included, ordered by name.
     internal List<GesLayoutHandle> Handles { get; }
 
     internal GesLayoutHandle Handle(string name) => Handles.Find(handle => handle.Name == name) ?? throw new InvalidOperationException($"Handle '@{name}' is not in the layout.");
@@ -90,8 +90,9 @@ internal sealed class GesLayoutOwner(string side, string handle, string projecti
     internal bool SendingState { get; } = sendingState;
 }
 
-// A handle type: its name without `@`, its handle hash, its state schema's type name and the encodings of its identity, an
-// `integer` or `text` id and its version, or for a composite the root's name and the part. A revision has its integer encoding.
+// A handle type: its name without `@`, its handle hash, its state schema's type name (empty without state) and the encodings of
+// its identity, an `integer` or `text` id and its version, or for a type with a part the root's name, the part and, keyed, its own
+// version. A revision has its integer encoding.
 internal sealed class GesLayoutHandle
 {
     internal string Name = "";
@@ -103,15 +104,17 @@ internal sealed class GesLayoutHandle
     internal string Root = "";
     internal GesLayoutEncoding? Part;
 
-    // The root of a part-less composite, which encodes like a plain handle with its root's id and version.
+    // The root of a type without a part, which encodes like a type without a root with its root's id.
     internal string PartlessRoot = "";
+
+    // Whether the type is keyed by its root rather than attached to it.
+    internal bool Keyed;
 
     // The form that the handle type `<Name>Handle` checks, shared with models.
     internal GesModelHandle Model = new();
 
-    internal bool IsComposite => Root.Length > 0;
+    internal bool HasPart => Root.Length > 0;
 
-    // A composite's id is its root's.
     internal bool Versioned => Version != GesHandleVersionKind.None;
 
     internal static string VersionName(GesHandleVersionKind kind) => kind switch
@@ -119,7 +122,7 @@ internal sealed class GesLayoutHandle
         GesHandleVersionKind.Revision => "revision",
         GesHandleVersionKind.Sha1 => "sha1",
         GesHandleVersionKind.Sha256 => "sha256",
-        GesHandleVersionKind.ContentHash => "contentHash",
+        GesHandleVersionKind.GesHash => "ges",
         _ => "none"
     };
 }
@@ -513,7 +516,7 @@ internal static class GesSchemaLayoutBuilder
         foreach (var element in type.Element) Reach(element, reached, handles);
     }
 
-    // A handle type brings a composite's root. Its state stays outside the layout: the wire carries only the identity, and a
+    // A handle type brings its root. Its state stays outside the layout: the wire carries only the identity, and a
     // state, often a document, need not be encodable.
     private static void Reach(GesHandleType handle, SortedDictionary<string, GesSchema> reached, SortedDictionary<string, GesHandleType> handles)
     {
@@ -523,31 +526,29 @@ internal static class GesSchemaLayoutBuilder
     }
 
     // The encodings of a handle type's identity, from the nodes of the type on its own: the group, then the id, the version
-    // and a composite's part.
+    // and the part of a type with one. An attached type with a part carries its root's version, whose encoding its root has.
     private static GesLayoutHandle Handle(GesHandleType type)
     {
         var resolved = type.Resolved;
         var nodes = GesSchemaBinder.BindHandle(resolved);
-        var handle = new GesLayoutHandle { Name = type.Name, Hash = type.Hash, State = type.StateName, Version = type.Version, Model = GesModelHandle.Of(type) };
-        var index = 1;
-        if (type.Root is { } partless && type.Part is null) handle.PartlessRoot = partless.Name;
-        else if (type.Root is { } root)
+        var handle = new GesLayoutHandle { Name = type.Name, Hash = type.Hash, State = type.StateName, Version = type.Version, Keyed = type.IsKeyed, Model = GesModelHandle.Of(type) };
+        if (type.Root is { } root)
         {
-            handle.Root = root.Name;
-            index = nodes[index].Next;
-            if (type.Version != GesHandleVersionKind.None) index++;
-            handle.Part = Key(in nodes[index]);
-            return handle;
+            if (type.Part is null) handle.PartlessRoot = root.Name;
+            else handle.Root = root.Name;
         }
 
-        handle.Id = Key(in nodes[index]);
+        var index = 1;
+        if (!handle.HasPart) handle.Id = Key(in nodes[index]);
         index = nodes[index].Next;
-        if (type.Version == GesHandleVersionKind.Revision)
+        if (type.Version == GesHandleVersionKind.Revision && (!handle.HasPart || type.IsKeyed))
         {
             handle.Revision = new GesLayoutEncoding();
             Number(in nodes[index], GesSchemaTypeKind.Number, GesQuantityUnit.UnitNone, null, null, handle.Revision);
         }
 
+        if (type.Version != GesHandleVersionKind.None) index = nodes[index].Next;
+        if (handle.HasPart) handle.Part = Key(in nodes[index]);
         return handle;
     }
 

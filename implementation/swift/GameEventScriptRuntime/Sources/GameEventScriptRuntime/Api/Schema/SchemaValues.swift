@@ -576,7 +576,7 @@ public enum GesSchemaValues {
         try encodeFields(&writer, schema, index + 1, node.next, fields, strict: strict)
     }
 
-    // A handle sends its identity: the id, the version of an `@Name~` field and a composite's part; a version in an `@Name`
+    // A handle sends its identity: the id, the version of an `@Name~` field and the part of a type with a part; a version in an `@Name`
     // field is dropped.
     private static func encodeHandle(_ writer: inout GesSchemaWriter, _ schema: GesBoundSchema, _ index: Int, _ value: GesValue) throws {
         let node = schema.nodes[index]
@@ -621,9 +621,8 @@ public enum GesSchemaValues {
             version = try decodeNode(&reader, schema, child)
             child = schema.nodes[child].next
         }
-        let composite = child < node.next
-        let part = composite ? try decodeNode(&reader, schema, child) : .nothing
-        return GesHandle.fromWire(typeName: schema.infos[index].schemaName, id: id, version: version, part: part, isComposite: composite)
+        let part = child < node.next ? try decodeNode(&reader, schema, child) : .nothing
+        return GesHandle.fromWire(typeName: schema.infos[index].schemaName, id: id, version: version, part: part, isKeyed: node.keyedHandle)
     }
 
     private static func decodeHandleMap(_ reader: inout GesSchemaReader, _ schema: GesBoundSchema, _ index: Int) throws -> GesValue {
@@ -900,7 +899,7 @@ public enum GesSchemaValues {
 
     /// Computes the content hash of a handle's state (specs/Schemas.md#content-hash): SHA-256 over its compact product JSON,
     /// normalized against the state schema with defaults applied and absent or `nothing` optional fields, computed fields
-    /// and undeclared keys left out. It is the version of a ``GesHandleVersionKind/contentHash`` type and is available for
+    /// and undeclared keys left out. It is the version of a ``GesHandleVersionKind/gesHash`` type and is available for
     /// every handle type.
     /// - Parameters:
     ///   - handleType: The handle type whose state schema normalizes the state.
@@ -909,17 +908,17 @@ public enum GesSchemaValues {
     /// - Throws: `GesWireError` `wire.typeMismatch` with the path when the state, or a value of a field that only takes
     ///   Records, is no Record or Map; `wire.missingField` with the path when a field without default is missing and not
     ///   optional; `message.invalidJson` when the state holds a value product JSON cannot write, such as a handle;
-    ///   `GesApiError.invalidArgument` when `handleType` is a store file type, which has no state.
+    ///   `GesApiError.invalidArgument` when `handleType` has no state.
     public static func contentHash(_ handleType: GesHandleType, state: GesValue) throws -> GesHash32 {
-        if handleType.storeOf != nil { throw GesApiError.invalidArgument("The store file type '@\(handleType.name)' has no state.") }
-        let normalized = try normalizeState(handleType.resolved.state, state, "", handleType.declarations)
+        guard let stateSchema = handleType.resolved.state else { throw GesApiError.invalidArgument("'@\(handleType.name)' has no state.") }
+        let normalized = try normalizeState(stateSchema, state, "", handleType.declarations)
         let json = try GesJson.write(try GesMessageJsonCodec().encode(normalized, 0))
         return GesHash32(bytes: GesSha256.digest(Array(json.utf8)))!
     }
 
     /// Computes the content hash of a handle's state read through a projection (specs/Schemas.md#projections): the content
     /// hash of the projection's Record, normalized against the projection. It is the version of `@Name(:P)~` for a
-    /// ``GesHandleVersionKind/contentHash`` type.
+    /// ``GesHandleVersionKind/gesHash`` type.
     /// - Parameters:
     ///   - handleType: The handle type whose state the projection narrows.
     ///   - projection: A projection of the handle type, one of ``GesHandleType/projections``.
@@ -928,7 +927,7 @@ public enum GesSchemaValues {
     /// - Throws: `GesApiError.invalidArgument` when `projection` is no projection of the handle type; otherwise as
     ///   ``project(_:state:)`` and ``contentHash(_:state:)``.
     public static func contentHash(_ handleType: GesHandleType, projection: GesSchema, state: GesValue) throws -> GesHash32 {
-        if handleType.storeOf != nil || !projection.declaration.narrows(handleType.resolved.state) {
+        guard let stateSchema = handleType.resolved.state, projection.declaration.narrows(stateSchema) else {
             throw GesApiError.invalidArgument("':\(projection.name)' is no projection of '@\(handleType.name)'.")
         }
         return try projectedHash(handleType, projection.declaration, try project(projection.declaration, state))

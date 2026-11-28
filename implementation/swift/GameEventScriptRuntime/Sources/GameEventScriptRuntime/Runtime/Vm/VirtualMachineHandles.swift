@@ -1,7 +1,7 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-private let compositeIdKeys = ["part", "root"]
+private let partIdKeys = ["part", "root"]
 private let rootIdKeys = ["root"]
 
 // Handle members, type checks and lazy state reads (specs/Language.md#handles, specs/HostRuntime.md#handles).
@@ -96,7 +96,7 @@ extension GesVirtualMachine {
         if !text.versioned {
             narrowed = handle.withView(.nothing, projection)
         } else if let binding = handleBinding(handle), let target = binding.type.findProjection(projection) {
-            if binding.type.version != .contentHash {
+            if binding.type.version != .gesHash {
                 narrowed = handle.withView(handle.version, projection)
             } else {
                 let wider = try resolveHandleState(handle)
@@ -117,7 +117,7 @@ extension GesVirtualMachine {
     func readHandleMember(_ destination: Int, _ key: String, _ handle: GesHandle) throws {
         switch key {
         case "id":
-            if handle.isComposite { setMap(destination, GesValueMap(canonicalKeys: compositeIdKeys, values: [handle.part, handle.id])) } else { setValue(destination, handle.id) }
+            if handle.hasPart { setMap(destination, GesValueMap(canonicalKeys: partIdKeys, values: [handle.part, handle.id])) } else { setValue(destination, handle.id) }
             return
         case "version":
             setValue(destination, handle.version)
@@ -126,11 +126,11 @@ extension GesVirtualMachine {
         case "root":
             setNothing(destination)
             return
-        // `@id` is `id` of a statically composite type of which one may be part-less: such a handle holds only its root's
-        // id, so its identity is the root alone, without a part.
+        // `@id` is `id` of a type with a root, statically known: `root` and, for a type with a part, `part`; a handle
+        // without a part holds only its root's id.
         case "@id":
-            if handle.isComposite {
-                setMap(destination, GesValueMap(canonicalKeys: compositeIdKeys, values: [handle.part, handle.id]))
+            if handle.hasPart {
+                setMap(destination, GesValueMap(canonicalKeys: partIdKeys, values: [handle.part, handle.id]))
             } else {
                 setMap(destination, GesValueMap(canonicalKeys: rootIdKeys, values: [handle.id]))
             }
@@ -139,11 +139,9 @@ extension GesVirtualMachine {
             break
         }
 
-        // `@Root` names the root type of a composite: a composite with a part keeps its root's identity and version, a
-        // part-less one, which holds its root's id as its own, gives the root without a version.
+        // `@Root` names the root type of an attached or keyed type: the root's handle, from the root's id, without a version.
         if key.unicodeScalars.count > 1 && key.unicodeScalars.first == "@" {
-            let version = handle.isComposite ? handle.version : .nothing
-            setValue(destination, .handle(GesHandle.fromWire(typeName: String(key.unicodeScalars.dropFirst()), id: handle.id, version: version, part: .nothing, isComposite: false)))
+            setValue(destination, .handle(GesHandle.fromWire(typeName: String(key.unicodeScalars.dropFirst()), id: handle.id, version: .nothing, part: .nothing, isKeyed: false)))
             return
         }
 
@@ -208,6 +206,8 @@ extension GesVirtualMachine {
         if let cached = handleStates[key] { return cached }
         // Without a resolver, which only a read without a static type reaches, the object reads as missing.
         guard let binding = handleBinding(handle) else { return GesHandleState(state: .nothing, version: .nothing) }
+        // A type without state has nothing to read; its resolver only lists objects and answers refs.
+        if !binding.type.hasState { return GesHandleState(state: .nothing, version: .nothing) }
         var projection: GesSchema?
         if !handle.projection.isEmpty {
             guard let found = binding.type.findProjection(handle.projection) else {
@@ -269,7 +269,7 @@ extension GesVirtualMachine {
             _ = batch.add(handle, binding.type, projection, handleParty)
             handleBatchSeen.insert(HandleStateKey(handle: handle))
             for item in list {
-                guard let element = item.handleValue, element.typeName == handle.typeName, element.isComposite == handle.isComposite else { continue }
+                guard let element = item.handleValue, element.typeName == handle.typeName, element.hasPart == handle.hasPart else { continue }
                 let other = element.withView(handle.hasVersion ? element.version : .nothing, handle.projection)
                 let key = HandleStateKey(handle: other)
                 if handleStates[key] != nil || !handleBatchSeen.insert(key).inserted { continue }

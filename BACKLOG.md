@@ -231,7 +231,7 @@ here.
 - Check resolved handle states with a schema validator in the resolve path instead of the document round trip. Each
   resolve prints the resolver's Record to a document, reads it back, checks it against the schema, normalizes and
   projects it (`GesHandleStates.Check` in both ports). Measured per resolve in C#: about 2.2–3 µs and 9–12 KB, about
-  4–7 µs and 15–27 KB with `:ContentHash` versions (Swift: same allocations, about 5× the time). A validator that
+  4–7 µs and 15–27 KB with `hash(#ges)` versions (Swift: same allocations, about 5× the time). A validator that
   walks the Record against the bound schema could check, normalize and project in one pass and hash the canonical
   bytes without text. First establish how much resolving matters on real hot paths (bot scripts, store reads)
   before choosing the design. The projection-keyed cache and `ResolveMany` already serve several views and batches

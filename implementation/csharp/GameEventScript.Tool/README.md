@@ -787,7 +787,7 @@ scripts as external types, `--values` converts them to and from the plain values
 `--documents` adds `FromDocument` (Swift `init(document:)`) per root and a `Document` type (`ModelDocument` without a namespace) that reads GES document
 text by its `:Schema(:Name)` header, checked against the embedded schemas, with errors at their line, column and field path.
 `--stores` (Since: Unreleased) includes `--documents` and adds a typed store `<Name>Store` per handle type whose state
-is a model root, whose id is Text and that is not composite: it reads store documents, offers entries by id, module and
+is a model root, whose id is Text and that has no root: it reads store documents, offers entries by id, module and
 handle and resolves the handle type for a host. See [Model stores](../../../specs/Schemas.md#model-stores).
 `--schemas <Name>` generates one public schema set type `Name` that embeds the sources once and holds their hash, the
 parameters, `Bind`, `BindNetwork`, `ReadDocument` and, per network, `Bound`; conversions and documents of the generation

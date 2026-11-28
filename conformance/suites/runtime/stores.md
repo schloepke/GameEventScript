@@ -41,7 +41,7 @@ sources:
   - name: store-read-from-files.ges
     program: main
 handles:
-  schemas: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 default 10 }\nhandle @Hull of :Hull as { id: :Text max 32, version: :Nothing }\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Fleet of :Contact as { id: :Number integer between 0 and 255, version: :Nothing }\nhandle @Ship of :Contact composite @Fleet as { part: :Number integer between 0 and 15 }\n"]
+  schemas: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 default 10 }\nhandle @Hull of :Hull with id :Text max 32\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Fleet of :Contact with id :Number integer between 0 and 255\nhandle @Ship of :Contact attached to @Fleet with part :Number integer between 0 and 15\n"]
   resolvers: []
   stores:
     files:
@@ -106,7 +106,7 @@ sources:
   - name: store-read-composes.ges
     program: main
 handles:
-  schemas: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 default 10 }\nhandle @Hull of :Hull as { id: :Text max 32, version: :Nothing }\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Fleet of :Contact as { id: :Number integer between 0 and 255, version: :Nothing }\nhandle @Ship of :Contact composite @Fleet as { part: :Number integer between 0 and 15 }\n"]
+  schemas: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 default 10 }\nhandle @Hull of :Hull with id :Text max 32\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Fleet of :Contact with id :Number integer between 0 and 255\nhandle @Ship of :Contact attached to @Fleet with part :Number integer between 0 and 15\n"]
   resolvers: []
   stores:
     files:
@@ -184,7 +184,7 @@ sources:
   - name: store-parts-of-root.ges
     program: main
 handles:
-  schemas: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 default 10 }\nhandle @Hull of :Hull as { id: :Text max 32, version: :Nothing }\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Fleet of :Contact as { id: :Number integer between 0 and 255, version: :Nothing }\nhandle @Ship of :Contact composite @Fleet as { part: :Number integer between 0 and 15 }\n"]
+  schemas: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 default 10 }\nhandle @Hull of :Hull with id :Text max 32\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Fleet of :Contact with id :Number integer between 0 and 255\nhandle @Ship of :Contact attached to @Fleet with part :Number integer between 0 and 15\n"]
   lists:
     - type: "Ship"
       root: "@Fleet:1"
@@ -254,7 +254,7 @@ sources:
   - name: store-not-enumerable.ges
     program: main
 handles:
-  schemas: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 default 10 }\nhandle @Hull of :Hull as { id: :Text max 32, version: :Nothing }\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Fleet of :Contact as { id: :Number integer between 0 and 255, version: :Nothing }\nhandle @Ship of :Contact composite @Fleet as { part: :Number integer between 0 and 15 }\n"]
+  schemas: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 default 10 }\nhandle @Hull of :Hull with id :Text max 32\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Fleet of :Contact with id :Number integer between 0 and 255\nhandle @Ship of :Contact attached to @Fleet with part :Number integer between 0 and 15\n"]
   resolvers: ["Target"]
 ```
 
@@ -312,7 +312,7 @@ sources:
   - name: store-invalid-listing.ges
     program: main
 handles:
-  schemas: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 default 10 }\nhandle @Hull of :Hull as { id: :Text max 32, version: :Nothing }\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact as { id: :Number integer between 0 and 65535, version: :Nothing }\nhandle @Fleet of :Contact as { id: :Number integer between 0 and 255, version: :Nothing }\nhandle @Ship of :Contact composite @Fleet as { part: :Number integer between 0 and 15 }\n"]
+  schemas: ["schema :Hull as { name: :Text max 32, armor: :Number integer between 0 and 100 default 10 }\nhandle @Hull of :Hull with id :Text max 32\nschema :Contact as { label: :Text max 16 }\nhandle @Target of :Contact with id :Number integer between 0 and 65535\nhandle @Fleet of :Contact with id :Number integer between 0 and 255\nhandle @Ship of :Contact attached to @Fleet with part :Number integer between 0 and 15\n"]
   lists:
     - type: "Ship"
       root: "@Fleet:1"

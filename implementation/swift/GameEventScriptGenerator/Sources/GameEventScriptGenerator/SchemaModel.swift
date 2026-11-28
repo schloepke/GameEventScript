@@ -15,7 +15,7 @@ struct GesModelLayout {
     var protocols: [GesModelProtocol] = []
     /// The schema sources, with their file names only, which generated code that reads documents embeds.
     var sources: [GesSchemaSource] = []
-    // The handle types the types reach, ordered by name, each with its composite root.
+    // The handle types the types reach, ordered by name, each with the root of a type with a part.
     var handles: [GesModelHandle] = []
 
     func type(_ name: String) -> GesModelType { types.first { $0.name == name }! }
@@ -59,20 +59,25 @@ struct GesModelHandle {
     var state = ""
     var version = GesHandleVersionKind.none
 
-    // The id of a plain handle type, or the part and the root's name of a composite. A part-less composite has its root's
-    // id and version as its own and builds like a plain handle; partlessRoot names its root.
+    // The id of a type without a part, or the part and the root's name of a type with one. A type with a root and without a
+    // part has its root's id as its own and builds like a type without a root; partlessRoot names its root. A keyed type with a
+    // part holds its root without a version and its own version; an attached one carries its root's.
     var id: GesHandleKey?
     var root: String?
     var part: GesHandleKey?
     var partlessRoot: String?
+    var keyed = false
 
     // The projections of the state that the layout holds, by name.
     var projections: [String] = []
 
-    var isComposite: Bool { root != nil }
+    var hasPart: Bool { root != nil }
 
-    // The key that a composite's equality compares after its root's id: its part; the id for any other.
-    var key: GesHandleKey { (isComposite ? part : id)! }
+    // Whether the type is keyed by its root and has a part, so that it holds its own version beside its root.
+    var isKeyed: Bool { keyed && hasPart }
+
+    // The key that equality compares after the root's id of a type with a part: its part; the id for any other.
+    var key: GesHandleKey { (hasPart ? part : id)! }
 
     static func of(_ handle: GesHandleType) -> GesModelHandle {
         GesModelHandle(
@@ -83,7 +88,8 @@ struct GesModelHandle {
             id: handle.id,
             root: handle.part == nil ? nil : handle.root?.name,
             part: handle.part,
-            partlessRoot: handle.part == nil ? handle.root?.name : nil
+            partlessRoot: handle.part == nil ? handle.root?.name : nil,
+            keyed: handle.isKeyed
         )
     }
 }
@@ -175,7 +181,7 @@ enum GesModelLayoutBuilder {
         // A model root that is the state of a handle type with a Text id of its own reaches that type, whose store holds it.
         // A handle's state is a schema, which a message of the same name does not stand for.
         for handle in set.handleTypes
-        where handle.root == nil && handle.storeOf == nil && handle.id?.isText == true && rootNames.contains(handle.stateName)
+        where handle.root == nil && handle.hasState && handle.id?.isText == true && rootNames.contains(handle.stateName)
             && reached[handle.stateName]?.kind == .schema
         {
             reach(handle, &handles)
@@ -367,7 +373,7 @@ enum GesModelLayoutBuilder {
         for element in type.element { try reach(element, &reached, &handles) }
     }
 
-    // A handle type brings its `<Name>Handle` and a composite's root handle type, whose `<Name>Handle` it holds. It never brings
+    // A handle type brings its `<Name>Handle` and the root handle type of a type with a part, whose `<Name>Handle` it holds. It never brings
     // its state schema: the generated handle names the state in documentation only, so the state is a model type only where
     // a root reaches it otherwise, as in the wire layout.
     private static func reach(_ handle: GesHandleType, _ handles: inout [String: GesHandleType]) {
@@ -539,8 +545,9 @@ enum GesModelLayoutJson {
                 json.beginObject()
                 json.string("name", handle.name)
                 json.string("hash", GesSchemaLayoutJson.hex(handle.hash))
-                json.string("state", handle.state)
+                if !handle.state.isEmpty { json.string("state", handle.state) }
                 json.string("version", GesLayoutHandle.versionName(handle.version))
+                if (handle.root ?? handle.partlessRoot) != nil { json.string("form", handle.keyed ? "keyed" : "attached") }
                 if let root = handle.root {
                     json.string("root", root)
                     json.key("part")

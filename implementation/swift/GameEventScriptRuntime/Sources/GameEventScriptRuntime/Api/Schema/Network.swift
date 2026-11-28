@@ -63,7 +63,7 @@ public final class GesNetworkRoute: @unchecked Sendable {
 public final class GesNetworkOwner: @unchecked Sendable {
     /// The side that owns the objects and can resolve their handles.
     public let side: GesNetworkSide
-    /// The owned handle type, which is never composite.
+    /// The owned handle type, which is never attached to a root.
     public let handle: GesHandleType
     /// The projection of `owns @Unit as :UnitPublic`, the only view of the state the other side reads; nil when it reads
     /// the full state.
@@ -125,7 +125,7 @@ public final class GesBoundNetwork: @unchecked Sendable {
         }
         for owner in network.owners {
             text += "owns \(owner.side == .client ? "client" : "server") \(owner.handle.name) \(GesSchemaCanonical.hex(owner.handle.hash)) "
-            text += GesSchemaCanonical.hex(owner.handle.resolved.state.schema!.hash)
+            text += owner.handle.resolved.state.map { GesSchemaCanonical.hex($0.schema!.hash) } ?? "none"
             if let projection = owner.projection { text += " as \(projection.name) \(GesSchemaCanonical.hex(projection.hash))" }
             if owner.sendsState { text += " sending" }
             text += "\n"
@@ -158,7 +158,10 @@ extension GesFileScope {
             for route in syntax.routes {
                 if route.owns {
                     let handle = try handle(route.root, route.rootOffset)
-                    if handle.root != nil { throw error(Code.invalidHandle, route.rootOffset, "'@\(route.root)' is composite; its root's owner owns it.") }
+                    if handle.attached {
+                        throw error(Code.invalidHandle, route.rootOffset, "'@\(route.root)' is attached to '@\(handle.root!.name)'; its root's owner owns it.")
+                    }
+                    if route.sendingState && handle.state == nil { throw error(Code.invalidHandle, route.rootOffset, "'@\(route.root)' has no state to send.") }
                     if owners.contains(where: { $0.handle.name == route.root }) {
                         throw error(Code.duplicateRoute, route.offset, "The network names '@\(route.root)' in two owns routes.")
                     }

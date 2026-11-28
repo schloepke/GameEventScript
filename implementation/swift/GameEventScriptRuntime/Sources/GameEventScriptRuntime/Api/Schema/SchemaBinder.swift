@@ -75,6 +75,8 @@ public final class GesSchemaParameters {
     @_spi(Generator) public var hasRange = false
     @_spi(Generator) public var isTagBit = false
     @_spi(Generator) public var isTagText = false
+    /// A handle group of a keyed type, whose version is its own.
+    @_spi(Generator) public var keyedHandle = false
     /// A record of a packed schema, whose delta is its whole word.
     @_spi(Generator) public var packed = false
     /// A `:Bytes max n`: a Text on the wire whose bytes need not be UTF-8.
@@ -511,7 +513,7 @@ enum GesSchemaBinder {
     }
 
     // The nodes of one handle type on its own, with its version when it has one: the group, the id or the root's id, the
-    // version and a composite's part, as a field of the type would hold them. Generation lays them out.
+    // version and the part of a type with a part, as a field of the type would hold them. Generation lays them out.
     static func bindHandle(_ handle: GesResolvedHandle) throws -> (nodes: [GesSchemaNode], infos: [GesSchemaNodeInfo]) {
         var build = Build(parameters: GesSchemaParameters())
         let type = GesResolvedType(
@@ -867,14 +869,16 @@ enum GesSchemaBinder {
             for field in reference.fields { try addField(&build, field.scope, field, path, lists, top: false) }
             build.levels[ObjectIdentifier(reference)] = level == 0 ? nil : level
         case .handle:
-            // The identity: the id, or a composite's root id; the version for `~`; a composite's part, if it has one.
+            // The identity: the id, or the root id of a type with a root; the version for `~`, an attached type's its
+            // root's; the part, if the type has one.
             let handle = type.handle!
-            try checkComposite(scope, handle, type.offset, build.levels)
+            try checkRootReach(scope, handle, type.offset, build.levels)
             node.kind = .group
             info.schemaName = handle.name
+            node.keyedHandle = handle.isKeyed
             let identity = handle.root ?? handle
             try addType(&build, identity.scope, identity.id, "id", path + ".id", optional: false, key: false, lists)
-            if type.versioned { try addVersion(&build, identity, path + ".version", lists) }
+            if type.versioned { try addVersion(&build, handle.versionOwner, path + ".version", lists) }
             if handle.hasPart { try addType(&build, handle.scope, handle.id, "part", path + ".part", optional: false, key: false, lists) }
         case .map:
             // Entries in ascending key order, each an entry group of the key and the value.
@@ -942,10 +946,10 @@ enum GesSchemaBinder {
         build.infos.append(info)
     }
 
-    // A composite reached from the state of its own root would repeat the root's identity in each element; a relative
-    // encoding is an open point.
-    private static func checkComposite(_ scope: GesFileScope, _ handle: GesResolvedHandle, _ offset: Int, _ levels: [ObjectIdentifier: Int]) throws {
-        if let root = handle.root, levels[ObjectIdentifier(root.state)] != nil {
+    // A handle of a type with a root reached from the state of its own root would repeat the root's identity in each element;
+    // a relative encoding is an open point.
+    private static func checkRootReach(_ scope: GesFileScope, _ handle: GesResolvedHandle, _ offset: Int, _ levels: [ObjectIdentifier: Int]) throws {
+        if let root = handle.root, let rootState = root.state, levels[ObjectIdentifier(rootState)] != nil {
             throw scope.error(Code.notEncodable, offset, "'@\(handle.name)' inside the state of its root '@\(root.name)' points into its own root's value; each element would repeat the root's identity, so it has no encoding.")
         }
     }
@@ -1019,11 +1023,11 @@ enum GesSchemaBinder {
         case .reference:
             try checkEncodable(type.reference!, lists, &known, &levels)
         case .handle:
-            try checkComposite(scope, type.handle!, type.offset, levels)
+            try checkRootReach(scope, type.handle!, type.offset, levels)
         case .map where type.handle != nil:
             if type.max == nil { throw scope.error(Code.notEncodable, type.offset, "A Map without max has no hard limit.") }
             if lists >= maximumListNesting { throw scope.error(Code.notEncodable, type.offset, "Lists nest at most \(maximumListNesting) levels for encoding.") }
-            try checkComposite(scope, type.handle!, type.offset, levels)
+            try checkRootReach(scope, type.handle!, type.offset, levels)
             for alternative in type.element! where alternative.kind != .nothing { try checkEncodable(scope, alternative, lists + 1, &known, &levels) }
         default:
             throw scope.error(Code.notEncodable, type.offset, "A \(type.kind.rawValue) has no width and is only for documents.")

@@ -122,7 +122,7 @@ enum GesProgramValidator {
     // Whether an `@Name`, `@Name(:P)`, `@Name~` or `@Name(:P)~` type operand names a handle type binding; nil for any
     // other type name.
     private static func isHandleTypeOperand(_ text: String, _ handleTypeNames: Set<String>) -> Bool? {
-        // `@id` is the identity member of a part-less composite's root, not a handle type name.
+        // `@id` is the identity member of the root of a type without a part, not a handle type name.
         guard text.utf8.first == UInt8(ascii: "@"), text != "@id" else { return nil }
         var name = text.utf8.last == UInt8(ascii: "~") ? Substring(text.unicodeScalars.dropFirst().dropLast()) : Substring(text.unicodeScalars.dropFirst())
         if let open = name.firstIndex(of: "(") {
@@ -187,7 +187,7 @@ enum GesProgramValidator {
                     if isHandleTypeOperand(storeName, handleTypeNames) != true || storeName.utf8.last == UInt8(ascii: "~") || storeName.utf8.contains(UInt8(ascii: "(")) { throw failure(.invalidOperand, 16, index) }
                     continue
                 }
-                // `h.root` of a composite names its root type as the member `@Root`, which needs a handle type binding.
+                // `h.root` of a type with a root names its root type as the member `@Root`, which needs a handle type binding.
                 if operand == .memberName, i.opcode == .memberAccess, let known = isHandleTypeOperand(p.stringConstants[Int(stringIndex)], handleTypeNames) {
                     if !known || p.stringConstants[Int(stringIndex)].utf8.last == UInt8(ascii: "~") { throw failure(.invalidOperand, 16, index) }
                     continue

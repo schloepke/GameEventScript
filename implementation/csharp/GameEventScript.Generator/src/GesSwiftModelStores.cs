@@ -117,8 +117,8 @@ internal static partial class GesSwiftModelEmitter
         code.Close();
         code.Blank();
         ReadDocumentation(code, dependencies.ConvertAll(dependency => (dependency.Name, dependency.Label)), files: false);
-        code.Open($"{access}static func read(roots: [GesHandle], resolver: some GesHandleResolver{parameters}) throws -> {name} {{");
-        code.Line($"try {name}(GesStore.read(try {set}.handleType({GesSchemaPlanner.Literal(handle.Name, true)}), roots: roots, resolver: resolver{passed}))");
+        code.Open($"{access}static func read(roots: [GesStoreSourceRoot], source: some GesStoreSource{parameters}) throws -> {name} {{");
+        code.Line($"try {name}(GesStore.read(try {set}.handleType({GesSchemaPlanner.Literal(handle.Name, true)}), roots: roots, source: source{passed}))");
         code.Close();
         code.Blank();
         code.Line("/// Answers a read of an entry's state: its state, with its content hash for a type that declares one, or missing.");
@@ -155,22 +155,22 @@ internal static partial class GesSwiftModelEmitter
 
     private static void ReadDocumentation(GesSchemaPlanner.Code code, List<(string Name, string Label)> dependencies, bool files)
     {
-        code.Line(files ? "/// Reads the store from named roots, whose files a source supplies." : "/// Reads the store from root handles, whose files a resolver answers.");
+        code.Line(files ? "/// Reads the store from named roots, whose files a source supplies." : "/// Reads the store from versioned sources: root handles and the paths of their root files, whose files a source answers.");
         code.Line("///");
         code.Line("/// - Parameters:");
         code.Line("///   - roots: The roots, read in this order.");
-        code.Line(files ? "///   - files: The source of every file's text." : "///   - resolver: The resolver that answers the root files and their imports.");
+        code.Line(files ? "///   - files: The source of every file's text." : "///   - source: The source that answers every file by root handle and path.");
         foreach (var dependency in dependencies)
             code.Line($"///   - {dependency.Label.Trim('`')}: The store of `@{dependency.Name}`, whose entries this store's entries may name or pin; none when nil.");
         code.Line("/// - Returns: The store.");
-        code.Line("/// - Throws: `GesApiError.invalidArgument` when two roots share a name or a root is no store file of the type; `GesStoreError`");
+        code.Line(files ? "/// - Throws: `GesApiError.invalidArgument` when two roots share a name; `GesStoreError`" : "/// - Throws: `GesApiError.invalidArgument` when a root handle carries a part or two roots have equal handles; `GesStoreError`");
         if (files)
         {
             code.Line("///   listing every error when the store has errors; `GesSchemaError` when the embedded schema sources no longer parse.");
             return;
         }
 
-        code.Line("///   listing every error when the store has errors; `GesHandleError` when the resolver answers a file wrongly; `GesSchemaError`");
-        code.Line("///   when the embedded schema sources no longer parse.");
+        code.Line("///   listing every error when the store has errors; `GesHandleError` when the source answers an invalid or another version of a root;");
+        code.Line("///   `GesSchemaError` when the embedded schema sources no longer parse.");
     }
 }

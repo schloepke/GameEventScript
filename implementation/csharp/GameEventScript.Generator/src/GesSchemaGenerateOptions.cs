@@ -96,7 +96,7 @@ public sealed class GesSchemaGenerateOptions
 
     /// <summary>
     /// Gets or sets whether model generation also writes a typed store <c>&lt;Name&gt;Store</c> for every handle type whose
-    /// state is a model root, whose id is Text and that is not composite (specs/Schemas.md#model-stores). It reads, holds
+    /// state is a model root, whose id is Text and that has no root (specs/Schemas.md#model-stores). It reads, holds
     /// and resolves the states of that type and includes <see cref="Documents"/>. Only model generation takes it.
     /// </summary>
     public bool Stores { get; set; }

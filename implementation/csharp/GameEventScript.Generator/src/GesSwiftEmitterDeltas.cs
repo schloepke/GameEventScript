@@ -192,7 +192,7 @@ internal static partial class GesSwiftEmitter
     // The UTF-8 storage of a Text in `owner`, "self" or another record.
     private static string Bytes(GesPlanValue value, string owner) => Storage(value, owner);
 
-    // The wire parts of a handle in node order, with their members in a and b: a composite's id is its root's, and a field
+    // The wire parts of a handle in node order, with their members in a and b: the id of a type with a part is its root's, and a field
     // without a version transmits none. A text id compares by its UTF-8 bytes, which String's equality would not.
     private static List<(GesPlanValue Part, string A, string B)> HandleMembers(GesPlanValue value, string a, string b)
     {
@@ -274,8 +274,7 @@ internal static partial class GesSwiftEmitter
             code.Close();
         }
 
-        var arguments = "uncheckedId: id" + (members.Exists(member => member.Part.Base == "Version") ? ", version: version" : "");
-        code.Line(value.HandleRoot is not null ? $"{a} = {value.HandleType}(uncheckedRoot: {GesCSharpEmitter.HandleRootType(value)}({arguments}), part: part)" : $"{a} = {value.HandleType}({arguments})");
+        code.Line($"{a} = {GesCSharpEmitter.HandleConstruction(value, members.Exists(member => member.Part.Base == "Version"), swift: true)}");
         code.Close();
     }
 

@@ -442,6 +442,24 @@ final class GenerateTests: XCTestCase {
         }
     }
 
+    func testHandlesWithAPartCheckTheirFormOnlyWithAVersion() throws {
+        // `@Log:3/7` reads as attached, so a keyed handle with a part but without a version must still convert.
+        let set = try GesSchemaSet(sources: [
+            GesSchemaSource(
+                name: "handles.gess",
+                text: "schema :Note as { text: :Text max 16 }\nhandle @Drone with id :Number integer between 0 and 9 versioned by revision\n"
+                    + "handle @Log of :Note keyed by @Drone with part :Number integer between 0 and 9 versioned by revision\n"
+                    + "handle @Slot of :Note attached to @Drone with part :Number integer between 0 and 9\nmodel schema :Move as { log: @Log~, slot: @Slot~ }\n"
+            )
+        ])
+        let csharp = try GesSchemaGenerator.generateModels(set, roots: ["Move"], options: GesSchemaGenerateOptions(language: .csharp))
+        XCTAssertTrue(csharp.contains("|| !handle.HasPart || (handle.HasVersion && !handle.IsKeyed)) return false;"))
+        XCTAssertTrue(csharp.contains("|| !handle.HasPart || (handle.HasVersion && handle.IsKeyed)) return false;"))
+        let swift = try GesSchemaGenerator.generateModels(set, roots: ["Move"], options: GesSchemaGenerateOptions(language: .swift))
+        XCTAssertTrue(swift.contains(", handle.hasPart, !handle.hasVersion || handle.isKeyed else { return nil }"))
+        XCTAssertTrue(swift.contains(", handle.hasPart, !handle.hasVersion || !handle.isKeyed else { return nil }"))
+    }
+
     func testSplitOutputPlacesAStoreInTheFileOfItsHandleType() throws {
         // The store type has no declaration of its own; it goes with the handle type, as <Name>Handle does.
         let set = try GesSchemaSet(sources: [

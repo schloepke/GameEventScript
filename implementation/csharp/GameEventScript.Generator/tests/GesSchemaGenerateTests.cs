@@ -384,6 +384,22 @@ public sealed class GesSchemaGenerateTests
     }
 
     [TestMethod]
+    public void HandlesWithAPartCheckTheirFormOnlyWithAVersion()
+    {
+        // `@Log:3/7` reads as attached, so a keyed handle with a part but without a version must still convert.
+        var set = GesSchemaSet.Parse(
+            "schema :Note as { text: :Text max 16 }\nhandle @Drone with id :Number integer between 0 and 9 versioned by revision\n" +
+            "handle @Log of :Note keyed by @Drone with part :Number integer between 0 and 9 versioned by revision\n" +
+            "handle @Slot of :Note attached to @Drone with part :Number integer between 0 and 9\nmodel schema :Move as { log: @Log~, slot: @Slot~ }\n");
+        var csharp = GesSchemaGenerator.GenerateModels(set, ["Move"], new GesSchemaGenerateOptions { Language = GesSchemaLanguage.CSharp });
+        StringAssert.Contains(csharp, "|| !handle.HasPart || (handle.HasVersion && !handle.IsKeyed)) return false;");
+        StringAssert.Contains(csharp, "|| !handle.HasPart || (handle.HasVersion && handle.IsKeyed)) return false;");
+        var swift = GesSchemaGenerator.GenerateModels(set, ["Move"], new GesSchemaGenerateOptions { Language = GesSchemaLanguage.Swift });
+        StringAssert.Contains(swift, ", handle.hasPart, !handle.hasVersion || handle.isKeyed else { return nil }");
+        StringAssert.Contains(swift, ", handle.hasPart, !handle.hasVersion || !handle.isKeyed else { return nil }");
+    }
+
+    [TestMethod]
     public void HandleFieldsReachTheirHandleTypesButNotTheirStates()
     {
         var set = GesSchemaSet.Parse(

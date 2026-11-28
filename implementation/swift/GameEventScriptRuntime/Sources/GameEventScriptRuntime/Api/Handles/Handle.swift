@@ -25,7 +25,8 @@ public final class GesHandle: Hashable, Comparable, @unchecked Sendable, CustomS
     /// The part of a handle of a type with a root and a part: an integer Number or a Text; Nothing for any other handle.
     public let part: GesValue
     /// Whether the handle is a keyed handle with a part, whose text form writes its own version after the part; equality
-    /// and order ignore it.
+    /// and order ignore it. A text form with a part but without a version or ref reads as not keyed; a keyed handle that
+    /// gains a version is created with ``init(typeName:keyedBy:part:version:)``.
     public let isKeyed: Bool
     /// The name of the [projection](https://gameeventscript.org/specs/Schemas.html#projections) the handle reads its
     /// state through, without the leading `:`; empty for the full view.

@@ -156,7 +156,8 @@ extension GesSwiftModelEmitter {
         code.blank()
         code.line("// A runtime handle of this type, or nil for a handle of another type or out of its declared form.")
         code.open("init?(matching handle: GesHandle) {")
-        code.line("guard handle.typeName == \(typeName), \(withPart ? "" : "!")handle.hasPart\(withPart ? ", \(keyed ? "" : "!")handle.isKeyed" : "") else { return nil }")
+        // A text form with a part but without a version reads as attached, so only a version marks the form.
+        code.line("guard handle.typeName == \(typeName), \(withPart ? "" : "!")handle.hasPart\(withPart ? ", !handle.hasVersion || \(keyed ? "" : "!")handle.isKeyed" : "") else { return nil }")
         if let root {
             let rootHandle =
                 root.version == .none || keyed

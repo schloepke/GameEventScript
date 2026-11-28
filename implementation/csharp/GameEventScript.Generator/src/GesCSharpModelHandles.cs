@@ -183,7 +183,8 @@ internal static partial class GesCSharpModelEmitter
         code.Line($"internal static bool TryFrom(GesHandle handle, out {name} result)");
         code.Open("{");
         code.Line("result = default;");
-        code.Line($"if (handle.TypeName != {GesSchemaPlanner.Literal(handle.Name, false)} || {(withPart ? "!" : "")}handle.HasPart{(withPart ? $" || {(keyed ? "!" : "")}handle.IsKeyed" : "")}) return false;");
+        // A text form with a part but without a version reads as attached, so only a version marks the form.
+        code.Line($"if (handle.TypeName != {GesSchemaPlanner.Literal(handle.Name, false)} || {(withPart ? "!" : "")}handle.HasPart{(withPart ? $" || (handle.HasVersion && {(keyed ? "!" : "")}handle.IsKeyed)" : "")}) return false;");
         if (withPart)
         {
             var rootName = GesModelPlanner.HandleName(root!.Name);

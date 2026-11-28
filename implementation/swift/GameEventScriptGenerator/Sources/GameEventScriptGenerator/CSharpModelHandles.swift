@@ -175,7 +175,8 @@ extension GesCSharpModelEmitter {
         code.line("internal static bool TryFrom(GesHandle handle, out \(name) result)")
         code.open("{")
         code.line("result = default;")
-        code.line("if (handle.TypeName != \(literalName) || \(withPart ? "!" : "")handle.HasPart\(withPart ? " || \(keyed ? "!" : "")handle.IsKeyed" : "")) return false;")
+        // A text form with a part but without a version reads as attached, so only a version marks the form.
+        code.line("if (handle.TypeName != \(literalName) || \(withPart ? "!" : "")handle.HasPart\(withPart ? " || (handle.HasVersion && \(keyed ? "!" : "")handle.IsKeyed)" : "")) return false;")
         if let root {
             let rootName = GesModelPlanner.handleName(root.name)
             let rootLiteral = GesSchemaPlanner.literal(root.name, swift: false)

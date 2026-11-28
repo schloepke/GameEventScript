@@ -156,7 +156,8 @@ internal static partial class GesSwiftModelEmitter
         code.Blank();
         code.Line("// A runtime handle of this type, or nil for a handle of another type or out of its declared form.");
         code.Open("init?(matching handle: GesHandle) {");
-        code.Line($"guard handle.typeName == {typeName}, {(withPart ? "" : "!")}handle.hasPart{(withPart ? $", {(keyed ? "" : "!")}handle.isKeyed" : "")} else {{ return nil }}");
+        // A text form with a part but without a version reads as attached, so only a version marks the form.
+        code.Line($"guard handle.typeName == {typeName}, {(withPart ? "" : "!")}handle.hasPart{(withPart ? $", !handle.hasVersion || {(keyed ? "" : "!")}handle.isKeyed" : "")} else {{ return nil }}");
         if (withPart)
         {
             var rootHandle = root!.Version == GesHandleVersionKind.None || keyed

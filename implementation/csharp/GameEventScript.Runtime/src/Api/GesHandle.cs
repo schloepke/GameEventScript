@@ -52,7 +52,8 @@ public sealed class GesHandle : IEquatable<GesHandle>, IComparable<GesHandle>
 
     /// <summary>
     /// Gets whether the handle is a keyed handle with a part, whose text form writes its own version after the part; equality and
-    /// order ignore it.
+    /// order ignore it. A text form with a part but without a version or ref reads as not keyed; a keyed handle that gains a version
+    /// is created with <see cref="CreateKeyed"/>.
     /// </summary>
     public bool IsKeyed { get; }
 
